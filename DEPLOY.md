@@ -47,9 +47,21 @@ hostname (e.g. `api.yourdomain.com`), validate via DNS, and copy the **cert ARN*
 
 ## 3. Deploy the stack
 
+Configuration is read from a CDK context flag (`-c key=value`) **or** an
+environment variable — so you don't have to type the flags every time.
+
+**Option A — local `.env` file (recommended):**
+
 ```bash
 cd infra
 npm install
+cp .env.example .env     # then fill in your ids/ARNs (gitignored)
+npm run deploy           # = cdk deploy, picks up infra/.env automatically
+```
+
+**Option B — one-off flags:**
+
+```bash
 npx cdk deploy \
   -c vpcId=vpc-0abc123... \
   -c databaseUrlSecretArn=arn:aws:secretsmanager:REGION:ACCT:secret:whathooks/database-url-XXXX \
@@ -61,11 +73,29 @@ npx cdk deploy \
   -c domainName=api.yourdomain.com
 ```
 
-Optional context: `-c dbPort=5432`, `-c taskSubnetType=private` (default `public`,
-which assigns the task a public IP so it can pull the image without a NAT gateway;
-use `private` only if your VPC has private subnets **with** NAT egress).
+Optional: `WH_DB_PORT` / `-c dbPort=5432`, and `WH_TASK_SUBNET_TYPE` /
+`-c taskSubnetType=private` (default `public`, which assigns the task a public IP
+so it can pull the image without a NAT gateway; use `private` only if your VPC has
+private subnets **with** NAT egress).
 
 Outputs include **AlbDnsName**, **ApiBaseUrl**, and **ApiTaskSecurityGroupId**.
+
+### Deploy from GitHub Actions instead
+
+`.github/workflows/deploy-api.yml` runs the same deploy in CI. Add these repo
+**secrets** (same names as the `.env` keys, plus AWS auth) and trigger the
+**Deploy API** workflow from the Actions tab:
+
+| Secret | Value |
+| --- | --- |
+| `AWS_DEPLOY_ROLE_ARN` | IAM role ARN for GitHub OIDC, with CDK deploy permissions |
+| `AWS_REGION` | e.g. `us-east-1` |
+| `WH_VPC_ID`, `WH_DATABASE_URL_SECRET_ARN`, `WH_REDIS_URL`, `WH_DB_SG_ID`, `WH_REDIS_SG_ID`, `WH_WEB_ORIGIN` | required |
+| `WH_CERT_ARN`, `WH_DOMAIN_NAME` | optional |
+
+The workflow is `workflow_dispatch` (manual) by default; uncomment the `push`
+block in it to deploy automatically when `api/` or `infra/` change on `main`.
+Bootstrap the account once (`npx cdk bootstrap`) before the first CI run.
 
 ## 4. Point DNS at the ALB
 

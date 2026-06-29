@@ -1,0 +1,52 @@
+name: Deploy API
+
+# Manual trigger by default. Uncomment the `push` block to deploy automatically
+# when api/ or infra/ change on main.
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  #   paths: ["api/**", "infra/**", ".github/workflows/deploy-api.yml"]
+
+# Required GitHub secrets:
+#   AWS_DEPLOY_ROLE_ARN  — IAM role for OIDC (trust github.com), with CDK deploy perms
+#   AWS_REGION           — e.g. us-east-1
+#   WH_VPC_ID, WH_DATABASE_URL_SECRET_ARN, WH_REDIS_URL,
+#   WH_DB_SG_ID, WH_REDIS_SG_ID, WH_WEB_ORIGIN
+#   WH_CERT_ARN, WH_DOMAIN_NAME (optional)
+
+permissions:
+  id-token: write # for AWS OIDC
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - run: npm ci
+
+      - name: CDK deploy
+        run: npx cdk deploy --require-approval never
+        env:
+          WH_VPC_ID: ${{ secrets.WH_VPC_ID }}
+          WH_DATABASE_URL_SECRET_ARN: ${{ secrets.WH_DATABASE_URL_SECRET_ARN }}
+          WH_REDIS_URL: ${{ secrets.WH_REDIS_URL }}
+          WH_DB_SG_ID: ${{ secrets.WH_DB_SG_ID }}
+          WH_REDIS_SG_ID: ${{ secrets.WH_REDIS_SG_ID }}
+          WH_WEB_ORIGIN: ${{ secrets.WH_WEB_ORIGIN }}
+          WH_CERT_ARN: ${{ secrets.WH_CERT_ARN }}
+          WH_DOMAIN_NAME: ${{ secrets.WH_DOMAIN_NAME }}

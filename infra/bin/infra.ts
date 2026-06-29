@@ -1,34 +1,41 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
+import 'dotenv/config'; // loads infra/.env when present (gitignored)
 import * as cdk from 'aws-cdk-lib';
 import { WhathooksApiStack } from '../lib/whathooks-api-stack';
 
 const app = new cdk.App();
-const ctx = (k: string) => app.node.tryGetContext(k) as string | undefined;
 
-// Required context (pass with -c key=value or via cdk.context.json):
-//   vpcId                 — the VPC that hosts your existing RDS + ElastiCache
-//   databaseUrlSecretArn  — Secrets Manager ARN holding the full DATABASE_URL
-//   redisUrl              — redis://your-elasticache-host:6379
-//   dbSecurityGroupId     — existing RDS security group (opened to the task)
-//   redisSecurityGroupId  — existing Redis security group (opened to the task)
-//   webOrigin             — your Vercel app URL (CORS)
-// Optional:
-//   certArn, domainName, dbPort, taskSubnetType (public|private)
-const required = {
-  vpcId: ctx('vpcId'),
-  databaseUrlSecretArn: ctx('databaseUrlSecretArn'),
-  redisUrl: ctx('redisUrl'),
-  dbSecurityGroupId: ctx('dbSecurityGroupId'),
-  redisSecurityGroupId: ctx('redisSecurityGroupId'),
+// Resolve each setting from a CDK context flag (-c key=value) first, then an
+// environment variable (from infra/.env locally, or GitHub secrets in CI).
+const val = (cdkKey: string, envKey: string): string | undefined =>
+  (app.node.tryGetContext(cdkKey) as string | undefined) ?? process.env[envKey];
+
+const config = {
+  vpcId: val('vpcId', 'WH_VPC_ID'),
+  databaseUrlSecretArn: val('databaseUrlSecretArn', 'WH_DATABASE_URL_SECRET_ARN'),
+  redisUrl: val('redisUrl', 'WH_REDIS_URL'),
+  dbSecurityGroupId: val('dbSecurityGroupId', 'WH_DB_SG_ID'),
+  redisSecurityGroupId: val('redisSecurityGroupId', 'WH_REDIS_SG_ID'),
+  webOrigin: val('webOrigin', 'WH_WEB_ORIGIN'),
+  certArn: val('certArn', 'WH_CERT_ARN'),
+  domainName: val('domainName', 'WH_DOMAIN_NAME'),
+  dbPort: val('dbPort', 'WH_DB_PORT'),
+  taskSubnetType: val('taskSubnetType', 'WH_TASK_SUBNET_TYPE'),
 };
-const missing = Object.entries(required)
-  .filter(([, v]) => !v)
-  .map(([k]) => k);
+
+const required: (keyof typeof config)[] = [
+  'vpcId',
+  'databaseUrlSecretArn',
+  'redisUrl',
+  'dbSecurityGroupId',
+  'redisSecurityGroupId',
+];
+const missing = required.filter((k) => !config[k]);
 if (missing.length) {
   throw new Error(
-    `Missing required context: ${missing.join(', ')}.\n` +
-      `Pass them with -c key=value, e.g. -c vpcId=vpc-0abc...`,
+    `Missing required config: ${missing.join(', ')}.\n` +
+      `Set them in infra/.env (see .env.example), as GitHub secrets, or with -c key=value.`,
   );
 }
 
@@ -37,14 +44,14 @@ new WhathooksApiStack(app, 'WhathooksApi', {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION,
   },
-  webOrigin: ctx('webOrigin') ?? 'https://your-app.vercel.app',
-  vpcId: required.vpcId!,
-  databaseUrlSecretArn: required.databaseUrlSecretArn!,
-  redisUrl: required.redisUrl!,
-  dbSecurityGroupId: required.dbSecurityGroupId!,
-  redisSecurityGroupId: required.redisSecurityGroupId!,
-  dbPort: ctx('dbPort') ? Number(ctx('dbPort')) : undefined,
-  taskSubnetType: ctx('taskSubnetType') === 'private' ? 'private' : undefined,
-  certArn: ctx('certArn'),
-  domainName: ctx('domainName'),
+  webOrigin: config.webOrigin ?? 'https://your-app.vercel.app',
+  vpcId: config.vpcId!,
+  databaseUrlSecretArn: config.databaseUrlSecretArn!,
+  redisUrl: config.redisUrl!,
+  dbSecurityGroupId: config.dbSecurityGroupId!,
+  redisSecurityGroupId: config.redisSecurityGroupId!,
+  dbPort: config.dbPort ? Number(config.dbPort) : undefined,
+  taskSubnetType: config.taskSubnetType === 'private' ? 'private' : undefined,
+  certArn: config.certArn,
+  domainName: config.domainName,
 });

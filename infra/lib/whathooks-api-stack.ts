@@ -4,10 +4,8 @@ import {
   aws_certificatemanager as acm,
   aws_ec2 as ec2,
   aws_ecs as ecs,
-  aws_elasticache as elasticache,
   aws_elasticloadbalancingv2 as elbv2,
   aws_logs as logs,
-  aws_rds as rds,
   aws_secretsmanager as secretsmanager,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -15,6 +13,20 @@ import { Construct } from 'constructs';
 export interface WhathooksApiStackProps extends cdk.StackProps {
   /** Vercel app origin allowed by CORS, e.g. https://whathooks.vercel.app */
   webOrigin: string;
+  /** The VPC that already hosts your RDS + ElastiCache instances. */
+  vpcId: string;
+  /** Secrets Manager ARN whose value is the full DATABASE_URL connection string. */
+  databaseUrlSecretArn: string;
+  /** Connection URL for your existing ElastiCache Redis, e.g. redis://host:6379 */
+  redisUrl: string;
+  /** Existing RDS security group — opened to the api task on its DB port. */
+  dbSecurityGroupId: string;
+  /** Existing Redis security group — opened to the api task on 6379. */
+  redisSecurityGroupId: string;
+  /** DB port (default 5432). */
+  dbPort?: number;
+  /** Place the task in 'public' (default, assigns a public IP) or 'private' subnets. */
+  taskSubnetType?: 'public' | 'private';
   /** ACM certificate ARN for the api subdomain. When set, the ALB serves HTTPS. */
   certArn?: string;
   /** The api hostname the cert covers, for output clarity. */
@@ -25,81 +37,51 @@ export class WhathooksApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: WhathooksApiStackProps) {
     super(scope, id, props);
 
-    // ---------------------------------------------------------------------
-    // Network — public subnets for the task (no NAT cost) + isolated for data
-    // ---------------------------------------------------------------------
-    const vpc = new ec2.Vpc(this, 'Vpc', {
-      maxAzs: 2,
-      natGateways: 0,
-      subnetConfiguration: [
-        { name: 'public', subnetType: ec2.SubnetType.PUBLIC, cidrMask: 24 },
-        {
-          name: 'isolated',
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-          cidrMask: 24,
-        },
-      ],
-    });
+    const dbPort = props.dbPort ?? 5432;
 
     // ---------------------------------------------------------------------
-    // Postgres (RDS) — only reachable from the api task
+    // Import the VPC that already contains RDS + ElastiCache
     // ---------------------------------------------------------------------
-    const db = new rds.DatabaseInstance(this, 'Db', {
-      engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.of('16.4', '16'),
-      }),
-      vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.BURSTABLE4_GRAVITON,
-        ec2.InstanceSize.MICRO,
-      ),
-      credentials: rds.Credentials.fromGeneratedSecret('whathooks', {
-        // keep the password URL-safe so we can build DATABASE_URL by hand
-        excludeCharacters: '/@" \\\'%:?#[]&',
-      }),
-      databaseName: 'whathooks',
-      allocatedStorage: 20,
-      maxAllocatedStorage: 100,
-      storageEncrypted: true,
-      multiAz: false,
-      publiclyAccessible: false,
-      backupRetention: cdk.Duration.days(7),
-      removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
-    });
+    const vpc = ec2.Vpc.fromLookup(this, 'Vpc', { vpcId: props.vpcId });
 
-    // ---------------------------------------------------------------------
-    // Redis (ElastiCache, single node)
-    // ---------------------------------------------------------------------
-    const redisSg = new ec2.SecurityGroup(this, 'RedisSg', {
+    const usePrivate = props.taskSubnetType === 'private';
+    const taskSubnets: ec2.SubnetSelection = usePrivate
+      ? { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }
+      : { subnetType: ec2.SubnetType.PUBLIC };
+
+    // Security group for the api task; we open the existing data-tier SGs to it.
+    const taskSg = new ec2.SecurityGroup(this, 'ApiSg', {
       vpc,
-      description: 'whathooks redis',
+      description: 'whathooks api task',
       allowAllOutbound: true,
     });
-    const redisSubnets = new elasticache.CfnSubnetGroup(this, 'RedisSubnets', {
-      description: 'whathooks redis subnets',
-      subnetIds: vpc.selectSubnets({
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-      }).subnetIds,
-    });
-    const redis = new elasticache.CfnCacheCluster(this, 'Redis', {
-      engine: 'redis',
-      cacheNodeType: 'cache.t4g.micro',
-      numCacheNodes: 1,
-      vpcSecurityGroupIds: [redisSg.securityGroupId],
-      cacheSubnetGroupName: redisSubnets.ref,
-    });
-    redis.addDependency(redisSubnets);
-    const redisUrl = `redis://${redis.attrRedisEndpointAddress}:${redis.attrRedisEndpointPort}`;
+
+    const dbSg = ec2.SecurityGroup.fromSecurityGroupId(
+      this,
+      'ImportedDbSg',
+      props.dbSecurityGroupId,
+      { mutable: true },
+    );
+    dbSg.addIngressRule(taskSg, ec2.Port.tcp(dbPort), 'whathooks api');
+
+    const redisSg = ec2.SecurityGroup.fromSecurityGroupId(
+      this,
+      'ImportedRedisSg',
+      props.redisSecurityGroupId,
+      { mutable: true },
+    );
+    redisSg.addIngressRule(taskSg, ec2.Port.tcp(6379), 'whathooks api');
 
     // ---------------------------------------------------------------------
-    // Secrets — app JWT signing secret
+    // Secrets — DATABASE_URL (existing) + a generated JWT signing secret
     // ---------------------------------------------------------------------
+    const dbUrlSecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'DatabaseUrlSecret',
+      props.databaseUrlSecretArn,
+    );
     const jwtSecret = new secretsmanager.Secret(this, 'JwtSecret', {
-      generateSecretString: {
-        excludePunctuation: true,
-        passwordLength: 48,
-      },
+      generateSecretString: { excludePunctuation: true, passwordLength: 48 },
     });
 
     // ---------------------------------------------------------------------
@@ -129,14 +111,11 @@ export class WhathooksApiStack extends cdk.Stack {
         API_KEY_PREFIX: 'wh_live',
         JWT_EXPIRES_IN: '7d',
         WEB_ORIGIN: props.webOrigin,
-        REDIS_URL: redisUrl,
+        REDIS_URL: props.redisUrl,
       },
       secrets: {
-        DB_HOST: ecs.Secret.fromSecretsManager(db.secret!, 'host'),
-        DB_PORT: ecs.Secret.fromSecretsManager(db.secret!, 'port'),
-        DB_USER: ecs.Secret.fromSecretsManager(db.secret!, 'username'),
-        DB_PASS: ecs.Secret.fromSecretsManager(db.secret!, 'password'),
-        DB_NAME: ecs.Secret.fromSecretsManager(db.secret!, 'dbname'),
+        // Whole secret value is the connection string → injected as DATABASE_URL.
+        DATABASE_URL: ecs.Secret.fromSecretsManager(dbUrlSecret),
         JWT_SECRET: ecs.Secret.fromSecretsManager(jwtSecret),
       },
     });
@@ -145,8 +124,9 @@ export class WhathooksApiStack extends cdk.Stack {
       cluster,
       taskDefinition: taskDef,
       desiredCount: 1,
-      assignPublicIp: true,
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      assignPublicIp: !usePrivate,
+      vpcSubnets: taskSubnets,
+      securityGroups: [taskSg],
       // Stop the old task before starting the new one — never run two Baileys
       // processes for the same numbers at once.
       minHealthyPercent: 0,
@@ -154,14 +134,6 @@ export class WhathooksApiStack extends cdk.Stack {
       healthCheckGracePeriod: cdk.Duration.seconds(90),
       circuitBreaker: { rollback: true },
     });
-
-    // data-tier access
-    db.connections.allowDefaultPortFrom(service, 'api task');
-    redisSg.addIngressRule(
-      service.connections.securityGroups[0],
-      ec2.Port.tcp(6379),
-      'api task',
-    );
 
     // ---------------------------------------------------------------------
     // ALB
@@ -191,8 +163,8 @@ export class WhathooksApiStack extends cdk.Stack {
         open: true,
       });
     } else {
-      // No cert → HTTP only. NOTE: browsers will block calls from the (HTTPS)
-      // Vercel frontend to an HTTP api (mixed content). Add a cert for prod.
+      // No cert → HTTP only. NOTE: browsers block calls from the (HTTPS) Vercel
+      // frontend to an HTTP api (mixed content). Add a cert for prod.
       listener = lb.addListener('Http', { port: 80, open: true });
     }
 
@@ -216,14 +188,16 @@ export class WhathooksApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     new cdk.CfnOutput(this, 'AlbDnsName', {
       value: lb.loadBalancerDnsName,
-      description: 'Point your api subdomain (CNAME) at this, then use it as API_URL',
+      description: 'CNAME your api subdomain at this, then use it as API_URL',
     });
     new cdk.CfnOutput(this, 'ApiBaseUrl', {
       value: cert
         ? `https://${props.domainName ?? lb.loadBalancerDnsName}/v1`
         : `http://${lb.loadBalancerDnsName}/v1`,
     });
-    new cdk.CfnOutput(this, 'DbSecretArn', { value: db.secret!.secretArn });
-    new cdk.CfnOutput(this, 'RedisEndpoint', { value: redisUrl });
+    new cdk.CfnOutput(this, 'ApiTaskSecurityGroupId', {
+      value: taskSg.securityGroupId,
+      description: 'Security group of the api task (already opened to RDS/Redis)',
+    });
   }
 }

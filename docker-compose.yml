@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: whathooks-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: whathooks
+      POSTGRES_PASSWORD: whathooks
+      POSTGRES_DB: whathooks
+    ports:
+      - "5432:5432"
+    volumes:
+      - whathooks_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U whathooks"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: whathooks-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - whathooks_redisdata:/data
+
+volumes:
+  whathooks_pgdata:
+  whathooks_redisdata:

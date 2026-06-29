@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0f0e;
+  --color-surface: #111614;
+  --color-surface-2: #161d1b;
+  --color-border: #233029;
+  --color-muted: #8a9a91;
+  --color-fg: #e8f0ec;
+  --color-brand: #25d366;
+  --color-brand-dark: #1da851;
+  --color-accent: #34e07e;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-[var(--color-brand)] text-black hover:bg-[var(--color-accent)];
+  }
+  .btn-ghost {
+    @apply border border-[var(--color-border)] text-[var(--color-fg)] hover:bg-[var(--color-surface-2)];
+  }
+  .btn-danger {
+    @apply border border-red-500/40 text-red-300 hover:bg-red-500/10;
+  }
+  .card {
+    @apply rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5;
+  }
+  .input {
+    @apply w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-fg)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)];
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-[var(--color-fg)];
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .pill {
+    @apply rounded-md bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-accent)];
+  }
+}

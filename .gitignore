@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+out/
+build/
+
+# env
+.env
+.env*.local
+*.env
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# prisma / data
+api/prisma/*.db
+
+# baileys local auth (dev fallback)
+.baileys_auth/
+
+# misc
+coverage/
+*.tsbuildinfo

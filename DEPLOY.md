@@ -82,6 +82,26 @@ Outputs include **AlbDnsName**, **ApiBaseUrl**, and **ApiTaskSecurityGroupId**.
 
 ### Deploy from GitHub Actions instead
 
+**One-time: create the OIDC deploy role.** CI authenticates to AWS via GitHub
+OIDC (no long-lived keys). Create the provider + role once, with admin creds:
+
+```bash
+aws cloudformation deploy \
+  --template-file infra/github-oidc-role.yml \
+  --stack-name whathooks-github-oidc \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides GitHubOrg=mbiffara GitHubRepo=whathooks
+# If the account already has the GitHub OIDC provider, add:
+#   CreateOIDCProvider=false
+aws cloudformation describe-stacks --stack-name whathooks-github-oidc \
+  --query "Stacks[0].Outputs[?OutputKey=='RoleArn'].OutputValue" --output text
+```
+
+The role is least-privilege — it can only assume the `cdk-*` bootstrap roles, so
+the account must be bootstrapped (`npx cdk bootstrap`) first. Put the printed ARN
+in the `AWS_DEPLOY_ROLE_ARN` secret. To restrict which branch can deploy, pass
+`SubjectFilter=ref:refs/heads/main`.
+
 `.github/workflows/deploy-api.yml` runs the same deploy in CI. Add these repo
 **secrets** (same names as the `.env` keys, plus AWS auth) and trigger the
 **Deploy API** workflow from the Actions tab:

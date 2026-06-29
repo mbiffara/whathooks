@@ -4,7 +4,9 @@ WORKDIR /app
 
 # Toolchain for native deps (argon2) + prisma engine runtime lib
 RUN apk add --no-cache python3 make g++ openssl
-RUN corepack enable
+# Pin the exact pnpm that generated the lockfile (newer pnpm enforces a
+# minimum-release-age supply-chain policy that rejects same-day lockfile entries).
+RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile

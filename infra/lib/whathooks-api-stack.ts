@@ -6,6 +6,8 @@ import {
   aws_ecs as ecs,
   aws_elasticloadbalancingv2 as elbv2,
   aws_logs as logs,
+  aws_route53 as route53,
+  aws_route53_targets as route53Targets,
   aws_secretsmanager as secretsmanager,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -33,10 +35,16 @@ export interface WhathooksApiStackProps extends cdk.StackProps {
   redisPort?: number;
   /** Place the task in 'public' (default, assigns a public IP) or 'private' subnets. */
   taskSubnetType?: 'public' | 'private';
-  /** ACM certificate ARN for the api subdomain. When set, the ALB serves HTTPS. */
-  certArn?: string;
-  /** The api hostname the cert covers, for output clarity. */
+  /** The api hostname, e.g. api.example.com. */
   domainName?: string;
+  /**
+   * Route 53 hosted zone for the domain. When set together with domainName, the
+   * stack creates + DNS-validates an ACM cert and an alias record automatically.
+   */
+  hostedZoneId?: string;
+  hostedZoneName?: string;
+  /** Alternative to hostedZone*: an already-issued ACM certificate ARN. */
+  certArn?: string;
 }
 
 export class WhathooksApiStack extends cdk.Stack {
@@ -99,6 +107,12 @@ export class WhathooksApiStack extends cdk.Stack {
     const taskDef = new ecs.FargateTaskDefinition(this, 'ApiTask', {
       cpu: 512,
       memoryLimitMiB: 1024,
+      // The image is built locally; match the build host (Apple Silicon → arm64).
+      // Graviton is also cheaper. If you build x86 images in CI, switch to X86_64.
+      runtimePlatform: {
+        cpuArchitecture: ecs.CpuArchitecture.ARM64,
+        operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
+      },
     });
 
     const image = ecs.ContainerImage.fromAsset(
@@ -150,9 +164,25 @@ export class WhathooksApiStack extends cdk.Stack {
       internetFacing: true,
     });
 
-    const cert = props.certArn
-      ? acm.Certificate.fromCertificateArn(this, 'Cert', props.certArn)
-      : undefined;
+    // Resolve a certificate: prefer a Route 53-managed cert (created + DNS
+    // validated here), else an imported ARN, else none (HTTP only).
+    const zone =
+      props.hostedZoneId && props.hostedZoneName
+        ? route53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
+            hostedZoneId: props.hostedZoneId,
+            zoneName: props.hostedZoneName,
+          })
+        : undefined;
+
+    let cert: acm.ICertificate | undefined;
+    if (zone && props.domainName) {
+      cert = new acm.Certificate(this, 'Cert', {
+        domainName: props.domainName,
+        validation: acm.CertificateValidation.fromDns(zone),
+      });
+    } else if (props.certArn) {
+      cert = acm.Certificate.fromCertificateArn(this, 'Cert', props.certArn);
+    }
 
     let listener: elbv2.ApplicationListener;
     if (cert) {
@@ -190,12 +220,24 @@ export class WhathooksApiStack extends cdk.Stack {
       deregistrationDelay: cdk.Duration.seconds(10),
     });
 
+    // Point the api hostname at the ALB automatically when we manage the zone.
+    if (zone && props.domainName) {
+      new route53.ARecord(this, 'AliasRecord', {
+        zone,
+        recordName: props.domainName,
+        target: route53.RecordTarget.fromAlias(
+          new route53Targets.LoadBalancerTarget(lb),
+        ),
+      });
+    }
+
     // ---------------------------------------------------------------------
     // Outputs
     // ---------------------------------------------------------------------
     new cdk.CfnOutput(this, 'AlbDnsName', {
       value: lb.loadBalancerDnsName,
-      description: 'CNAME your api subdomain at this, then use it as API_URL',
+      description:
+        'ALB hostname (DNS alias is created automatically when a hosted zone is set)',
     });
     new cdk.CfnOutput(this, 'ApiBaseUrl', {
       value: cert

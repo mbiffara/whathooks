@@ -5,6 +5,10 @@ import Redis from 'ioredis';
 export const REDIS_PUB = 'REDIS_PUB';
 export const REDIS_SUB = 'REDIS_SUB';
 
+// REDIS_URL targets an ElastiCache Valkey or Redis endpoint (same protocol).
+// ioredis enables TLS automatically when the URL uses the rediss:// scheme, and
+// reads an auth token from the URL userinfo (rediss://:TOKEN@host:6379).
+
 @Global()
 @Module({
   providers: [

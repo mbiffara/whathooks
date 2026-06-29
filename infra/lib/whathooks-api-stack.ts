@@ -17,14 +17,20 @@ export interface WhathooksApiStackProps extends cdk.StackProps {
   vpcId: string;
   /** Secrets Manager ARN whose value is the full DATABASE_URL connection string. */
   databaseUrlSecretArn: string;
-  /** Connection URL for your existing ElastiCache Redis, e.g. redis://host:6379 */
+  /**
+   * Connection URL for your existing ElastiCache cache (Valkey or Redis — same
+   * wire protocol). Use redis://host:6379, or rediss://host:6379 when in-transit
+   * encryption is on, optionally with an auth token: rediss://:TOKEN@host:6379
+   */
   redisUrl: string;
   /** Existing RDS security group — opened to the api task on its DB port. */
   dbSecurityGroupId: string;
-  /** Existing Redis security group — opened to the api task on 6379. */
+  /** Existing cache (Valkey/Redis) security group — opened to the api task. */
   redisSecurityGroupId: string;
   /** DB port (default 5432). */
   dbPort?: number;
+  /** Cache port (default 6379). */
+  redisPort?: number;
   /** Place the task in 'public' (default, assigns a public IP) or 'private' subnets. */
   taskSubnetType?: 'public' | 'private';
   /** ACM certificate ARN for the api subdomain. When set, the ALB serves HTTPS. */
@@ -38,6 +44,7 @@ export class WhathooksApiStack extends cdk.Stack {
     super(scope, id, props);
 
     const dbPort = props.dbPort ?? 5432;
+    const redisPort = props.redisPort ?? 6379;
 
     // ---------------------------------------------------------------------
     // Import the VPC that already contains RDS + ElastiCache
@@ -70,7 +77,7 @@ export class WhathooksApiStack extends cdk.Stack {
       props.redisSecurityGroupId,
       { mutable: true },
     );
-    redisSg.addIngressRule(taskSg, ec2.Port.tcp(6379), 'whathooks api');
+    redisSg.addIngressRule(taskSg, ec2.Port.tcp(redisPort), 'whathooks api');
 
     // ---------------------------------------------------------------------
     // Secrets — DATABASE_URL (existing) + a generated JWT signing secret

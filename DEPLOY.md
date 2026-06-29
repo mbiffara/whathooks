@@ -4,7 +4,8 @@ Best-of-breed split:
 
 - **`web/`** → Vercel (already deployed)
 - **`api/`** → AWS ECS Fargate (this guide), reusing your **existing** RDS Postgres
-  + ElastiCache Redis
+  + ElastiCache **Valkey** (Redis-compatible — the `ioredis` client and the
+  `redis://` / `rediss://` URL scheme work unchanged)
 
 The `api` is the stateful Baileys process, so it runs as a **single Fargate task**
 (`desiredCount: 1`). Don't raise that count without first building the
@@ -13,16 +14,21 @@ fight. Deploys **stop the old task before starting the new one**
 (`minHealthyPercent: 0`) for the same reason; expect a few seconds of downtime per
 deploy until the worker split exists.
 
-The task runs **in the same VPC** as your RDS/Redis so it can reach them over
+The task runs **in the same VPC** as your RDS + Valkey so it can reach them over
 private networking. The stack imports that VPC and both data-tier security groups,
 and adds an ingress rule from the api task's security group.
+
+> **Cache:** the app uses `ioredis`, which is fully compatible with ElastiCache
+> **Valkey** (and Redis). No code change — just point `WH_REDIS_URL` at your Valkey
+> endpoint. If in-transit encryption is on (always for Serverless), use the
+> `rediss://` scheme; add an auth token as `rediss://:TOKEN@host:6379`.
 
 ## Prerequisites
 
 - AWS CLI configured (`aws sts get-caller-identity` works)
 - Docker running locally (CDK builds the image at deploy time)
 - Node 22, and CDK bootstrapped once per account/region: `npx cdk bootstrap`
-- Your existing **VPC id**, **RDS** + **Redis** endpoints and **security group ids**
+- Your existing **VPC id**, **RDS** + **Valkey** endpoints and **security group ids**
 
 ## 1. Put the connection string in Secrets Manager
 
@@ -65,9 +71,9 @@ npm run deploy           # = cdk deploy, picks up infra/.env automatically
 npx cdk deploy \
   -c vpcId=vpc-0abc123... \
   -c databaseUrlSecretArn=arn:aws:secretsmanager:REGION:ACCT:secret:whathooks/database-url-XXXX \
-  -c redisUrl=redis://your-elasticache-host:6379 \
+  -c redisUrl=rediss://your-valkey-host:6379 \
   -c dbSecurityGroupId=sg-0rds... \
-  -c redisSecurityGroupId=sg-0redis... \
+  -c redisSecurityGroupId=sg-0valkey... \
   -c webOrigin=https://YOUR-APP.vercel.app \
   -c certArn=arn:aws:acm:REGION:ACCT:certificate/XXXX \
   -c domainName=api.yourdomain.com
@@ -134,7 +140,7 @@ In the Vercel project (root dir `web`), set and redeploy:
 | --- | --- |
 | VPC | **imported** (`vpcId`) |
 | RDS Postgres | **imported** — reached via `DATABASE_URL` secret; SG opened to task |
-| ElastiCache Redis | **imported** — reached via `redisUrl`; SG opened to task |
+| ElastiCache Valkey/Redis | **imported** — reached via `redisUrl` (use `rediss://` if TLS); SG opened to task |
 | ECS cluster + Fargate service | created — 1 task, 0.5 vCPU / 1 GB |
 | ALB | created — HTTPS→HTTP redirect (with cert); health check `GET /v1/health` |
 | Secrets Manager (`JWT_SECRET`) | created |

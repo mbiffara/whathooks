@@ -21,6 +21,7 @@ const config = {
   certArn: val('certArn', 'WH_CERT_ARN'),
   domainName: val('domainName', 'WH_DOMAIN_NAME'),
   dbPort: val('dbPort', 'WH_DB_PORT'),
+  redisPort: val('redisPort', 'WH_REDIS_PORT'),
   taskSubnetType: val('taskSubnetType', 'WH_TASK_SUBNET_TYPE'),
 };
 
@@ -51,6 +52,7 @@ new WhathooksApiStack(app, 'WhathooksApi', {
   dbSecurityGroupId: config.dbSecurityGroupId!,
   redisSecurityGroupId: config.redisSecurityGroupId!,
   dbPort: config.dbPort ? Number(config.dbPort) : undefined,
+  redisPort: config.redisPort ? Number(config.redisPort) : undefined,
   taskSubnetType: config.taskSubnetType === 'private' ? 'private' : undefined,
   certArn: config.certArn,
   domainName: config.domainName,

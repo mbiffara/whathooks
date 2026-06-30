@@ -80,6 +80,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     return this.sessions.has(sessionId);
   }
 
+  /** Number of live Baileys sockets currently held by this process. */
+  getLiveSessionCount(): number {
+    return this.sessions.size;
+  }
+
   /** Boot (or reboot) the Baileys socket for a session. */
   async start(sessionId: string): Promise<void> {
     const existing = this.sessions.get(sessionId);

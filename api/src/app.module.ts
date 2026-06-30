@@ -8,6 +8,7 @@ import { RedisModule } from './common/redis/redis.module';
 import { HealthController } from './health/health.controller';
 import { MediaModule } from './media/media.module';
 import { MessagesModule } from './messages/messages.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
@@ -24,6 +25,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     ApiKeysModule,
     MessagesModule,
     ConversationsModule,
+    MetricsModule,
     AdminModule,
   ],
   controllers: [HealthController],

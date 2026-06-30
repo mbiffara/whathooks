@@ -25,6 +25,7 @@ const config = {
   dbPort: val('dbPort', 'WH_DB_PORT'),
   redisPort: val('redisPort', 'WH_REDIS_PORT'),
   taskSubnetType: val('taskSubnetType', 'WH_TASK_SUBNET_TYPE'),
+  alarmEmail: val('alarmEmail', 'WH_ALARM_EMAIL'),
 };
 
 const required: (keyof typeof config)[] = [
@@ -60,4 +61,5 @@ new WhathooksApiStack(app, 'WhathooksApi', {
   hostedZoneId: config.hostedZoneId,
   hostedZoneName: config.hostedZoneName,
   certArn: config.certArn,
+  alarmEmail: config.alarmEmail,
 });

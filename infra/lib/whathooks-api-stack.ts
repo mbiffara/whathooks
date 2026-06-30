@@ -2,14 +2,19 @@ import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import {
   aws_certificatemanager as acm,
+  aws_cloudwatch as cloudwatch,
+  aws_cloudwatch_actions as cwActions,
   aws_ec2 as ec2,
   aws_ecs as ecs,
   aws_elasticloadbalancingv2 as elbv2,
+  aws_iam as iam,
   aws_logs as logs,
   aws_route53 as route53,
   aws_route53_targets as route53Targets,
   aws_s3 as s3,
   aws_secretsmanager as secretsmanager,
+  aws_sns as sns,
+  aws_sns_subscriptions as subs,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
@@ -46,6 +51,8 @@ export interface WhathooksApiStackProps extends cdk.StackProps {
   hostedZoneName?: string;
   /** Alternative to hostedZone*: an already-issued ACM certificate ARN. */
   certArn?: string;
+  /** Email to receive CloudWatch alarm notifications (memory/CPU). Optional. */
+  alarmEmail?: string;
 }
 
 export class WhathooksApiStack extends cdk.Stack {
@@ -125,7 +132,7 @@ export class WhathooksApiStack extends cdk.Stack {
 
     const taskDef = new ecs.FargateTaskDefinition(this, 'ApiTask', {
       cpu: 512,
-      memoryLimitMiB: 1024,
+      memoryLimitMiB: 2048,
       // The image is built locally; match the build host (Apple Silicon → arm64).
       // Graviton is also cheaper. If you build x86 images in CI, switch to X86_64.
       runtimePlatform: {
@@ -157,6 +164,7 @@ export class WhathooksApiStack extends cdk.Stack {
         PUBLIC_API_URL: props.domainName
           ? `https://${props.domainName}`
           : '',
+        METRICS_NAMESPACE: 'whathooks',
       },
       secrets: {
         // Whole secret value is the connection string → injected as DATABASE_URL.
@@ -166,6 +174,18 @@ export class WhathooksApiStack extends cdk.Stack {
     });
 
     mediaBucket.grantReadWrite(taskDef.taskRole);
+
+    // Allow the task to publish its own gauges (active sessions, RSS) to the
+    // "whathooks" CloudWatch namespace only.
+    taskDef.addToTaskRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+        conditions: {
+          StringEquals: { 'cloudwatch:namespace': 'whathooks' },
+        },
+      }),
+    );
 
     const service = new ecs.FargateService(this, 'ApiService', {
       cluster,
@@ -256,6 +276,86 @@ export class WhathooksApiStack extends cdk.Stack {
         ),
       });
     }
+
+    // ---------------------------------------------------------------------
+    // Monitoring — alarms (scale-up signal) + a dashboard for headroom
+    // ---------------------------------------------------------------------
+    const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
+      displayName: 'whathooks api alarms',
+    });
+    if (props.alarmEmail) {
+      alarmTopic.addSubscription(new subs.EmailSubscription(props.alarmEmail));
+    }
+    const snsAction = new cwActions.SnsAction(alarmTopic);
+
+    service
+      .metricMemoryUtilization({
+        period: cdk.Duration.minutes(5),
+        statistic: 'Average',
+      })
+      .createAlarm(this, 'HighMemoryAlarm', {
+        alarmName: 'whathooks-api-high-memory',
+        threshold: 75,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 3,
+        comparisonOperator:
+          cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        alarmDescription:
+          'API task memory >= 75% for 15min — add RAM (memoryLimitMiB) or shard sessions.',
+      })
+      .addAlarmAction(snsAction);
+
+    service
+      .metricCpuUtilization({
+        period: cdk.Duration.minutes(5),
+        statistic: 'Average',
+      })
+      .createAlarm(this, 'HighCpuAlarm', {
+        alarmName: 'whathooks-api-high-cpu',
+        threshold: 80,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 3,
+        comparisonOperator:
+          cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        alarmDescription: 'API task CPU >= 80% for 15min.',
+      })
+      .addAlarmAction(snsAction);
+
+    // App-published gauges (active Baileys sockets + process RSS).
+    const activeSessions = new cloudwatch.Metric({
+      namespace: 'whathooks',
+      metricName: 'ActiveSessions',
+      statistic: 'Maximum',
+      period: cdk.Duration.minutes(5),
+    });
+    const processMemory = new cloudwatch.Metric({
+      namespace: 'whathooks',
+      metricName: 'ProcessMemoryMB',
+      statistic: 'Maximum',
+      period: cdk.Duration.minutes(5),
+    });
+
+    new cloudwatch.Dashboard(this, 'Dashboard', {
+      dashboardName: 'whathooks-api',
+    }).addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'Task utilization (% of 0.5 vCPU / 2 GB)',
+        left: [
+          service.metricMemoryUtilization({ period: cdk.Duration.minutes(5) }),
+          service.metricCpuUtilization({ period: cdk.Duration.minutes(5) }),
+        ],
+        leftYAxis: { min: 0, max: 100 },
+        width: 12,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Active sessions & process memory (MB)',
+        left: [activeSessions],
+        right: [processMemory],
+        width: 12,
+      }),
+    );
 
     // ---------------------------------------------------------------------
     // Outputs

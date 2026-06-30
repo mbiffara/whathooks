@@ -25,10 +25,14 @@ function mergeMessages(
   existing: ChatMessage[],
   incoming: ChatMessage[],
 ): ChatMessage[] {
-  const map = new Map<string, ChatMessage>();
-  for (const m of existing) map.set(m.id, m);
-  for (const m of incoming) map.set(m.id, m);
-  return Array.from(map.values()).sort(
+  // Keep the already-rendered object for ids we've seen, so a poll doesn't swap
+  // in a freshly-signed media URL (which would reload <img> and flicker). Only
+  // genuinely new messages are added. Return the SAME reference when nothing
+  // changed so React skips re-rendering / auto-scroll.
+  const seen = new Set(existing.map((m) => m.id));
+  const fresh = incoming.filter((m) => !seen.has(m.id));
+  if (fresh.length === 0) return existing;
+  return [...existing, ...fresh].sort(
     (a, b) =>
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );

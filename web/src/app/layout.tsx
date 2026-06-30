@@ -13,10 +13,35 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const title = "whathooks — WhatsApp as a webhook";
+const description =
+  "Connect your WhatsApp number via QR, receive messages on your webhook, and reply through a simple API.";
+
 export const metadata: Metadata = {
-  title: "whathooks — WhatsApp as a webhook",
-  description:
-    "Connect your WhatsApp number via QR, receive messages on your webhook, and reply through a simple API.",
+  metadataBase: new URL("https://whathooks.app"),
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    url: "https://whathooks.app",
+    siteName: "whathooks",
+    type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "whathooks — WhatsApp as a webhook",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({

@@ -132,7 +132,7 @@ export class WhathooksApiStack extends cdk.Stack {
 
     const taskDef = new ecs.FargateTaskDefinition(this, 'ApiTask', {
       cpu: 512,
-      memoryLimitMiB: 2048,
+      memoryLimitMiB: 1024,
       // The image is built locally; match the build host (Apple Silicon → arm64).
       // Graviton is also cheaper. If you build x86 images in CI, switch to X86_64.
       runtimePlatform: {
@@ -341,7 +341,7 @@ export class WhathooksApiStack extends cdk.Stack {
       dashboardName: 'whathooks-api',
     }).addWidgets(
       new cloudwatch.GraphWidget({
-        title: 'Task utilization (% of 0.5 vCPU / 2 GB)',
+        title: 'Task utilization (% of 0.5 vCPU / 1 GB)',
         left: [
           service.metricMemoryUtilization({ period: cdk.Duration.minutes(5) }),
           service.metricCpuUtilization({ period: cdk.Duration.minutes(5) }),

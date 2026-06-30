@@ -5,16 +5,21 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
+import { readFileSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly manager: ConnectionManagerService,
+  ) {}
 
   @Get('overview')
   async overview() {
@@ -35,6 +40,8 @@ export class AdminController {
       this.prisma.message.count(),
       this.prisma.webhook.count(),
     ]);
+    const limitMB = readMemoryLimitMB();
+    const usedMB = Math.round(process.memoryUsage().rss / 1048576);
     return {
       organizations,
       users,
@@ -43,6 +50,14 @@ export class AdminController {
       conversations,
       messages,
       webhooks,
+      // Live gauge from the running API process (single task today).
+      system: {
+        liveSessions: this.manager.getLiveSessionCount(),
+        memoryUsedMB: usedMB,
+        memoryLimitMB: limitMB,
+        memoryPercent: limitMB ? Math.round((usedMB / limitMB) * 100) : null,
+        uptimeSeconds: Math.round(process.uptime()),
+      },
     };
   }
 
@@ -136,4 +151,27 @@ export class AdminController {
       },
     };
   }
+}
+
+// Container memory limit from cgroup (v2 then v1), so the admin gauge can show a
+// percentage. Returns null when unbounded / unavailable (e.g. local dev).
+function readMemoryLimitMB(): number | null {
+  const files = [
+    '/sys/fs/cgroup/memory.max', // cgroup v2
+    '/sys/fs/cgroup/memory/memory.limit_in_bytes', // cgroup v1
+  ];
+  for (const f of files) {
+    try {
+      const raw = readFileSync(f, 'utf8').trim();
+      if (raw === 'max') continue;
+      const bytes = Number(raw);
+      // ignore the "unlimited" sentinel (a huge number) cgroup v1 reports
+      if (Number.isFinite(bytes) && bytes > 0 && bytes < 1e12) {
+        return Math.round(bytes / 1048576);
+      }
+    } catch {
+      /* not available */
+    }
+  }
+  return null;
 }

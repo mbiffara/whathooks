@@ -62,6 +62,13 @@ export interface AdminOverview {
   conversations: number;
   messages: number;
   webhooks: number;
+  system: {
+    liveSessions: number;
+    memoryUsedMB: number;
+    memoryLimitMB: number | null;
+    memoryPercent: number | null;
+    uptimeSeconds: number;
+  };
 }
 
 export interface AdminOrg {

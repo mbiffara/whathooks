@@ -37,6 +37,8 @@ export default async function AdminPage() {
         ))}
       </div>
 
+      {overview?.system && <SystemHealth system={overview.system} />}
+
       <section className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
@@ -88,4 +90,74 @@ export default async function AdminPage() {
       </section>
     </div>
   );
+}
+
+function SystemHealth({
+  system,
+}: {
+  system: NonNullable<AdminOverview["system"]>;
+}) {
+  const pct = system.memoryPercent;
+  const barColor =
+    pct == null
+      ? "bg-[var(--color-brand)]"
+      : pct >= 85
+        ? "bg-red-400"
+        : pct >= 70
+          ? "bg-amber-400"
+          : "bg-[var(--color-brand)]";
+
+  return (
+    <section className="card flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold">API process</h2>
+        <span className="text-xs text-[var(--color-muted)]">
+          live worker · refresh to update
+        </span>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-3">
+        <div>
+          <div className="text-2xl font-bold">{system.liveSessions}</div>
+          <div className="mt-1 text-xs text-[var(--color-muted)]">
+            Live WhatsApp sockets
+          </div>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="mb-1 flex items-baseline justify-between">
+            <span className="text-sm font-medium">Memory</span>
+            <span className="text-sm text-[var(--color-muted)]">
+              {system.memoryUsedMB} MB
+              {system.memoryLimitMB
+                ? ` / ${system.memoryLimitMB} MB${pct != null ? ` (${pct}%)` : ""}`
+                : ""}
+            </span>
+          </div>
+          {system.memoryLimitMB ? (
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+              <div
+                className={`h-full ${barColor}`}
+                style={{ width: `${Math.min(pct ?? 0, 100)}%` }}
+              />
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--color-muted)]">
+              Limit unavailable (local/dev)
+            </p>
+          )}
+          <p className="mt-2 text-xs text-[var(--color-muted)]">
+            Uptime {formatUptime(system.uptimeSeconds)} · alarm fires at 75%
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function formatUptime(seconds: number): string {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }

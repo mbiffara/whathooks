@@ -47,8 +47,9 @@ export interface MessageLog {
   sessionId: string;
   direction: "INBOUND" | "OUTBOUND";
   remoteJid: string;
+  contactName: string | null;
   type: string;
-  content: { text?: string | null; pushName?: string | null };
+  text: string | null;
   status: string;
   createdAt: string;
 }
@@ -58,6 +59,7 @@ export interface AdminOverview {
   users: number;
   sessions: number;
   connected: number;
+  conversations: number;
   messages: number;
   webhooks: number;
 }
@@ -69,5 +71,44 @@ export interface AdminOrg {
   users: number;
   sessions: number;
   webhooks: number;
+  conversations: number;
   messages: number;
+}
+
+export interface AdminOrgDetail {
+  id: string;
+  name: string;
+  createdAt: string;
+  users: {
+    id: string;
+    email: string;
+    name: string | null;
+    role: "ADMIN" | "CLIENT";
+    createdAt: string;
+  }[];
+  sessions: {
+    id: string;
+    label: string;
+    status: WaStatus;
+    phoneNumber: string | null;
+    lastConnectedAt: string | null;
+    createdAt: string;
+  }[];
+  webhooks: {
+    id: string;
+    url: string;
+    events: string[];
+    active: boolean;
+    sessionId: string | null;
+    createdAt: string;
+  }[];
+  apiKeys: {
+    id: string;
+    name: string;
+    prefix: string;
+    lastUsedAt: string | null;
+    revokedAt: string | null;
+    createdAt: string;
+  }[];
+  counts: { conversations: number; messages: number };
 }

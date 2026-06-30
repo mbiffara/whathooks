@@ -1,5 +1,6 @@
 import { apiServer } from "@/lib/api";
 import type { AdminOrg, AdminOverview } from "@/lib/types";
+import Link from "next/link";
 
 export default async function AdminPage() {
   const [overview, orgs] = await Promise.all([
@@ -13,7 +14,7 @@ export default async function AdminPage() {
         { label: "Users", value: overview.users },
         { label: "Sessions", value: overview.sessions },
         { label: "Connected", value: overview.connected },
-        { label: "Webhooks", value: overview.webhooks },
+        { label: "Conversations", value: overview.conversations },
         { label: "Messages", value: overview.messages },
       ]
     : [];
@@ -44,23 +45,41 @@ export default async function AdminPage() {
               <th className="px-4 py-3 font-medium">Users</th>
               <th className="px-4 py-3 font-medium">Sessions</th>
               <th className="px-4 py-3 font-medium">Webhooks</th>
+              <th className="px-4 py-3 font-medium">Chats</th>
               <th className="px-4 py-3 font-medium">Messages</th>
               <th className="px-4 py-3 font-medium">Joined</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {orgs.map((o) => (
               <tr
                 key={o.id}
-                className="border-b border-[var(--color-border)] last:border-0"
+                className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]/50"
               >
-                <td className="px-4 py-3 font-medium">{o.name}</td>
+                <td className="px-4 py-3 font-medium">
+                  <Link
+                    href={`/admin/organizations/${o.id}`}
+                    className="hover:text-[var(--color-brand)]"
+                  >
+                    {o.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-3">{o.users}</td>
                 <td className="px-4 py-3">{o.sessions}</td>
                 <td className="px-4 py-3">{o.webhooks}</td>
+                <td className="px-4 py-3">{o.conversations}</td>
                 <td className="px-4 py-3">{o.messages}</td>
                 <td className="px-4 py-3 text-xs text-[var(--color-muted)]">
                   {new Date(o.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/admin/organizations/${o.id}`}
+                    className="text-sm text-[var(--color-brand)]"
+                  >
+                    View →
+                  </Link>
                 </td>
               </tr>
             ))}

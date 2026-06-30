@@ -25,11 +25,12 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users      User[]
-  sessions   WaSession[]
-  webhooks   Webhook[]
-  apiKeys    ApiKey[]
-  messages   MessageLog[]
+  users         User[]
+  sessions      WaSession[]
+  webhooks      Webhook[]
+  apiKeys       ApiKey[]
+  conversations Conversation[]
+  messages      Message[]
 }
 
 model User {
@@ -72,10 +73,11 @@ model WaSession {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  creds      WaCredential?
-  signalKeys WaSignalKey[]
-  messages   MessageLog[]
-  webhooks   Webhook[]
+  creds         WaCredential?
+  signalKeys    WaSignalKey[]
+  conversations Conversation[]
+  messages      Message[]
+  webhooks      Webhook[]
 
   @@index([organizationId])
 }
@@ -155,35 +157,93 @@ enum MessageStatus {
   FAILED
 }
 
-model MessageLog {
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  STICKER
+  LOCATION
+  CONTACT
+  UNKNOWN
+}
+
+// A chat thread between a session and a remote contact (or group).
+model Conversation {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sessionId       String
+  session         WaSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  remoteJid       String // contact/group jid
+  name            String? // pushName / contact name
+  isGroup         Boolean      @default(false)
+  lastMessageAt   DateTime?
+  lastMessageText String?
+  lastMessageType MessageType?
+  unreadCount     Int          @default(0)
+  archived        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  messages Message[]
+
+  @@unique([sessionId, remoteJid])
+  @@index([organizationId])
+  @@index([sessionId, lastMessageAt])
+}
+
+model Message {
   id             String           @id @default(cuid())
   organizationId String
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sessionId      String
   session        WaSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  waMessageId    String?
   direction      MessageDirection
-  waMessageId    String? // WhatsApp message id
-  remoteJid      String // counterpart jid
   fromMe         Boolean          @default(false)
-  type           String // text, image, audio, document, ...
-  content        Json
+  type           MessageType      @default(TEXT)
+  text           String? // body or media caption
   status         MessageStatus
   error          String?
+  timestamp      DateTime         @default(now()) // WhatsApp message time
+  raw            Json?
   createdAt      DateTime         @default(now())
 
+  media      MediaAsset?
   deliveries WebhookDelivery[]
 
+  @@index([conversationId, timestamp])
   @@index([organizationId])
   @@index([sessionId])
-  @@index([remoteJid])
+  @@index([waMessageId])
+}
+
+// Stored media for a message (object lives in S3 / local disk).
+model MediaAsset {
+  id              String   @id @default(cuid())
+  messageId       String   @unique
+  message         Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  storageKey      String // object key in the media store
+  mimeType        String
+  fileName        String?
+  size            Int?
+  width           Int?
+  height          Int?
+  durationSeconds Int?
+  sha256          String?
+  createdAt       DateTime @default(now())
 }
 
 model WebhookDelivery {
   id             String      @id @default(cuid())
   webhookId      String
-  webhook        Webhook     @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-  messageLogId   String?
-  messageLog     MessageLog? @relation(fields: [messageLogId], references: [id], onDelete: SetNull)
+  webhook        Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  messageId      String?
+  message        Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
   event          String
   payload        Json
   responseStatus Int?

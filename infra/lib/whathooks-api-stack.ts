@@ -8,6 +8,7 @@ import {
   aws_logs as logs,
   aws_route53 as route53,
   aws_route53_targets as route53Targets,
+  aws_s3 as s3,
   aws_secretsmanager as secretsmanager,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -100,6 +101,24 @@ export class WhathooksApiStack extends cdk.Stack {
     });
 
     // ---------------------------------------------------------------------
+    // Media bucket (private; browser loads objects via presigned URLs)
+    // ---------------------------------------------------------------------
+    const mediaBucket = new s3.Bucket(this, 'MediaBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.GET],
+          allowedOrigins: ['*'],
+          allowedHeaders: ['*'],
+          maxAge: 3000,
+        },
+      ],
+    });
+
+    // ---------------------------------------------------------------------
     // ECS Fargate — the stateful Baileys api (single owner per socket → 1 task)
     // ---------------------------------------------------------------------
     const cluster = new ecs.Cluster(this, 'Cluster', { vpc });
@@ -133,6 +152,11 @@ export class WhathooksApiStack extends cdk.Stack {
         JWT_EXPIRES_IN: '7d',
         WEB_ORIGIN: props.webOrigin,
         REDIS_URL: props.redisUrl,
+        MEDIA_BUCKET: mediaBucket.bucketName,
+        AWS_REGION: this.region,
+        PUBLIC_API_URL: props.domainName
+          ? `https://${props.domainName}`
+          : '',
       },
       secrets: {
         // Whole secret value is the connection string → injected as DATABASE_URL.
@@ -140,6 +164,8 @@ export class WhathooksApiStack extends cdk.Stack {
         JWT_SECRET: ecs.Secret.fromSecretsManager(jwtSecret),
       },
     });
+
+    mediaBucket.grantReadWrite(taskDef.taskRole);
 
     const service = new ecs.FargateService(this, 'ApiService', {
       cluster,

@@ -8,7 +8,7 @@ interface DispatchParams {
   sessionId?: string | null;
   event: string;
   payload: Record<string, unknown>;
-  messageLogId?: string | null;
+  messageId?: string | null;
 }
 
 @Injectable()
@@ -48,7 +48,7 @@ export class WebhookDispatchService {
     const delivery = await this.prisma.webhookDelivery.create({
       data: {
         webhookId: hook.id,
-        messageLogId: params.messageLogId ?? null,
+        messageId: params.messageId ?? null,
         event: params.event,
         payload: JSON.parse(body),
         attempts: 1,

@@ -94,7 +94,7 @@ export default async function OverviewPage() {
                     >
                       {m.direction === "INBOUND" ? "←" : "→"}
                     </span>{" "}
-                    {m.content?.text ?? `[${m.type}]`}
+                    {m.text ?? `[${m.type}]`}
                   </span>
                   <span className="shrink-0 text-xs text-[var(--color-muted)]">
                     {m.remoteJid.split("@")[0]}

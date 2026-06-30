@@ -1,4 +1,10 @@
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class SendMessageDto {
   @IsString()
@@ -10,8 +16,19 @@ export class SendMessageDto {
   @MaxLength(120)
   to!: string; // msisdn or full jid
 
+  // Text body, or caption when sending media.
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(4096)
-  text!: string;
+  text?: string;
+
+  // When set, the media at this URL is fetched and sent (image/audio/video/document).
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  mediaUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  fileName?: string;
 }

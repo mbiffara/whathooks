@@ -4,10 +4,17 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { WaSessionStatus } from '@prisma/client';
+import {
+  MessageDirection,
+  MessageStatus,
+  MessageType,
+  WaSessionStatus,
+} from '@prisma/client';
 import makeWASocket, {
+  AnyMessageContent,
   Browsers,
   DisconnectReason,
+  downloadMediaMessage,
   fetchLatestBaileysVersion,
   jidNormalizedUser,
   makeCacheableSignalKeyStore,
@@ -16,7 +23,9 @@ import makeWASocket, {
   WASocket,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
+import { createHash } from 'crypto';
 import pino from 'pino';
+import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { usePrismaAuthState } from './baileys-auth-state';
@@ -39,6 +48,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly webhooks: WebhookDispatchService,
+    private readonly media: MediaService,
   ) {}
 
   /** Restore previously-connected sockets after a restart. */
@@ -214,52 +224,80 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private async handleInbound(sessionId: string, msg: WAMessage) {
     const organizationId = await this.orgIdOf(sessionId);
     const remoteJid = msg.key.remoteJid ?? 'unknown';
-    const { type, text } = normalizeMessage(msg);
+    const described = describeMessage(msg);
+    const timestamp = msg.messageTimestamp
+      ? new Date(Number(msg.messageTimestamp) * 1000)
+      : new Date();
 
-    const content = {
-      text,
-      pushName: msg.pushName ?? null,
+    // Download media (if any) and stage it for storage.
+    let media: StagedMedia | undefined;
+    if (described.media) {
+      try {
+        const buffer = (await downloadMediaMessage(
+          msg,
+          'buffer',
+          {},
+          {
+            logger,
+            reuploadRequest: this.sessions.get(sessionId)!.sock
+              .updateMediaMessage,
+          },
+        )) as Buffer;
+        media = { ...described.media, buffer };
+      } catch (e) {
+        this.log.warn(`Media download failed for ${sessionId}: ${e}`);
+      }
+    }
+
+    const result = await this.persistMessage({
+      sessionId,
+      organizationId,
+      remoteJid,
+      name: msg.pushName ?? null,
+      direction: MessageDirection.INBOUND,
+      fromMe: false,
+      type: described.type,
+      text: described.text,
+      waMessageId: msg.key.id ?? null,
+      status: MessageStatus.RECEIVED,
+      timestamp,
       raw: JSON.parse(JSON.stringify(msg.message)),
-    };
-
-    const logEntry = await this.prisma.messageLog.create({
-      data: {
-        organizationId,
-        sessionId,
-        direction: 'INBOUND',
-        waMessageId: msg.key.id ?? null,
-        remoteJid,
-        fromMe: false,
-        type,
-        content,
-        status: 'RECEIVED',
-      },
+      media,
+      incrementUnread: true,
     });
 
     await this.webhooks.dispatch({
       organizationId,
       sessionId,
       event: 'message.received',
-      messageLogId: logEntry.id,
+      messageId: result.messageId,
       payload: {
-        id: logEntry.id,
+        id: result.messageId,
+        conversationId: result.conversationId,
         sessionId,
         from: remoteJid,
         pushName: msg.pushName ?? null,
-        type,
-        text,
+        type: described.type,
+        text: described.text,
+        media: result.mediaUrl
+          ? {
+              url: result.mediaUrl,
+              mimeType: media?.mimeType ?? null,
+              fileName: media?.fileName ?? null,
+            }
+          : null,
         waMessageId: msg.key.id ?? null,
-        timestamp: Number(msg.messageTimestamp) || null,
+        timestamp: Math.floor(timestamp.getTime() / 1000),
       },
     });
   }
 
-  /** Send a text message and log it. Returns the WhatsApp message id. */
+  /** Send a text message. Returns the WhatsApp message id + stored message id. */
   async sendText(
     sessionId: string,
     to: string,
     text: string,
-  ): Promise<{ waMessageId: string | null; logId: string }> {
+  ): Promise<{ waMessageId: string | null; messageId: string }> {
     const live = this.sessions.get(sessionId);
     if (!live) throw new Error('Session is not connected');
 
@@ -267,20 +305,156 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     const sent = await live.sock.sendMessage(jid, { text });
     const organizationId = await this.orgIdOf(sessionId);
 
-    const log = await this.prisma.messageLog.create({
-      data: {
-        organizationId,
-        sessionId,
-        direction: 'OUTBOUND',
-        waMessageId: sent?.key?.id ?? null,
-        remoteJid: jid,
-        fromMe: true,
-        type: 'text',
-        content: { text },
-        status: 'SENT',
+    const result = await this.persistMessage({
+      sessionId,
+      organizationId,
+      remoteJid: jid,
+      direction: MessageDirection.OUTBOUND,
+      fromMe: true,
+      type: MessageType.TEXT,
+      text,
+      waMessageId: sent?.key?.id ?? null,
+      status: MessageStatus.SENT,
+      timestamp: new Date(),
+      incrementUnread: false,
+    });
+    return { waMessageId: sent?.key?.id ?? null, messageId: result.messageId };
+  }
+
+  /** Send a media message (image/video/audio/document). */
+  async sendMedia(
+    sessionId: string,
+    to: string,
+    file: { buffer: Buffer; mimeType: string; fileName?: string | null },
+    caption?: string | null,
+  ): Promise<{ waMessageId: string | null; messageId: string; mediaUrl?: string }> {
+    const live = this.sessions.get(sessionId);
+    if (!live) throw new Error('Session is not connected');
+
+    const jid = toJid(to);
+    const kind = mediaKind(file.mimeType);
+    const content = buildBaileysMedia(kind, file, caption);
+    const sent = await live.sock.sendMessage(jid, content);
+    const organizationId = await this.orgIdOf(sessionId);
+
+    const result = await this.persistMessage({
+      sessionId,
+      organizationId,
+      remoteJid: jid,
+      direction: MessageDirection.OUTBOUND,
+      fromMe: true,
+      type: kindToType(kind),
+      text: caption ?? null,
+      waMessageId: sent?.key?.id ?? null,
+      status: MessageStatus.SENT,
+      timestamp: new Date(),
+      media: {
+        buffer: file.buffer,
+        mimeType: file.mimeType,
+        fileName: file.fileName ?? null,
+      },
+      incrementUnread: false,
+    });
+    return {
+      waMessageId: sent?.key?.id ?? null,
+      messageId: result.messageId,
+      mediaUrl: result.mediaUrl,
+    };
+  }
+
+  /** Upsert the conversation, create the message row, store media. */
+  private async persistMessage(p: {
+    sessionId: string;
+    organizationId: string;
+    remoteJid: string;
+    name?: string | null;
+    direction: MessageDirection;
+    fromMe: boolean;
+    type: MessageType;
+    text?: string | null;
+    waMessageId?: string | null;
+    status: MessageStatus;
+    timestamp: Date;
+    raw?: unknown;
+    media?: StagedMedia;
+    incrementUnread: boolean;
+  }): Promise<{
+    messageId: string;
+    conversationId: string;
+    mediaUrl?: string;
+  }> {
+    const preview = p.text || mediaLabel(p.type);
+    const isGroup = p.remoteJid.endsWith('@g.us');
+
+    const conversation = await this.prisma.conversation.upsert({
+      where: {
+        sessionId_remoteJid: {
+          sessionId: p.sessionId,
+          remoteJid: p.remoteJid,
+        },
+      },
+      create: {
+        organizationId: p.organizationId,
+        sessionId: p.sessionId,
+        remoteJid: p.remoteJid,
+        name: p.name ?? null,
+        isGroup,
+        lastMessageAt: p.timestamp,
+        lastMessageText: preview,
+        lastMessageType: p.type,
+        unreadCount: p.incrementUnread ? 1 : 0,
+      },
+      update: {
+        name: p.name ?? undefined,
+        lastMessageAt: p.timestamp,
+        lastMessageText: preview,
+        lastMessageType: p.type,
+        ...(p.incrementUnread ? { unreadCount: { increment: 1 } } : {}),
       },
     });
-    return { waMessageId: sent?.key?.id ?? null, logId: log.id };
+
+    const message = await this.prisma.message.create({
+      data: {
+        organizationId: p.organizationId,
+        conversationId: conversation.id,
+        sessionId: p.sessionId,
+        waMessageId: p.waMessageId ?? null,
+        direction: p.direction,
+        fromMe: p.fromMe,
+        type: p.type,
+        text: p.text ?? null,
+        status: p.status,
+        timestamp: p.timestamp,
+        raw: p.raw ? (p.raw as object) : undefined,
+      },
+    });
+
+    let mediaUrl: string | undefined;
+    if (p.media?.buffer) {
+      const ext = extForMedia(p.media.mimeType, p.media.fileName);
+      const key = this.media.newKey(p.organizationId, p.sessionId, ext);
+      await this.media.put(key, p.media.buffer, p.media.mimeType);
+      await this.prisma.mediaAsset.create({
+        data: {
+          messageId: message.id,
+          storageKey: key,
+          mimeType: p.media.mimeType,
+          fileName: p.media.fileName ?? null,
+          size: p.media.buffer.length,
+          width: p.media.width ?? null,
+          height: p.media.height ?? null,
+          durationSeconds: p.media.durationSeconds ?? null,
+          sha256: createHash('sha256').update(p.media.buffer).digest('hex'),
+        },
+      });
+      mediaUrl = await this.media.viewUrl(
+        key,
+        p.media.mimeType,
+        p.media.fileName ?? undefined,
+      );
+    }
+
+    return { messageId: message.id, conversationId: conversation.id, mediaUrl };
   }
 
   /** Log out and remove the socket + persisted auth. */
@@ -346,21 +520,160 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   }
 }
 
-function normalizeMessage(msg: WAMessage): { type: string; text: string | null } {
+interface MediaMeta {
+  mimeType: string;
+  fileName?: string | null;
+  width?: number | null;
+  height?: number | null;
+  durationSeconds?: number | null;
+}
+interface StagedMedia extends MediaMeta {
+  buffer: Buffer;
+}
+
+function num(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function describeMessage(msg: WAMessage): {
+  type: MessageType;
+  text: string | null;
+  media?: MediaMeta;
+} {
   const m = msg.message ?? {};
-  if (m.conversation) return { type: 'text', text: m.conversation };
+  if (m.conversation) return { type: MessageType.TEXT, text: m.conversation };
   if (m.extendedTextMessage?.text)
-    return { type: 'text', text: m.extendedTextMessage.text };
-  if (m.imageMessage) return { type: 'image', text: m.imageMessage.caption ?? null };
-  if (m.videoMessage) return { type: 'video', text: m.videoMessage.caption ?? null };
-  if (m.audioMessage) return { type: 'audio', text: null };
+    return { type: MessageType.TEXT, text: m.extendedTextMessage.text };
+  if (m.imageMessage)
+    return {
+      type: MessageType.IMAGE,
+      text: m.imageMessage.caption ?? null,
+      media: {
+        mimeType: m.imageMessage.mimetype ?? 'image/jpeg',
+        width: num(m.imageMessage.width),
+        height: num(m.imageMessage.height),
+      },
+    };
+  if (m.videoMessage)
+    return {
+      type: MessageType.VIDEO,
+      text: m.videoMessage.caption ?? null,
+      media: {
+        mimeType: m.videoMessage.mimetype ?? 'video/mp4',
+        width: num(m.videoMessage.width),
+        height: num(m.videoMessage.height),
+        durationSeconds: num(m.videoMessage.seconds),
+      },
+    };
+  if (m.audioMessage)
+    return {
+      type: MessageType.AUDIO,
+      text: null,
+      media: {
+        mimeType: m.audioMessage.mimetype ?? 'audio/ogg',
+        durationSeconds: num(m.audioMessage.seconds),
+      },
+    };
   if (m.documentMessage)
-    return { type: 'document', text: m.documentMessage.caption ?? null };
-  if (m.stickerMessage) return { type: 'sticker', text: null };
-  if (m.locationMessage) return { type: 'location', text: null };
-  if (m.contactMessage) return { type: 'contact', text: null };
-  const [key] = Object.keys(m);
-  return { type: key ?? 'unknown', text: null };
+    return {
+      type: MessageType.DOCUMENT,
+      text: m.documentMessage.caption ?? null,
+      media: {
+        mimeType: m.documentMessage.mimetype ?? 'application/octet-stream',
+        fileName: m.documentMessage.fileName ?? m.documentMessage.title ?? null,
+      },
+    };
+  if (m.stickerMessage)
+    return {
+      type: MessageType.STICKER,
+      text: null,
+      media: { mimeType: m.stickerMessage.mimetype ?? 'image/webp' },
+    };
+  if (m.locationMessage) return { type: MessageType.LOCATION, text: null };
+  if (m.contactMessage) return { type: MessageType.CONTACT, text: null };
+  return { type: MessageType.UNKNOWN, text: null };
+}
+
+type MediaKind = 'image' | 'video' | 'audio' | 'document';
+function mediaKind(mime: string): MediaKind {
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('audio/')) return 'audio';
+  return 'document';
+}
+function kindToType(kind: MediaKind): MessageType {
+  return {
+    image: MessageType.IMAGE,
+    video: MessageType.VIDEO,
+    audio: MessageType.AUDIO,
+    document: MessageType.DOCUMENT,
+  }[kind];
+}
+function buildBaileysMedia(
+  kind: MediaKind,
+  file: { buffer: Buffer; mimeType: string; fileName?: string | null },
+  caption?: string | null,
+): AnyMessageContent {
+  const cap = caption ?? undefined;
+  switch (kind) {
+    case 'image':
+      return {
+        image: file.buffer,
+        mimetype: file.mimeType,
+        caption: cap,
+      } as AnyMessageContent;
+    case 'video':
+      return {
+        video: file.buffer,
+        mimetype: file.mimeType,
+        caption: cap,
+      } as AnyMessageContent;
+    case 'audio':
+      return {
+        audio: file.buffer,
+        mimetype: file.mimeType,
+        ptt: false,
+      } as AnyMessageContent;
+    default:
+      return {
+        document: file.buffer,
+        mimetype: file.mimeType,
+        fileName: file.fileName ?? 'file',
+        caption: cap,
+      } as AnyMessageContent;
+  }
+}
+function mediaLabel(type: MessageType): string {
+  return (
+    {
+      [MessageType.IMAGE]: '📷 Photo',
+      [MessageType.VIDEO]: '🎥 Video',
+      [MessageType.AUDIO]: '🎤 Audio',
+      [MessageType.DOCUMENT]: '📄 Document',
+      [MessageType.STICKER]: 'Sticker',
+      [MessageType.LOCATION]: '📍 Location',
+      [MessageType.CONTACT]: '👤 Contact',
+      [MessageType.TEXT]: '',
+      [MessageType.UNKNOWN]: 'Message',
+    }[type] || 'Message'
+  );
+}
+function extForMedia(mime: string, fileName?: string | null): string {
+  if (fileName && fileName.includes('.')) return fileName.split('.').pop()!;
+  const map: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'video/mp4': 'mp4',
+    'audio/ogg': 'ogg',
+    'audio/mpeg': 'mp3',
+    'audio/mp4': 'm4a',
+    'application/pdf': 'pdf',
+  };
+  return map[mime] ?? mime.split('/')[1] ?? 'bin';
 }
 
 // Accept a bare msisdn ("15551234567"), or a full jid.

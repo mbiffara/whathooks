@@ -33,3 +33,7 @@ api/prisma/*.db
 # misc
 coverage/
 *.tsbuildinfo
+
+# local media store
+.media/
+api/.media/

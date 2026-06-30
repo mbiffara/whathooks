@@ -1,0 +1,50 @@
+export type ChatMessageType =
+  | "TEXT"
+  | "IMAGE"
+  | "AUDIO"
+  | "VIDEO"
+  | "DOCUMENT"
+  | "STICKER"
+  | "LOCATION"
+  | "CONTACT"
+  | "UNKNOWN";
+
+export interface ChatMedia {
+  url: string;
+  mimeType: string;
+  fileName: string | null;
+  width: number | null;
+  height: number | null;
+  durationSeconds: number | null;
+  size: number | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  direction: "INBOUND" | "OUTBOUND";
+  fromMe: boolean;
+  type: ChatMessageType;
+  text: string | null;
+  status: string;
+  timestamp: string;
+  media: ChatMedia | null;
+}
+
+export interface MessagesPage {
+  items: ChatMessage[];
+  hasMore: boolean;
+  before: string | null;
+}
+
+export interface Conversation {
+  id: string;
+  sessionId: string;
+  remoteJid: string;
+  contact: string;
+  name: string | null;
+  isGroup: boolean;
+  unreadCount: number;
+  lastMessageAt: string | null;
+  lastMessageText: string | null;
+  lastMessageType: string | null;
+}

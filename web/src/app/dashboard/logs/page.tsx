@@ -54,7 +54,7 @@ export default async function LogsPage() {
                   </td>
                   <td className="px-4 py-3">{m.type}</td>
                   <td className="max-w-xs truncate px-4 py-3">
-                    {m.content?.text ?? "—"}
+                    {m.text ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-xs text-[var(--color-muted)]">
                     {m.status}

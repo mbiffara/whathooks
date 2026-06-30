@@ -264,9 +264,9 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div className="flex h-full overflow-hidden">
       {/* Left pane */}
-      <div className="flex w-[320px] shrink-0 flex-col border-r border-[var(--color-border)]">
+      <div className="flex w-[320px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:w-[360px]">
         <div className="border-b border-[var(--color-border)] p-3">
           <h1 className="mb-2 text-lg font-semibold">Messages</h1>
           <select

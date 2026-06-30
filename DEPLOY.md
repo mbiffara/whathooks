@@ -165,6 +165,53 @@ UPDATE "User" SET role = 'ADMIN' WHERE email = 'you@yourdomain.com';
 Since RDS + Redis are reused, the new spend is roughly **~$35/mo**: Fargate
 0.5 vCPU / 1 GB (~$18) + ALB (~$16) + logs/secrets. No new database cost.
 
+## Monitoring & when to scale
+
+The stack publishes operational signals to CloudWatch (region `us-east-1`):
+
+- **Dashboard `whathooks-api`** — task memory/CPU % plus app gauges. Open it in
+  the CloudWatch console (Dashboards → `whathooks-api`).
+- **App gauges** (namespace `whathooks`, every 60s): `ActiveSessions` (live Baileys
+  sockets in the process) and `ProcessMemoryMB` (real RSS).
+- **Alarms → SNS email** (`WH_ALARM_EMAIL`): `whathooks-api-high-memory` (≥75% for
+  15 min) and `whathooks-api-high-cpu` (≥80% for 15 min). Confirm the SNS email
+  subscription once, or alarms can't notify you.
+
+### Capacity model (single stateful task)
+
+The api holds **one Baileys WebSocket per connected number in one process**, so
+scaling is **vertical first**. Memory is the binding constraint (~65–70 MB base +
+~20–40 MB per idle session, more under media/traffic). Watch `ProcessMemoryMB`
+against the task's memory and `ActiveSessions` for headroom.
+
+Rough capacity per task size (estimates — measure `ProcessMemoryMB` as you grow):
+
+| `cpu` / `memoryLimitMiB` | ~capacity |
+| --- | --- |
+| 512 / 1024 (current) | ~15–20 numbers |
+| 512 / 2048 | ~30–40 |
+| 1024 / 2048 | ~40–50 |
+| 2048 / 4096 | ~100–150 |
+
+> ⚠️ It's a single task, so an out-of-memory kill drops **every** session at once
+> (they then all reconnect → CPU spike). Scale **before** ~70–75% memory, not at
+> the limit.
+
+### Scale up (vertical) — one-line change
+
+1. Edit `cpu` / `memoryLimitMiB` in `infra/lib/whathooks-api-stack.ts`
+   (`FargateTaskDefinition`). Use a valid Fargate combo (0.5 vCPU supports
+   1–4 GB; for >4 GB raise `cpu` too).
+2. `cd infra && npm run deploy`. Expect one brief API blip as the task rolls;
+   sessions reconnect from persisted creds.
+
+### Scale out (horizontal) — when one task isn't enough
+
+Past a few hundred numbers, or when a single-task outage is unacceptable, split the
+API (stateless) from **connection workers** (stateful), with a `session→worker`
+registry in Redis (already provisioned) and outbound sends routed to the owning
+worker. Bigger lift; the `isLive` ownership seam already anticipates it.
+
 ## Tear down
 
 ```bash

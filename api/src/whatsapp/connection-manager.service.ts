@@ -43,6 +43,7 @@ interface LiveSession {
 export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(ConnectionManagerService.name);
   private readonly sessions = new Map<string, LiveSession>();
+  private readonly groupNames = new Map<string, string>(); // jid -> subject
   private shuttingDown = false;
 
   constructor(
@@ -140,8 +141,49 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     sock.ev.on('messages.upsert', (upsert) =>
       this.onMessages(sessionId, upsert),
     );
+    sock.ev.on('groups.update', (updates) =>
+      this.onGroupsUpdate(sessionId, updates),
+    );
 
     live.starting = false;
+  }
+
+  // Keep group conversation titles in sync with the group subject.
+  private async onGroupsUpdate(
+    sessionId: string,
+    updates: Array<{ id?: string | null; subject?: string | null }>,
+  ) {
+    for (const u of updates) {
+      if (!u.id || !u.subject) continue;
+      this.groupNames.set(u.id, u.subject);
+      await this.prisma.conversation
+        .updateMany({
+          where: { sessionId, remoteJid: u.id },
+          data: { name: u.subject },
+        })
+        .catch(() => undefined);
+    }
+  }
+
+  /** Resolve (and cache) a group's subject; null for non-groups or on failure. */
+  private async groupSubject(
+    sessionId: string,
+    jid: string,
+  ): Promise<string | null> {
+    const cached = this.groupNames.get(jid);
+    if (cached) return cached;
+    const sock = this.sessions.get(sessionId)?.sock;
+    if (!sock) return null;
+    try {
+      const meta = await sock.groupMetadata(jid);
+      if (meta?.subject) {
+        this.groupNames.set(jid, meta.subject);
+        return meta.subject;
+      }
+    } catch {
+      /* metadata unavailable */
+    }
+    return null;
   }
 
   private async onConnectionUpdate(
@@ -229,6 +271,12 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private async handleInbound(sessionId: string, msg: WAMessage) {
     const organizationId = await this.orgIdOf(sessionId);
     const remoteJid = msg.key.remoteJid ?? 'unknown';
+    const isGroup = remoteJid.endsWith('@g.us');
+    // For groups the conversation title is the group subject (pushName is the
+    // individual sender, not the group); for 1:1 it's the contact's pushName.
+    const contactName = isGroup
+      ? await this.groupSubject(sessionId, remoteJid)
+      : (msg.pushName ?? null);
     const described = describeMessage(msg);
     const timestamp = msg.messageTimestamp
       ? new Date(Number(msg.messageTimestamp) * 1000)
@@ -258,7 +306,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       sessionId,
       organizationId,
       remoteJid,
-      name: msg.pushName ?? null,
+      name: contactName,
       direction: MessageDirection.INBOUND,
       fromMe: false,
       type: described.type,

@@ -87,20 +87,29 @@ model WaSession {
   @@index([agentId])
 }
 
+enum AgentProvider {
+  ANTHROPIC
+  OPENAI
+}
+
 // An AI auto-responder: a personality ("soul") + behavior ("instructions"),
-// backed by an LLM, assignable to one or more WhatsApp sessions.
+// backed by an LLM (provider + model + the org's own API key), assignable to
+// one or more WhatsApp sessions.
 model Agent {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  soul           String // personality / character
-  instructions   String // behavioral instructions
-  model          String       @default("claude-opus-4-8")
-  maxTokens      Int          @default(1024)
-  enabled        Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id              String        @id @default(cuid())
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  soul            String // personality / character
+  instructions    String // behavioral instructions
+  provider        AgentProvider @default(ANTHROPIC)
+  model           String        @default("claude-opus-4-8")
+  apiKeyCiphertext String // AES-256-GCM encrypted provider API key
+  apiKeyHint      String // last chars, for display (e.g. "sk-…aB12")
+  maxTokens       Int           @default(1024)
+  enabled         Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   sessions WaSession[]
   messages Message[]

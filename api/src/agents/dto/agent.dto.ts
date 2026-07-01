@@ -10,11 +10,20 @@ import {
   MinLength,
 } from 'class-validator';
 
-export const AGENT_MODELS = [
-  'claude-opus-4-8',
-  'claude-sonnet-4-6',
-  'claude-haiku-4-5',
-] as const;
+export const AGENT_PROVIDERS = ['ANTHROPIC', 'OPENAI'] as const;
+export type AgentProviderName = (typeof AGENT_PROVIDERS)[number];
+
+// Suggested models per provider (the API accepts any non-empty string, so new
+// models work without a backend change; these drive the frontend picker).
+export const AGENT_MODELS: Record<AgentProviderName, string[]> = {
+  ANTHROPIC: ['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
+  OPENAI: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini'],
+};
+
+export const DEFAULT_MODEL: Record<AgentProviderName, string> = {
+  ANTHROPIC: 'claude-opus-4-8',
+  OPENAI: 'gpt-4o',
+};
 
 export class CreateAgentDto {
   @IsString()
@@ -33,8 +42,19 @@ export class CreateAgentDto {
   instructions!: string;
 
   @IsOptional()
-  @IsIn(AGENT_MODELS)
+  @IsIn(AGENT_PROVIDERS)
+  provider?: AgentProviderName;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
   model?: string;
+
+  @IsString()
+  @MinLength(8)
+  @MaxLength(400)
+  apiKey!: string;
 
   @IsOptional()
   @IsInt()
@@ -67,8 +87,21 @@ export class UpdateAgentDto {
   instructions?: string;
 
   @IsOptional()
-  @IsIn(AGENT_MODELS)
+  @IsIn(AGENT_PROVIDERS)
+  provider?: AgentProviderName;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
   model?: string;
+
+  // Optional on update — omit to keep the existing key.
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  @MaxLength(400)
+  apiKey?: string;
 
   @IsOptional()
   @IsInt()

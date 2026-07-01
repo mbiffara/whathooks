@@ -25,8 +25,6 @@ export interface WhathooksApiStackProps extends cdk.StackProps {
   vpcId: string;
   /** Secrets Manager ARN whose value is the full DATABASE_URL connection string. */
   databaseUrlSecretArn: string;
-  /** Secrets Manager ARN holding the Anthropic API key (enables AI agents). Optional. */
-  anthropicSecretArn?: string;
   /**
    * Connection URL for your existing ElastiCache cache (Valkey or Redis — same
    * wire protocol). Use redis://host:6379, or rediss://host:6379 when in-transit
@@ -108,13 +106,14 @@ export class WhathooksApiStack extends cdk.Stack {
     const jwtSecret = new secretsmanager.Secret(this, 'JwtSecret', {
       generateSecretString: { excludePunctuation: true, passwordLength: 48 },
     });
-    const anthropicSecret = props.anthropicSecretArn
-      ? secretsmanager.Secret.fromSecretCompleteArn(
-          this,
-          'AnthropicSecret',
-          props.anthropicSecretArn,
-        )
-      : undefined;
+    // Key material for encrypting each agent's provider API key at rest. Generated
+    // once and retained; rotating it would make existing agent keys undecryptable.
+    const agentEncryptionSecret = new secretsmanager.Secret(
+      this,
+      'AgentEncryptionKey',
+      { generateSecretString: { excludePunctuation: true, passwordLength: 48 } },
+    );
+    agentEncryptionSecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
 
     // ---------------------------------------------------------------------
     // Media bucket (private; browser loads objects via presigned URLs)
@@ -179,9 +178,8 @@ export class WhathooksApiStack extends cdk.Stack {
         // Whole secret value is the connection string → injected as DATABASE_URL.
         DATABASE_URL: ecs.Secret.fromSecretsManager(dbUrlSecret),
         JWT_SECRET: ecs.Secret.fromSecretsManager(jwtSecret),
-        ...(anthropicSecret
-          ? { ANTHROPIC_API_KEY: ecs.Secret.fromSecretsManager(anthropicSecret) }
-          : {}),
+        AGENT_ENCRYPTION_KEY:
+          ecs.Secret.fromSecretsManager(agentEncryptionSecret),
       },
     });
 

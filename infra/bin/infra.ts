@@ -14,7 +14,6 @@ const val = (cdkKey: string, envKey: string): string | undefined =>
 const config = {
   vpcId: val('vpcId', 'WH_VPC_ID'),
   databaseUrlSecretArn: val('databaseUrlSecretArn', 'WH_DATABASE_URL_SECRET_ARN'),
-  anthropicSecretArn: val('anthropicSecretArn', 'WH_ANTHROPIC_SECRET_ARN'),
   redisUrl: val('redisUrl', 'WH_REDIS_URL'),
   dbSecurityGroupId: val('dbSecurityGroupId', 'WH_DB_SG_ID'),
   redisSecurityGroupId: val('redisSecurityGroupId', 'WH_REDIS_SG_ID'),
@@ -52,7 +51,6 @@ new WhathooksApiStack(app, 'WhathooksApi', {
   webOrigin: config.webOrigin ?? 'https://your-app.vercel.app',
   vpcId: config.vpcId!,
   databaseUrlSecretArn: config.databaseUrlSecretArn!,
-  anthropicSecretArn: config.anthropicSecretArn,
   redisUrl: config.redisUrl!,
   dbSecurityGroupId: config.dbSecurityGroupId!,
   redisSecurityGroupId: config.redisSecurityGroupId!,

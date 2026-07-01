@@ -1,11 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Agent } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAgentDto, UpdateAgentDto } from './dto/agent.dto';
+import {
+  AgentProviderName,
+  CreateAgentDto,
+  DEFAULT_MODEL,
+  UpdateAgentDto,
+} from './dto/agent.dto';
+import { EncryptionService } from './encryption.service';
 
 @Injectable()
 export class AgentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly encryption: EncryptionService,
+  ) {}
 
   async list(organizationId: string) {
     const agents = await this.prisma.agent.findMany({
@@ -25,13 +38,19 @@ export class AgentsService {
   }
 
   async create(organizationId: string, dto: CreateAgentDto) {
+    this.ensureEncryption();
+    const provider: AgentProviderName = dto.provider ?? 'ANTHROPIC';
+    const apiKey = dto.apiKey.trim();
     const agent = await this.prisma.agent.create({
       data: {
         organizationId,
         name: dto.name,
         soul: dto.soul,
         instructions: dto.instructions,
-        model: dto.model ?? 'claude-opus-4-8',
+        provider,
+        model: dto.model?.trim() || DEFAULT_MODEL[provider],
+        apiKeyCiphertext: this.encryption.encrypt(apiKey),
+        apiKeyHint: this.encryption.hint(apiKey),
         maxTokens: dto.maxTokens ?? 1024,
         enabled: dto.enabled ?? true,
       },
@@ -40,19 +59,43 @@ export class AgentsService {
   }
 
   async update(organizationId: string, id: string, dto: UpdateAgentDto) {
-    await this.require(organizationId, id);
+    const existing = await this.require(organizationId, id);
+    const provider = dto.provider ?? (existing.provider as AgentProviderName);
+
+    // If the provider changed and no explicit model was given, reset to the new
+    // provider's default (an Anthropic model can't run on OpenAI, and vice versa).
+    let model = dto.model?.trim();
+    if (!model && dto.provider && dto.provider !== existing.provider) {
+      model = DEFAULT_MODEL[provider];
+    }
+
+    let apiKeyCiphertext: string | undefined;
+    let apiKeyHint: string | undefined;
+    if (dto.apiKey) {
+      this.ensureEncryption();
+      const apiKey = dto.apiKey.trim();
+      apiKeyCiphertext = this.encryption.encrypt(apiKey);
+      apiKeyHint = this.encryption.hint(apiKey);
+    }
+
     const agent = await this.prisma.agent.update({
       where: { id },
       data: {
         name: dto.name,
         soul: dto.soul,
         instructions: dto.instructions,
-        model: dto.model,
+        provider: dto.provider,
+        model,
+        apiKeyCiphertext,
+        apiKeyHint,
         maxTokens: dto.maxTokens,
         enabled: dto.enabled,
       },
     });
-    return this.toPublic(agent, 0);
+    const sessionCount = await this.prisma.waSession.count({
+      where: { agentId: id },
+    });
+    return this.toPublic(agent, sessionCount);
   }
 
   async remove(organizationId: string, id: string) {
@@ -80,6 +123,14 @@ export class AgentsService {
     return { ok: true, agentId: agentId || null };
   }
 
+  private ensureEncryption() {
+    if (!this.encryption.isConfigured()) {
+      throw new BadRequestException(
+        'Agent API-key storage is not configured on the server (AGENT_ENCRYPTION_KEY missing).',
+      );
+    }
+  }
+
   private async require(organizationId: string, id: string): Promise<Agent> {
     const agent = await this.prisma.agent.findFirst({
       where: { id, organizationId },
@@ -94,7 +145,9 @@ export class AgentsService {
       name: a.name,
       soul: a.soul,
       instructions: a.instructions,
+      provider: a.provider,
       model: a.model,
+      apiKeyHint: a.apiKeyHint, // never the ciphertext or the key itself
       maxTokens: a.maxTokens,
       enabled: a.enabled,
       sessionCount,

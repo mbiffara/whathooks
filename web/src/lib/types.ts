@@ -17,12 +17,16 @@ export interface WaSession {
   live: boolean;
 }
 
+export type AgentProvider = "ANTHROPIC" | "OPENAI";
+
 export interface Agent {
   id: string;
   name: string;
   soul: string;
   instructions: string;
+  provider: AgentProvider;
   model: string;
+  apiKeyHint: string;
   maxTokens: number;
   enabled: boolean;
   sessionCount: number;
@@ -30,11 +34,27 @@ export interface Agent {
   updatedAt?: string;
 }
 
-export const AGENT_MODELS = [
-  { id: "claude-opus-4-8", label: "Claude Opus 4.8 — most capable" },
-  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 — balanced" },
-  { id: "claude-haiku-4-5", label: "Claude Haiku 4.5 — fastest & cheapest" },
+export const AGENT_PROVIDERS: { id: AgentProvider; label: string }[] = [
+  { id: "ANTHROPIC", label: "Anthropic (Claude)" },
+  { id: "OPENAI", label: "OpenAI (ChatGPT)" },
 ];
+
+export const AGENT_MODELS: Record<
+  AgentProvider,
+  { id: string; label: string }[]
+> = {
+  ANTHROPIC: [
+    { id: "claude-opus-4-8", label: "Claude Opus 4.8 — most capable" },
+    { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 — balanced" },
+    { id: "claude-haiku-4-5", label: "Claude Haiku 4.5 — fastest & cheapest" },
+  ],
+  OPENAI: [
+    { id: "gpt-4o", label: "GPT-4o — most capable" },
+    { id: "gpt-4o-mini", label: "GPT-4o mini — fast & cheap" },
+    { id: "gpt-4.1", label: "GPT-4.1" },
+    { id: "gpt-4.1-mini", label: "GPT-4.1 mini" },
+  ],
+};
 
 export interface WaSessionDetail extends WaSession {
   qr: string | null;

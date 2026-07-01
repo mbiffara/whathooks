@@ -1,7 +1,12 @@
 "use client";
 
 import { apiClient } from "@/lib/client-api";
-import { AGENT_MODELS, type Agent } from "@/lib/types";
+import {
+  AGENT_MODELS,
+  AGENT_PROVIDERS,
+  type Agent,
+  type AgentProvider,
+} from "@/lib/types";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -10,7 +15,10 @@ type Draft = {
   name: string;
   soul: string;
   instructions: string;
+  provider: AgentProvider;
   model: string;
+  apiKey: string; // blank on edit = keep existing
+  apiKeyHint?: string;
   enabled: boolean;
 };
 
@@ -18,7 +26,9 @@ const EMPTY: Draft = {
   name: "",
   soul: "",
   instructions: "",
-  model: AGENT_MODELS[0].id,
+  provider: "ANTHROPIC",
+  model: AGENT_MODELS.ANTHROPIC[0].id,
+  apiKey: "",
   enabled: true,
 };
 
@@ -52,13 +62,17 @@ export default function AgentsPage() {
     setSaving(true);
     setError(null);
     try {
-      const body = JSON.stringify({
+      const payload: Record<string, unknown> = {
         name: draft.name,
         soul: draft.soul,
         instructions: draft.instructions,
+        provider: draft.provider,
         model: draft.model,
         enabled: draft.enabled,
-      });
+      };
+      // Only send the key when the user entered one (blank = keep existing).
+      if (draft.apiKey.trim()) payload.apiKey = draft.apiKey.trim();
+      const body = JSON.stringify(payload);
       if (draft.id) {
         await apiClient(`/agents/${draft.id}`, token, {
           method: "PATCH",
@@ -152,32 +166,78 @@ export default function AgentsPage() {
               required
             />
           </div>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex-1">
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-40">
+              <label className="label">Provider</label>
+              <select
+                className="input"
+                value={draft.provider}
+                onChange={(e) => {
+                  const provider = e.target.value as AgentProvider;
+                  // Reset the model to the new provider's default.
+                  setDraft({
+                    ...draft,
+                    provider,
+                    model: AGENT_MODELS[provider][0].id,
+                  });
+                }}
+              >
+                {AGENT_PROVIDERS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 min-w-40">
               <label className="label">Model</label>
               <select
                 className="input"
                 value={draft.model}
                 onChange={(e) => setDraft({ ...draft, model: e.target.value })}
               >
-                {AGENT_MODELS.map((m) => (
+                {AGENT_MODELS[draft.provider].map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
                   </option>
                 ))}
               </select>
             </div>
-            <label className="flex items-center gap-2 pb-2 text-sm">
-              <input
-                type="checkbox"
-                checked={draft.enabled}
-                onChange={(e) =>
-                  setDraft({ ...draft, enabled: e.target.checked })
-                }
-              />
-              Enabled
-            </label>
           </div>
+          <div>
+            <label className="label">
+              API key{" "}
+              <span className="text-[var(--color-muted)]">
+                {draft.provider === "OPENAI" ? "— OpenAI" : "— Anthropic"}
+              </span>
+            </label>
+            <input
+              className="input"
+              type="password"
+              autoComplete="off"
+              value={draft.apiKey}
+              onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
+              placeholder={
+                draft.id
+                  ? `Leave blank to keep current key (${draft.apiKeyHint ?? "•••"})`
+                  : draft.provider === "OPENAI"
+                    ? "sk-…"
+                    : "sk-ant-…"
+              }
+              required={!draft.id}
+            />
+            <p className="mt-1 text-xs text-[var(--color-muted)]">
+              Stored encrypted. Used only to generate this agent’s replies.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={draft.enabled}
+              onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+            />
+            Enabled
+          </label>
           <div className="flex gap-2">
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving ? "Saving…" : draft.id ? "Save changes" : "Create agent"}
@@ -206,7 +266,10 @@ export default function AgentsPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-medium">{a.name}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--color-muted)]">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
+                    <span className="pill">
+                      {a.provider === "OPENAI" ? "OpenAI" : "Anthropic"}
+                    </span>
                     <span className="pill">{a.model}</span>
                     <span>
                       {a.sessionCount} session{a.sessionCount === 1 ? "" : "s"}
@@ -235,7 +298,10 @@ export default function AgentsPage() {
                       name: a.name,
                       soul: a.soul,
                       instructions: a.instructions,
+                      provider: a.provider,
                       model: a.model,
+                      apiKey: "",
+                      apiKeyHint: a.apiKeyHint,
                       enabled: a.enabled,
                     })
                   }

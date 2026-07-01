@@ -376,6 +376,39 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Show a "typing…" presence in the chat for `ms`, refreshing it periodically
+   * (WhatsApp clears the composing state on its own after a few seconds).
+   */
+  private async typeAndWait(
+    sessionId: string,
+    jid: string,
+    ms: number,
+  ): Promise<void> {
+    const live = this.sessions.get(sessionId);
+    if (!live) return;
+    const REFRESH = 4000;
+    let elapsed = 0;
+    try {
+      await live.sock.sendPresenceUpdate('composing', jid);
+      while (elapsed < ms && this.sessions.has(sessionId)) {
+        const step = Math.min(REFRESH, ms - elapsed);
+        await sleep(step);
+        elapsed += step;
+        if (elapsed < ms) await live.sock.sendPresenceUpdate('composing', jid);
+      }
+    } catch (e) {
+      this.log.warn(`Typing indicator failed for ${sessionId}: ${e}`);
+    } finally {
+      // Clear the indicator; the outgoing message also resolves it.
+      try {
+        await live.sock.sendPresenceUpdate('paused', jid);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  /**
    * If the session has an enabled agent, generate and send a reply. When
    * `mention` is set (group reply), the reply tags that sender.
    */
@@ -409,6 +442,10 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       // sender — the text must carry the "@<number>" token to render a mention.
       if (reply.text) {
         const text = mention ? `@${mention.number} ${reply.text}` : reply.text;
+        // Optional human-like pause: show a "typing…" indicator for a random
+        // time in the agent's [min,max] window before actually sending.
+        const delayMs = randomDelayMs(agent);
+        if (delayMs > 0) await this.typeAndWait(sessionId, remoteJid, delayMs);
         await this.sendText(sessionId, remoteJid, text, {
           source: MessageSource.AGENT,
           agentId: agent.id,
@@ -695,6 +732,20 @@ function num(v: unknown): number | null {
   if (v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/** A random reply delay (ms) inside the agent's [min,max] window, else 0. */
+function randomDelayMs(agent: {
+  replyDelayMinSeconds: number;
+  replyDelayMaxSeconds: number;
+}): number {
+  const min = Math.max(0, agent.replyDelayMinSeconds);
+  const max = Math.max(min, agent.replyDelayMaxSeconds);
+  if (max <= 0) return 0;
+  return Math.round((min + Math.random() * (max - min)) * 1000);
 }
 
 /** JIDs @mentioned in a message (from whichever content type carries it). */

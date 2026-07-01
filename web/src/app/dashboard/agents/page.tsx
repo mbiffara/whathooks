@@ -20,6 +20,8 @@ type Draft = {
   apiKey: string; // blank on edit = keep existing
   apiKeyHint?: string;
   allowAutoStop: boolean;
+  replyDelayMinSeconds: number;
+  replyDelayMaxSeconds: number;
   enabled: boolean;
 };
 
@@ -31,6 +33,8 @@ const EMPTY: Draft = {
   model: AGENT_MODELS.ANTHROPIC[0].id,
   apiKey: "",
   allowAutoStop: false,
+  replyDelayMinSeconds: 0,
+  replyDelayMaxSeconds: 0,
   enabled: true,
 };
 
@@ -71,6 +75,8 @@ export default function AgentsPage() {
         provider: draft.provider,
         model: draft.model,
         allowAutoStop: draft.allowAutoStop,
+        replyDelayMinSeconds: draft.replyDelayMinSeconds,
+        replyDelayMaxSeconds: draft.replyDelayMaxSeconds,
         enabled: draft.enabled,
       };
       // Only send the key when the user entered one (blank = keep existing).
@@ -241,6 +247,50 @@ export default function AgentsPage() {
               Stored encrypted. Used only to generate this agent’s replies.
             </p>
           </div>
+          <div>
+            <label className="label">
+              Reply delay{" "}
+              <span className="text-[var(--color-muted)]">
+                — seconds (0 = instant)
+              </span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={300}
+                className="input w-24"
+                value={draft.replyDelayMinSeconds}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    replyDelayMinSeconds: Math.max(0, Number(e.target.value) || 0),
+                  })
+                }
+                aria-label="Minimum delay seconds"
+              />
+              <span className="text-sm text-[var(--color-muted)]">to</span>
+              <input
+                type="number"
+                min={0}
+                max={300}
+                className="input w-24"
+                value={draft.replyDelayMaxSeconds}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    replyDelayMaxSeconds: Math.max(0, Number(e.target.value) || 0),
+                  })
+                }
+                aria-label="Maximum delay seconds"
+              />
+            </div>
+            <p className="mt-1 text-xs text-[var(--color-muted)]">
+              Waits a random time in this range before replying, showing a
+              “typing…” indicator meanwhile. Feels more human than an instant
+              answer.
+            </p>
+          </div>
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
@@ -332,6 +382,8 @@ export default function AgentsPage() {
                       apiKey: "",
                       apiKeyHint: a.apiKeyHint,
                       allowAutoStop: a.allowAutoStop,
+                      replyDelayMinSeconds: a.replyDelayMinSeconds,
+                      replyDelayMaxSeconds: a.replyDelayMaxSeconds,
                       enabled: a.enabled,
                     })
                   }

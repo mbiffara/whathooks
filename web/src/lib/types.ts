@@ -29,6 +29,8 @@ export interface Agent {
   apiKeyHint: string;
   maxTokens: number;
   allowAutoStop: boolean;
+  replyDelayMinSeconds: number;
+  replyDelayMaxSeconds: number;
   enabled: boolean;
   sessionCount: number;
   createdAt: string;

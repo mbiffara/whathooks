@@ -67,6 +67,18 @@ export class CreateAgentDto {
   allowAutoStop?: boolean;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(300)
+  replyDelayMinSeconds?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(300)
+  replyDelayMaxSeconds?: number;
+
+  @IsOptional()
   @IsBoolean()
   enabled?: boolean;
 }
@@ -116,6 +128,18 @@ export class UpdateAgentDto {
   @IsOptional()
   @IsBoolean()
   allowAutoStop?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(300)
+  replyDelayMinSeconds?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(300)
+  replyDelayMaxSeconds?: number;
 
   @IsOptional()
   @IsBoolean()

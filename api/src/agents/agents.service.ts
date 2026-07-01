@@ -53,6 +53,11 @@ export class AgentsService {
         apiKeyHint: this.encryption.hint(apiKey),
         maxTokens: dto.maxTokens ?? 1024,
         allowAutoStop: dto.allowAutoStop ?? false,
+        replyDelayMinSeconds: dto.replyDelayMinSeconds ?? 0,
+        replyDelayMaxSeconds: Math.max(
+          dto.replyDelayMinSeconds ?? 0,
+          dto.replyDelayMaxSeconds ?? 0,
+        ),
         enabled: dto.enabled ?? true,
       },
     });
@@ -79,6 +84,19 @@ export class AgentsService {
       apiKeyHint = this.encryption.hint(apiKey);
     }
 
+    // Normalize the delay window (max ≥ min) when either bound is changing.
+    let replyDelayMinSeconds: number | undefined;
+    let replyDelayMaxSeconds: number | undefined;
+    if (
+      dto.replyDelayMinSeconds !== undefined ||
+      dto.replyDelayMaxSeconds !== undefined
+    ) {
+      const min = dto.replyDelayMinSeconds ?? existing.replyDelayMinSeconds;
+      const max = dto.replyDelayMaxSeconds ?? existing.replyDelayMaxSeconds;
+      replyDelayMinSeconds = min;
+      replyDelayMaxSeconds = Math.max(min, max);
+    }
+
     const agent = await this.prisma.agent.update({
       where: { id },
       data: {
@@ -91,6 +109,8 @@ export class AgentsService {
         apiKeyHint,
         maxTokens: dto.maxTokens,
         allowAutoStop: dto.allowAutoStop,
+        replyDelayMinSeconds,
+        replyDelayMaxSeconds,
         enabled: dto.enabled,
       },
     });
@@ -152,6 +172,8 @@ export class AgentsService {
       apiKeyHint: a.apiKeyHint, // never the ciphertext or the key itself
       maxTokens: a.maxTokens,
       allowAutoStop: a.allowAutoStop,
+      replyDelayMinSeconds: a.replyDelayMinSeconds,
+      replyDelayMaxSeconds: a.replyDelayMaxSeconds,
       enabled: a.enabled,
       sessionCount,
       createdAt: a.createdAt,

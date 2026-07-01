@@ -64,6 +64,10 @@ export class CreateAgentDto {
 
   @IsOptional()
   @IsBoolean()
+  allowAutoStop?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   enabled?: boolean;
 }
 
@@ -108,6 +112,10 @@ export class UpdateAgentDto {
   @Min(64)
   @Max(8192)
   maxTokens?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  allowAutoStop?: boolean;
 
   @IsOptional()
   @IsBoolean()

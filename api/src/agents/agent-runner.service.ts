@@ -9,6 +9,30 @@ const HISTORY_LIMIT = 20;
 
 type Turn = { role: 'user' | 'assistant'; text: string };
 
+/** Outcome of a run: a reply to send (if any) and whether the agent handed off. */
+export interface AgentReply {
+  text: string | null;
+  handoff: boolean;
+  reason?: string;
+}
+
+// A tool the agent may call to pause itself on a conversation (handoff to human).
+const HANDOFF_TOOL = 'handoff_to_human';
+const HANDOFF_DESCRIPTION =
+  'Pause yourself on this conversation and hand it off to a human operator. ' +
+  'Call this when you are unsure how to help, the request is out of scope, or ' +
+  'the user explicitly asks for a human. After calling it you will stop ' +
+  'replying until an operator resumes you.';
+const HANDOFF_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    reason: {
+      type: 'string',
+      description: 'Short note for the operator on why you handed off.',
+    },
+  },
+};
+
 /**
  * Runs an AI agent: builds a system prompt from the agent's soul + instructions,
  * feeds the recent conversation as history, and returns the reply text. Each
@@ -34,7 +58,7 @@ export class AgentRunnerService {
   async generateReply(
     agent: Agent,
     conversationId: string,
-  ): Promise<string | null> {
+  ): Promise<AgentReply | null> {
     if (!this.encryption.isConfigured()) return null;
 
     let apiKey: string;
@@ -52,7 +76,7 @@ export class AgentRunnerService {
     const turns = await this.loadHistory(conversationId, convo?.isGroup ?? false);
     if (!turns.length) return null;
 
-    const system = buildSystemPrompt(agent, convo?.isGroup ?? false);
+    const system = buildSystemPrompt(agent, convo?.isGroup ?? false, agent.allowAutoStop);
     try {
       if (agent.provider === 'OPENAI') {
         return await this.replyOpenAI(agent, apiKey, system, turns);
@@ -100,20 +124,37 @@ export class AgentRunnerService {
     apiKey: string,
     system: string,
     turns: Turn[],
-  ): Promise<string | null> {
+  ): Promise<AgentReply> {
     const client = new Anthropic({ apiKey });
+    const tools: Anthropic.Tool[] = agent.allowAutoStop
+      ? [
+          {
+            name: HANDOFF_TOOL,
+            description: HANDOFF_DESCRIPTION,
+            input_schema: HANDOFF_SCHEMA,
+          },
+        ]
+      : [];
     const response = await client.messages.create({
       model: agent.model,
       max_tokens: agent.maxTokens,
       system,
       messages: turns.map((t) => ({ role: t.role, content: t.text })),
+      ...(tools.length ? { tools } : {}),
     });
-    const reply = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
-      .trim();
-    return reply || null;
+
+    let text = '';
+    let handoff = false;
+    let reason: string | undefined;
+    for (const block of response.content) {
+      if (block.type === 'text') {
+        text += block.text;
+      } else if (block.type === 'tool_use' && block.name === HANDOFF_TOOL) {
+        handoff = true;
+        reason = (block.input as { reason?: string })?.reason;
+      }
+    }
+    return { text: text.trim() || null, handoff, reason };
   }
 
   private async replyOpenAI(
@@ -121,21 +162,54 @@ export class AgentRunnerService {
     apiKey: string,
     system: string,
     turns: Turn[],
-  ): Promise<string | null> {
+  ): Promise<AgentReply> {
     const client = new OpenAI({ apiKey });
+    const tools: OpenAI.Chat.Completions.ChatCompletionTool[] =
+      agent.allowAutoStop
+        ? [
+            {
+              type: 'function',
+              function: {
+                name: HANDOFF_TOOL,
+                description: HANDOFF_DESCRIPTION,
+                parameters: HANDOFF_SCHEMA,
+              },
+            },
+          ]
+        : [];
     const response = await client.chat.completions.create({
       model: agent.model,
       messages: [
         { role: 'system', content: system },
         ...turns.map((t) => ({ role: t.role, content: t.text }) as const),
       ],
+      ...(tools.length ? { tools, tool_choice: 'auto' as const } : {}),
     });
-    const reply = response.choices[0]?.message?.content?.trim();
-    return reply || null;
+
+    const message = response.choices[0]?.message;
+    let handoff = false;
+    let reason: string | undefined;
+    const call = message?.tool_calls?.find(
+      (c) => c.type === 'function' && c.function.name === HANDOFF_TOOL,
+    );
+    if (call && call.type === 'function') {
+      handoff = true;
+      try {
+        reason = (JSON.parse(call.function.arguments || '{}') as { reason?: string })
+          .reason;
+      } catch {
+        /* ignore malformed args */
+      }
+    }
+    return { text: message?.content?.trim() || null, handoff, reason };
   }
 }
 
-function buildSystemPrompt(agent: Agent, isGroup: boolean): string {
+function buildSystemPrompt(
+  agent: Agent,
+  isGroup: boolean,
+  allowAutoStop: boolean,
+): string {
   return [
     `You are ${agent.name}, an assistant replying to messages on WhatsApp.`,
     '',
@@ -151,6 +225,17 @@ function buildSystemPrompt(agent: Agent, isGroup: boolean): string {
           'You are in a group with several participants. Each incoming message is',
           'prefixed with the sender’s name. You were @mentioned, so reply to the',
           'person who summoned you. Do NOT prefix your reply with your own name.',
+          '',
+        ]
+      : []),
+    ...(allowAutoStop
+      ? [
+          '# Handing off',
+          `If you don't know how to help, the request is outside your scope, or the`,
+          'user needs a human, call the handoff_to_human tool to pause yourself on',
+          'this conversation. Prefer handing off over guessing or making things up.',
+          'You may send a brief message (e.g. letting them know a human will follow',
+          'up) together with the tool call, or hand off silently.',
           '',
         ]
       : []),

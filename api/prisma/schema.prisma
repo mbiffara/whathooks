@@ -107,6 +107,7 @@ model Agent {
   apiKeyCiphertext String // AES-256-GCM encrypted provider API key
   apiKeyHint      String // last chars, for display (e.g. "sk-…aB12")
   maxTokens       Int           @default(1024)
+  allowAutoStop   Boolean       @default(false) // give the agent a tool to pause itself (handoff to human)
   enabled         Boolean       @default(true)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

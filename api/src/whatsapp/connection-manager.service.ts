@@ -404,14 +404,30 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       const reply = await this.agentRunner.generateReply(agent, conversationId);
       if (!reply) return;
       if (!this.sessions.has(sessionId)) return; // disconnected meanwhile
-      // In a group, tag the sender so the reply threads to them. The text must
-      // carry the "@<number>" token for WhatsApp to render the mention.
-      const text = mention ? `@${mention.number} ${reply}` : reply;
-      await this.sendText(sessionId, remoteJid, text, {
-        source: MessageSource.AGENT,
-        agentId: agent.id,
-        mentions: mention ? [mention.jid] : undefined,
-      });
+
+      // Send the reply text (if the agent produced any). In a group, tag the
+      // sender — the text must carry the "@<number>" token to render a mention.
+      if (reply.text) {
+        const text = mention ? `@${mention.number} ${reply.text}` : reply.text;
+        await this.sendText(sessionId, remoteJid, text, {
+          source: MessageSource.AGENT,
+          agentId: agent.id,
+          mentions: mention ? [mention.jid] : undefined,
+        });
+      }
+
+      // The agent asked to hand off → pause it on this conversation until an
+      // operator resumes. Same flag the operator toggles manually.
+      if (reply.handoff) {
+        await this.prisma.conversation.update({
+          where: { id: conversationId },
+          data: { agentPaused: true },
+        });
+        this.log.log(
+          `Agent "${agent.name}" handed off conversation ${conversationId}` +
+            (reply.reason ? `: ${reply.reason}` : ''),
+        );
+      }
     } catch (e) {
       this.log.error(`Agent reply failed for ${sessionId}: ${e}`);
     }

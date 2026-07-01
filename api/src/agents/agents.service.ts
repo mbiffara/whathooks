@@ -52,6 +52,7 @@ export class AgentsService {
         apiKeyCiphertext: this.encryption.encrypt(apiKey),
         apiKeyHint: this.encryption.hint(apiKey),
         maxTokens: dto.maxTokens ?? 1024,
+        allowAutoStop: dto.allowAutoStop ?? false,
         enabled: dto.enabled ?? true,
       },
     });
@@ -89,6 +90,7 @@ export class AgentsService {
         apiKeyCiphertext,
         apiKeyHint,
         maxTokens: dto.maxTokens,
+        allowAutoStop: dto.allowAutoStop,
         enabled: dto.enabled,
       },
     });
@@ -149,6 +151,7 @@ export class AgentsService {
       model: a.model,
       apiKeyHint: a.apiKeyHint, // never the ciphertext or the key itself
       maxTokens: a.maxTokens,
+      allowAutoStop: a.allowAutoStop,
       enabled: a.enabled,
       sessionCount,
       createdAt: a.createdAt,

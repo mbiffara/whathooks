@@ -28,6 +28,7 @@ export interface Agent {
   model: string;
   apiKeyHint: string;
   maxTokens: number;
+  allowAutoStop: boolean;
   enabled: boolean;
   sessionCount: number;
   createdAt: string;

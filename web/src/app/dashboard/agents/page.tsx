@@ -19,6 +19,7 @@ type Draft = {
   model: string;
   apiKey: string; // blank on edit = keep existing
   apiKeyHint?: string;
+  allowAutoStop: boolean;
   enabled: boolean;
 };
 
@@ -29,6 +30,7 @@ const EMPTY: Draft = {
   provider: "ANTHROPIC",
   model: AGENT_MODELS.ANTHROPIC[0].id,
   apiKey: "",
+  allowAutoStop: false,
   enabled: true,
 };
 
@@ -68,6 +70,7 @@ export default function AgentsPage() {
         instructions: draft.instructions,
         provider: draft.provider,
         model: draft.model,
+        allowAutoStop: draft.allowAutoStop,
         enabled: draft.enabled,
       };
       // Only send the key when the user entered one (blank = keep existing).
@@ -238,6 +241,24 @@ export default function AgentsPage() {
               Stored encrypted. Used only to generate this agent’s replies.
             </p>
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={draft.allowAutoStop}
+              onChange={(e) =>
+                setDraft({ ...draft, allowAutoStop: e.target.checked })
+              }
+            />
+            <span>
+              Allow auto-stop
+              <span className="block text-xs text-[var(--color-muted)]">
+                Give the agent a tool to pause itself on a conversation (hand off
+                to a human) when it doesn’t know how to answer. You resume it from
+                the conversation.
+              </span>
+            </span>
+          </label>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -310,6 +331,7 @@ export default function AgentsPage() {
                       model: a.model,
                       apiKey: "",
                       apiKeyHint: a.apiKeyHint,
+                      allowAutoStop: a.allowAutoStop,
                       enabled: a.enabled,
                     })
                   }

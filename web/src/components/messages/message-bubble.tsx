@@ -14,6 +14,13 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
             : "border border-[var(--color-border)] bg-[var(--color-surface-2)]"
         }`}
       >
+        {outbound && message.source && message.source !== "HUMAN" && (
+          <div className="mb-0.5 text-[10px] font-semibold text-[var(--color-brand)]">
+            {message.source === "AGENT"
+              ? `🤖 ${message.agentName ?? "Agent"}`
+              : "⚙ API"}
+          </div>
+        )}
         <MessageBody message={message} />
         <div className="mt-1 text-right text-[10px] text-[var(--color-muted)]">
           {clockTime(message.timestamp)}

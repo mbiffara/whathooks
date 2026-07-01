@@ -2,7 +2,7 @@
 
 import { StatusBadge } from "@/components/status-badge";
 import { apiClient } from "@/lib/client-api";
-import type { WaSessionDetail } from "@/lib/types";
+import type { Agent, WaSessionDetail } from "@/lib/types";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
@@ -20,7 +20,26 @@ export default function SessionDetailPage() {
   const [to, setTo] = useState("");
   const [text, setText] = useState("");
   const [sendResult, setSendResult] = useState<string | null>(null);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    apiClient<Agent[]>("/agents", token)
+      .then(setAgents)
+      .catch(() => setAgents([]));
+  }, [token]);
+
+  async function assignAgent(agentId: string) {
+    if (!token) return;
+    setSession((s) => (s ? { ...s, agentId: agentId || null } : s));
+    await apiClient(`/agents/sessions/${id}`, token, {
+      method: "POST",
+      body: JSON.stringify({ agentId: agentId || null }),
+    }).catch((e) =>
+      setError(e instanceof Error ? e.message : "Failed to assign agent"),
+    );
+  }
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -138,6 +157,32 @@ export default function SessionDetailPage() {
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
+
+      <div className="card">
+        <h2 className="mb-1 font-semibold">AI Agent</h2>
+        <p className="mb-3 text-sm text-[var(--color-muted)]">
+          Assign an agent to auto-reply to incoming 1:1 messages on this number.
+        </p>
+        <select
+          className="input max-w-sm"
+          value={session.agentId ?? ""}
+          onChange={(e) => assignAgent(e.target.value)}
+        >
+          <option value="">No agent (manual replies)</option>
+          {agents.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+              {a.enabled ? "" : " (disabled)"}
+            </option>
+          ))}
+        </select>
+        {session.agentId &&
+          agents.find((a) => a.id === session.agentId)?.enabled === false && (
+            <p className="mt-2 text-xs text-amber-300">
+              This agent is disabled — enable it on the Agents page to auto-reply.
+            </p>
+          )}
+      </div>
 
       {isQr && (
         <div className="card flex flex-col items-center gap-4 text-center">

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AdminModule } from './admin/admin.module';
+import { AgentsModule } from './agents/agents.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AuthModule } from './auth/auth.module';
 import { ConversationsModule } from './conversations/conversations.module';
@@ -25,6 +26,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     ApiKeysModule,
     MessagesModule,
     ConversationsModule,
+    AgentsModule,
     MetricsModule,
     AdminModule,
   ],

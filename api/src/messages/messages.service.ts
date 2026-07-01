@@ -35,6 +35,7 @@ export class MessagesService {
         dto.to,
         file,
         dto.text,
+        { source: 'API' },
       );
       return {
         id: result.messageId,
@@ -47,7 +48,9 @@ export class MessagesService {
       };
     }
 
-    const result = await this.manager.sendText(session.id, dto.to, dto.text!);
+    const result = await this.manager.sendText(session.id, dto.to, dto.text!, {
+      source: 'API',
+    });
     return {
       id: result.messageId,
       waMessageId: result.waMessageId,

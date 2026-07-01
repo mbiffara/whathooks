@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/dashboard", label: "Overview", exact: true },
   { href: "/dashboard/sessions", label: "WhatsApp Sessions" },
   { href: "/dashboard/messages", label: "Messages" },
+  { href: "/dashboard/agents", label: "Agents" },
   { href: "/dashboard/webhooks", label: "Webhooks" },
   { href: "/dashboard/api-keys", label: "API Keys" },
   { href: "/dashboard/logs", label: "Message Log" },

@@ -11,10 +11,30 @@ export interface WaSession {
   label: string;
   status: WaStatus;
   phoneNumber: string | null;
+  agentId: string | null;
   lastConnectedAt: string | null;
   createdAt: string;
   live: boolean;
 }
+
+export interface Agent {
+  id: string;
+  name: string;
+  soul: string;
+  instructions: string;
+  model: string;
+  maxTokens: number;
+  enabled: boolean;
+  sessionCount: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export const AGENT_MODELS = [
+  { id: "claude-opus-4-8", label: "Claude Opus 4.8 — most capable" },
+  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 — balanced" },
+  { id: "claude-haiku-4-5", label: "Claude Haiku 4.5 — fastest & cheapest" },
+];
 
 export interface WaSessionDetail extends WaSession {
   qr: string | null;

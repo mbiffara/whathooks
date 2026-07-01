@@ -90,6 +90,7 @@ export class WhatsappService {
       label: s.label,
       status: s.status,
       phoneNumber: s.phoneNumber,
+      agentId: s.agentId,
       lastConnectedAt: s.lastConnectedAt,
       createdAt: s.createdAt,
       live: this.manager.isLive(s.id),

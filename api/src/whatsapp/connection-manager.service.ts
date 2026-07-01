@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   MessageDirection,
+  MessageSource,
   MessageStatus,
   MessageType,
   WaSessionStatus,
@@ -25,6 +26,7 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom';
 import { createHash } from 'crypto';
 import pino from 'pino';
+import { AgentRunnerService } from '../agents/agent-runner.service';
 import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
@@ -50,6 +52,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly webhooks: WebhookDispatchService,
     private readonly media: MediaService,
+    private readonly agentRunner: AgentRunnerService,
   ) {}
 
   /** Restore previously-connected sockets after a restart. */
@@ -309,6 +312,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       name: contactName,
       direction: MessageDirection.INBOUND,
       fromMe: false,
+      source: MessageSource.CONTACT,
       type: described.type,
       text: described.text,
       waMessageId: msg.key.id ?? null,
@@ -343,6 +347,38 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         timestamp: Math.floor(timestamp.getTime() / 1000),
       },
     });
+
+    // Auto-reply if an enabled agent is assigned (1:1 chats only).
+    if (!isGroup) {
+      void this.maybeAgentReply(sessionId, remoteJid, result.conversationId);
+    }
+  }
+
+  /** If the session has an enabled agent, generate and send a reply. */
+  private async maybeAgentReply(
+    sessionId: string,
+    remoteJid: string,
+    conversationId: string,
+  ) {
+    if (!this.agentRunner.isConfigured()) return;
+    const session = await this.prisma.waSession.findUnique({
+      where: { id: sessionId },
+      include: { agent: true },
+    });
+    const agent = session?.agent;
+    if (!agent || !agent.enabled) return;
+
+    try {
+      const reply = await this.agentRunner.generateReply(agent, conversationId);
+      if (!reply) return;
+      if (!this.sessions.has(sessionId)) return; // disconnected meanwhile
+      await this.sendText(sessionId, remoteJid, reply, {
+        source: MessageSource.AGENT,
+        agentId: agent.id,
+      });
+    } catch (e) {
+      this.log.error(`Agent reply failed for ${sessionId}: ${e}`);
+    }
   }
 
   /** Send a text message. Returns the WhatsApp message id + stored message id. */
@@ -350,6 +386,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     sessionId: string,
     to: string,
     text: string,
+    opts: { source?: MessageSource; agentId?: string } = {},
   ): Promise<{ waMessageId: string | null; messageId: string }> {
     const live = this.sessions.get(sessionId);
     if (!live) throw new Error('Session is not connected');
@@ -364,6 +401,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       remoteJid: jid,
       direction: MessageDirection.OUTBOUND,
       fromMe: true,
+      source: opts.source ?? MessageSource.HUMAN,
+      agentId: opts.agentId,
       type: MessageType.TEXT,
       text,
       waMessageId: sent?.key?.id ?? null,
@@ -380,6 +419,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     to: string,
     file: { buffer: Buffer; mimeType: string; fileName?: string | null },
     caption?: string | null,
+    opts: { source?: MessageSource; agentId?: string } = {},
   ): Promise<{ waMessageId: string | null; messageId: string; mediaUrl?: string }> {
     const live = this.sessions.get(sessionId);
     if (!live) throw new Error('Session is not connected');
@@ -396,6 +436,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       remoteJid: jid,
       direction: MessageDirection.OUTBOUND,
       fromMe: true,
+      source: opts.source ?? MessageSource.HUMAN,
+      agentId: opts.agentId,
       type: kindToType(kind),
       text: caption ?? null,
       waMessageId: sent?.key?.id ?? null,
@@ -423,6 +465,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     name?: string | null;
     direction: MessageDirection;
     fromMe: boolean;
+    source: MessageSource;
+    agentId?: string;
     type: MessageType;
     text?: string | null;
     waMessageId?: string | null;
@@ -474,6 +518,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         waMessageId: p.waMessageId ?? null,
         direction: p.direction,
         fromMe: p.fromMe,
+        source: p.source,
+        agentId: p.agentId ?? null,
         type: p.type,
         text: p.text ?? null,
         status: p.status,

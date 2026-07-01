@@ -4,6 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Conversation, MediaAsset, Message } from '@prisma/client';
+type MessageWithRelations = Message & {
+  media: MediaAsset | null;
+  agent: { name: string } | null;
+};
 import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
@@ -52,7 +56,7 @@ export class ConversationsService {
       },
       orderBy: { timestamp: 'desc' },
       take: limit,
-      include: { media: true },
+      include: { media: true, agent: { select: { name: true } } },
     });
     const items = await Promise.all(
       rows.reverse().map((m) => this.toMessageDto(m)),
@@ -133,7 +137,7 @@ export class ConversationsService {
     };
   }
 
-  private async toMessageDto(m: Message & { media: MediaAsset | null }) {
+  private async toMessageDto(m: MessageWithRelations) {
     let media: Record<string, unknown> | null = null;
     if (m.media) {
       media = {
@@ -154,6 +158,8 @@ export class ConversationsService {
       id: m.id,
       direction: m.direction,
       fromMe: m.fromMe,
+      source: m.source,
+      agentName: m.agent?.name ?? null,
       type: m.type,
       text: m.text,
       status: m.status,

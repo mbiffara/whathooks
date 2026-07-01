@@ -19,10 +19,14 @@ export interface ChatMedia {
   size: number | null;
 }
 
+export type MessageSource = "CONTACT" | "HUMAN" | "API" | "AGENT";
+
 export interface ChatMessage {
   id: string;
   direction: "INBOUND" | "OUTBOUND";
   fromMe: boolean;
+  source?: MessageSource;
+  agentName?: string | null;
   type: ChatMessageType;
   text: string | null;
   status: string;

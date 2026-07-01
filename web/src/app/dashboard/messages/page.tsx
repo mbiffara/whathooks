@@ -394,8 +394,13 @@ export default function MessagesPage() {
                     </span>
                   ) : selectedConv.agentPaused ? (
                     <>
-                      <span className="badge bg-amber-500/15 text-amber-400">
-                        ⏸ Agent paused — replying manually
+                      <span
+                        className="badge max-w-[22rem] truncate bg-amber-500/15 text-amber-400"
+                        title={selectedConv.agentPausedReason ?? undefined}
+                      >
+                        {selectedConv.agentPausedReason
+                          ? `⏸ Agent handed off: ${selectedConv.agentPausedReason}`
+                          : "⏸ Agent paused — replying manually"}
                       </span>
                       <button
                         onClick={toggleAgentPause}

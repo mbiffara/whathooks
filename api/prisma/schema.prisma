@@ -229,6 +229,7 @@ model Conversation {
   unreadCount     Int          @default(0)
   archived        Boolean      @default(false)
   agentPaused     Boolean      @default(false) // operator took over → agent won't auto-reply
+  agentPausedReason String?    // why the agent handed off (null when paused manually)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

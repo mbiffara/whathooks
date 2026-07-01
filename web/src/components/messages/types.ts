@@ -53,6 +53,7 @@ export interface Conversation {
   lastMessageType: string | null;
   agent: ConversationAgent | null;
   agentPaused: boolean;
+  agentPausedReason: string | null;
 }
 
 export interface ConversationAgent {

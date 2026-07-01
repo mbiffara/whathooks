@@ -421,7 +421,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       if (reply.handoff) {
         await this.prisma.conversation.update({
           where: { id: conversationId },
-          data: { agentPaused: true },
+          data: {
+            agentPaused: true,
+            agentPausedReason:
+              reply.reason?.trim() || 'The agent wasn’t sure how to respond.',
+          },
         });
         this.log.log(
           `Agent "${agent.name}" handed off conversation ${conversationId}` +

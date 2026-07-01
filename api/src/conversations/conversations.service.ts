@@ -57,9 +57,10 @@ export class ConversationsService {
   /** Pause or resume the assigned agent's auto-replies for one conversation. */
   async setAgentPaused(organizationId: string, id: string, paused: boolean) {
     await this.requireConversation(organizationId, id);
+    // A manual toggle has no handoff reason — clear any the agent left behind.
     await this.prisma.conversation.update({
       where: { id },
-      data: { agentPaused: paused },
+      data: { agentPaused: paused, agentPausedReason: null },
     });
     return { ok: true, agentPaused: paused };
   }
@@ -167,6 +168,7 @@ export class ConversationsService {
       // replies when @mentioned; the frontend distinguishes via isGroup.
       agent,
       agentPaused: c.agentPaused,
+      agentPausedReason: c.agentPausedReason,
     };
   }
 

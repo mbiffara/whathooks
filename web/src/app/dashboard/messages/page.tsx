@@ -58,6 +58,7 @@ export default function MessagesPage() {
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [togglingAgent, setTogglingAgent] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
@@ -256,6 +257,35 @@ export default function MessagesPage() {
     }
   }
 
+  async function toggleAgentPause() {
+    if (!token || !selectedConv || togglingAgent) return;
+    const next = !selectedConv.agentPaused;
+    setTogglingAgent(true);
+    // Optimistically flip the flag so the header updates immediately.
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === selectedConv.id ? { ...c, agentPaused: next } : c,
+      ),
+    );
+    try {
+      await apiClient(
+        `/conversations/${selectedConv.id}/agent/pause`,
+        token,
+        { method: "POST", body: JSON.stringify({ paused: next }) },
+      );
+    } catch {
+      // Revert on failure.
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selectedConv.id ? { ...c, agentPaused: !next } : c,
+        ),
+      );
+    } finally {
+      setTogglingAgent(false);
+      loadConversations();
+    }
+  }
+
   function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -344,7 +374,7 @@ export default function MessagesPage() {
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
               <div className="min-w-0">
                 <div className="truncate font-medium text-[var(--color-fg)]">
                   {selectedConv.name || `+${selectedConv.contact}`}
@@ -355,6 +385,42 @@ export default function MessagesPage() {
                     : " "}
                 </div>
               </div>
+
+              {selectedConv.agent && (
+                <div className="flex shrink-0 items-center gap-2">
+                  {!selectedConv.agent.enabled ? (
+                    <span className="badge bg-white/10 text-[var(--color-muted)]">
+                      🤖 {selectedConv.agent.name} · disabled
+                    </span>
+                  ) : selectedConv.agentPaused ? (
+                    <>
+                      <span className="badge bg-amber-500/15 text-amber-400">
+                        ⏸ Agent paused — replying manually
+                      </span>
+                      <button
+                        onClick={toggleAgentPause}
+                        disabled={togglingAgent}
+                        className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
+                      >
+                        Resume {selectedConv.agent.name}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="badge bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
+                        🤖 {selectedConv.agent.name} is responding
+                      </span>
+                      <button
+                        onClick={toggleAgentPause}
+                        disabled={togglingAgent}
+                        className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
+                      >
+                        Pause agent
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <div

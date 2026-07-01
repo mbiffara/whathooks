@@ -8,6 +8,18 @@ type MessageWithRelations = Message & {
   media: MediaAsset | null;
   agent: { name: string } | null;
 };
+type ConversationWithAgent = Conversation & {
+  session?: {
+    agent: { id: string; name: string; enabled: boolean } | null;
+  } | null;
+};
+const AGENT_INCLUDE = {
+  session: {
+    select: {
+      agent: { select: { id: true, name: true, enabled: true } },
+    },
+  },
+} as const;
 import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
@@ -32,13 +44,24 @@ export class ConversationsService {
       },
       orderBy: { lastMessageAt: 'desc' },
       take: Math.min(opts.limit ?? 100, 200),
+      include: AGENT_INCLUDE,
     });
     return rows.map((c) => this.toConversationDto(c));
   }
 
   async get(organizationId: string, id: string) {
-    const c = await this.requireConversation(organizationId, id);
+    const c = await this.requireConversation(organizationId, id, true);
     return this.toConversationDto(c);
+  }
+
+  /** Pause or resume the assigned agent's auto-replies for one conversation. */
+  async setAgentPaused(organizationId: string, id: string, paused: boolean) {
+    await this.requireConversation(organizationId, id);
+    await this.prisma.conversation.update({
+      where: { id },
+      data: { agentPaused: paused },
+    });
+    return { ok: true, agentPaused: paused };
   }
 
   async messages(
@@ -114,15 +137,21 @@ export class ConversationsService {
     return c;
   }
 
-  private async requireConversation(organizationId: string, id: string) {
+  private async requireConversation(
+    organizationId: string,
+    id: string,
+    withAgent = false,
+  ) {
     const c = await this.prisma.conversation.findFirst({
       where: { id, organizationId },
+      ...(withAgent ? { include: AGENT_INCLUDE } : {}),
     });
     if (!c) throw new NotFoundException('Conversation not found');
     return c;
   }
 
-  private toConversationDto(c: Conversation) {
+  private toConversationDto(c: ConversationWithAgent) {
+    const agent = c.session?.agent ?? null;
     return {
       id: c.id,
       sessionId: c.sessionId,
@@ -134,6 +163,9 @@ export class ConversationsService {
       lastMessageAt: c.lastMessageAt,
       lastMessageText: c.lastMessageText,
       lastMessageType: c.lastMessageType,
+      // The agent assigned to this conversation's session (groups never auto-reply).
+      agent: agent && !c.isGroup ? agent : null,
+      agentPaused: c.agentPaused,
     };
   }
 

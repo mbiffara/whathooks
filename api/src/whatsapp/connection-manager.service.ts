@@ -368,6 +368,13 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     const agent = session?.agent;
     if (!agent || !agent.enabled) return;
 
+    // An operator can pause the agent on a single conversation to reply manually.
+    const convo = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { agentPaused: true },
+    });
+    if (convo?.agentPaused) return;
+
     try {
       const reply = await this.agentRunner.generateReply(agent, conversationId);
       if (!reply) return;

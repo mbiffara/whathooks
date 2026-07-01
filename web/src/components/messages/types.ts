@@ -51,4 +51,12 @@ export interface Conversation {
   lastMessageAt: string | null;
   lastMessageText: string | null;
   lastMessageType: string | null;
+  agent: ConversationAgent | null;
+  agentPaused: boolean;
+}
+
+export interface ConversationAgent {
+  id: string;
+  name: string;
+  enabled: boolean;
 }

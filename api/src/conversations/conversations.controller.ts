@@ -11,7 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
@@ -22,6 +22,11 @@ class SendDto {
   @IsString()
   @MaxLength(4096)
   text?: string;
+}
+
+class AgentPauseDto {
+  @IsBoolean()
+  paused!: boolean;
 }
 
 @UseGuards(JwtAuthGuard)
@@ -68,6 +73,15 @@ export class ConversationsController {
   @Post(':id/read')
   read(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.conversations.markRead(this.orgOf(user), id);
+  }
+
+  @Post(':id/agent/pause')
+  setAgentPaused(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: AgentPauseDto,
+  ) {
+    return this.conversations.setAgentPaused(this.orgOf(user), id, body.paused);
   }
 
   @Post(':id/messages')

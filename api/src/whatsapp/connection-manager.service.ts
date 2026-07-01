@@ -310,6 +310,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       organizationId,
       remoteJid,
       name: contactName,
+      // In a group, pushName is the individual sender — keep it for agent context.
+      senderName: isGroup ? (msg.pushName ?? null) : null,
       direction: MessageDirection.INBOUND,
       fromMe: false,
       source: MessageSource.CONTACT,
@@ -348,17 +350,40 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
-    // Auto-reply if an enabled agent is assigned (1:1 chats only).
+    // Auto-reply if an enabled agent is assigned. In 1:1 the agent always
+    // considers replying; in a group it only replies when the bot is @mentioned.
     if (!isGroup) {
       void this.maybeAgentReply(sessionId, remoteJid, result.conversationId);
+    } else {
+      const botNum = this.botNumber(sessionId);
+      const senderJid = msg.key.participant ?? undefined;
+      const mentioned =
+        botNum != null &&
+        extractMentions(msg).some((j) => j.split('@')[0] === botNum);
+      if (mentioned && senderJid) {
+        void this.maybeAgentReply(sessionId, remoteJid, result.conversationId, {
+          jid: senderJid,
+          number: senderJid.split('@')[0],
+        });
+      }
     }
   }
 
-  /** If the session has an enabled agent, generate and send a reply. */
+  /** The connected number's own msisdn (no domain), or null if not live. */
+  private botNumber(sessionId: string): string | null {
+    const id = this.sessions.get(sessionId)?.sock.user?.id;
+    return id ? jidNormalizedUser(id).split('@')[0] : null;
+  }
+
+  /**
+   * If the session has an enabled agent, generate and send a reply. When
+   * `mention` is set (group reply), the reply tags that sender.
+   */
   private async maybeAgentReply(
     sessionId: string,
     remoteJid: string,
     conversationId: string,
+    mention?: { jid: string; number: string },
   ) {
     if (!this.agentRunner.isConfigured()) return;
     const session = await this.prisma.waSession.findUnique({
@@ -379,9 +404,13 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       const reply = await this.agentRunner.generateReply(agent, conversationId);
       if (!reply) return;
       if (!this.sessions.has(sessionId)) return; // disconnected meanwhile
-      await this.sendText(sessionId, remoteJid, reply, {
+      // In a group, tag the sender so the reply threads to them. The text must
+      // carry the "@<number>" token for WhatsApp to render the mention.
+      const text = mention ? `@${mention.number} ${reply}` : reply;
+      await this.sendText(sessionId, remoteJid, text, {
         source: MessageSource.AGENT,
         agentId: agent.id,
+        mentions: mention ? [mention.jid] : undefined,
       });
     } catch (e) {
       this.log.error(`Agent reply failed for ${sessionId}: ${e}`);
@@ -393,13 +422,16 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     sessionId: string,
     to: string,
     text: string,
-    opts: { source?: MessageSource; agentId?: string } = {},
+    opts: { source?: MessageSource; agentId?: string; mentions?: string[] } = {},
   ): Promise<{ waMessageId: string | null; messageId: string }> {
     const live = this.sessions.get(sessionId);
     if (!live) throw new Error('Session is not connected');
 
     const jid = toJid(to);
-    const sent = await live.sock.sendMessage(jid, { text });
+    const sent = await live.sock.sendMessage(jid, {
+      text,
+      ...(opts.mentions?.length ? { mentions: opts.mentions } : {}),
+    });
     const organizationId = await this.orgIdOf(sessionId);
 
     const result = await this.persistMessage({
@@ -470,6 +502,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     organizationId: string;
     remoteJid: string;
     name?: string | null;
+    senderName?: string | null;
     direction: MessageDirection;
     fromMe: boolean;
     source: MessageSource;
@@ -526,6 +559,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         direction: p.direction,
         fromMe: p.fromMe,
         source: p.source,
+        senderName: p.senderName ?? null,
         agentId: p.agentId ?? null,
         type: p.type,
         text: p.text ?? null,
@@ -641,6 +675,20 @@ function num(v: unknown): number | null {
   if (v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+/** JIDs @mentioned in a message (from whichever content type carries it). */
+function extractMentions(msg: WAMessage): string[] {
+  const m = msg.message ?? {};
+  const ctx =
+    m.extendedTextMessage?.contextInfo ??
+    m.imageMessage?.contextInfo ??
+    m.videoMessage?.contextInfo ??
+    m.documentMessage?.contextInfo ??
+    m.audioMessage?.contextInfo ??
+    m.stickerMessage?.contextInfo ??
+    null;
+  return ctx?.mentionedJid ?? [];
 }
 
 function describeMessage(msg: WAMessage): {

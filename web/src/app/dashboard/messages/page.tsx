@@ -408,7 +408,9 @@ export default function MessagesPage() {
                   ) : (
                     <>
                       <span className="badge bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
-                        🤖 {selectedConv.agent.name} is responding
+                        {selectedConv.isGroup
+                          ? `🤖 ${selectedConv.agent.name} · replies when @mentioned`
+                          : `🤖 ${selectedConv.agent.name} is responding`}
                       </span>
                       <button
                         onClick={toggleAgentPause}

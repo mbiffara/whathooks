@@ -45,10 +45,14 @@ export class AgentRunnerService {
       return null;
     }
 
-    const turns = await this.loadHistory(conversationId);
+    const convo = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { isGroup: true },
+    });
+    const turns = await this.loadHistory(conversationId, convo?.isGroup ?? false);
     if (!turns.length) return null;
 
-    const system = buildSystemPrompt(agent);
+    const system = buildSystemPrompt(agent, convo?.isGroup ?? false);
     try {
       if (agent.provider === 'OPENAI') {
         return await this.replyOpenAI(agent, apiKey, system, turns);
@@ -61,19 +65,26 @@ export class AgentRunnerService {
   }
 
   /** Recent messages, chronological, starting from the first inbound turn. */
-  private async loadHistory(conversationId: string): Promise<Turn[]> {
+  private async loadHistory(
+    conversationId: string,
+    isGroup: boolean,
+  ): Promise<Turn[]> {
     const rows = await this.prisma.message.findMany({
       where: { conversationId },
       orderBy: { timestamp: 'desc' },
       take: HISTORY_LIMIT,
-      select: { direction: true, text: true, type: true },
+      select: { direction: true, text: true, type: true, senderName: true },
     });
     rows.reverse();
 
     const turns: Turn[] = [];
     for (const m of rows) {
-      const text = m.text ?? mediaPlaceholder(m.type);
+      let text = m.text ?? mediaPlaceholder(m.type);
       if (!text) continue;
+      // In a group multiple people talk, so label who said what.
+      if (isGroup && m.direction === 'INBOUND' && m.senderName) {
+        text = `${m.senderName}: ${text}`;
+      }
       turns.push({
         role: m.direction === 'INBOUND' ? 'user' : 'assistant',
         text,
@@ -124,7 +135,7 @@ export class AgentRunnerService {
   }
 }
 
-function buildSystemPrompt(agent: Agent): string {
+function buildSystemPrompt(agent: Agent, isGroup: boolean): string {
   return [
     `You are ${agent.name}, an assistant replying to messages on WhatsApp.`,
     '',
@@ -134,6 +145,15 @@ function buildSystemPrompt(agent: Agent): string {
     '# Instructions',
     agent.instructions,
     '',
+    ...(isGroup
+      ? [
+          '# Group chat',
+          'You are in a group with several participants. Each incoming message is',
+          'prefixed with the sender’s name. You were @mentioned, so reply to the',
+          'person who summoned you. Do NOT prefix your reply with your own name.',
+          '',
+        ]
+      : []),
     'Reply with ONLY the message to send back over WhatsApp — no preamble, no',
     'quotation marks, no meta-commentary, and no explanation of your reasoning.',
     'Keep replies concise and conversational, suitable for a chat message.',

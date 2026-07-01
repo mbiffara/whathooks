@@ -163,8 +163,9 @@ export class ConversationsService {
       lastMessageAt: c.lastMessageAt,
       lastMessageText: c.lastMessageText,
       lastMessageType: c.lastMessageType,
-      // The agent assigned to this conversation's session (groups never auto-reply).
-      agent: agent && !c.isGroup ? agent : null,
+      // The agent assigned to this conversation's session. In groups it only
+      // replies when @mentioned; the frontend distinguishes via isGroup.
+      agent,
       agentPaused: c.agentPaused,
     };
   }

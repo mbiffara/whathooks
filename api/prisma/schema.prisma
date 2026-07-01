@@ -250,6 +250,7 @@ model Message {
   direction      MessageDirection
   fromMe         Boolean          @default(false)
   source         MessageSource    @default(CONTACT)
+  senderName     String? // pushName of the sender (used for group context)
   type           MessageType      @default(TEXT)
   text           String? // body or media caption
   status         MessageStatus

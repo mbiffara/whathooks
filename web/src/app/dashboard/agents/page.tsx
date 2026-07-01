@@ -196,6 +196,14 @@ export default function AgentsPage() {
                 value={draft.model}
                 onChange={(e) => setDraft({ ...draft, model: e.target.value })}
               >
+                {/* Keep an existing agent's stored model selectable even if it's
+                    no longer in our suggested list, so editing doesn't reset it. */}
+                {!AGENT_MODELS[draft.provider].some(
+                  (m) => m.id === draft.model,
+                ) &&
+                  draft.model && (
+                    <option value={draft.model}>{draft.model} (current)</option>
+                  )}
                 {AGENT_MODELS[draft.provider].map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}

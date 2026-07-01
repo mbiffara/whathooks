@@ -49,10 +49,10 @@ export const AGENT_MODELS: Record<
     { id: "claude-haiku-4-5", label: "Claude Haiku 4.5 — fastest & cheapest" },
   ],
   OPENAI: [
-    { id: "gpt-4o", label: "GPT-4o — most capable" },
-    { id: "gpt-4o-mini", label: "GPT-4o mini — fast & cheap" },
-    { id: "gpt-4.1", label: "GPT-4.1" },
-    { id: "gpt-4.1-mini", label: "GPT-4.1 mini" },
+    { id: "gpt-5.5", label: "GPT-5.5 — most capable" },
+    { id: "gpt-5.4", label: "GPT-5.4 — more affordable" },
+    { id: "gpt-5.4-mini", label: "GPT-5.4 mini — fast & cheap" },
+    { id: "gpt-5.4-nano", label: "GPT-5.4 nano — cheapest, high-volume" },
   ],
 };
 

@@ -17,12 +17,12 @@ export type AgentProviderName = (typeof AGENT_PROVIDERS)[number];
 // models work without a backend change; these drive the frontend picker).
 export const AGENT_MODELS: Record<AgentProviderName, string[]> = {
   ANTHROPIC: ['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
-  OPENAI: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini'],
+  OPENAI: ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-nano'],
 };
 
 export const DEFAULT_MODEL: Record<AgentProviderName, string> = {
   ANTHROPIC: 'claude-opus-4-8',
-  OPENAI: 'gpt-4o',
+  OPENAI: 'gpt-5.5',
 };
 
 export class CreateAgentDto {

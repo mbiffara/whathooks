@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { ApiKeyGuard } from '../api-keys/api-key.guard';
 import { ApiOrg } from '../common/decorators/org.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -27,7 +28,7 @@ export class MessagesController {
   }
 
   /** Dashboard message log — authenticated with the user session (JWT). */
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, OrgRolesGuard)
   @Get()
   list(
     @CurrentUser() user: AuthUser,

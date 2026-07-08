@@ -19,6 +19,14 @@ enum UserRole {
   CLIENT // organization user
 }
 
+// Role of a user within one organization. Membership is the source of truth
+// for org access; User.organizationId only remembers the active selection.
+enum OrgRole {
+  OWNER // full control: team, ownership transfer, delete org
+  ADMIN // manage sessions, agents, webhooks, API keys, invites
+  MEMBER // operate: view resources, read/send messages
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -26,6 +34,8 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   users         User[]
+  memberships   Membership[]
+  invitations   Invitation[]
   sessions      WaSession[]
   webhooks      Webhook[]
   apiKeys       ApiKey[]
@@ -43,10 +53,50 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Active (last selected) organization — Membership is the source of truth.
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
+  memberships     Membership[]
+  sentInvitations Invitation[] @relation("SentInvitations")
+
   @@index([organizationId])
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           OrgRole      @default(MEMBER)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// Pending/accepted invites to join an organization. The raw token is shown
+// once (invite link); only its sha-256 lands here. Status is derived:
+// pending = !acceptedAt && !revokedAt && expiresAt > now().
+model Invitation {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email            String
+  role             OrgRole      @default(MEMBER)
+  tokenHash        String       @unique
+  invitedById      String?
+  invitedBy        User?        @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: SetNull)
+  acceptedByUserId String?
+  expiresAt        DateTime
+  acceptedAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([email])
 }
 
 // ---------------------------------------------------------------------------

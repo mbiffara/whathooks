@@ -5,6 +5,8 @@ export interface AuthUser {
   email: string;
   role: 'ADMIN' | 'CLIENT';
   organizationId: string | null;
+  // Role in the active organization; set by OrgRolesGuard from the DB.
+  orgRole?: 'OWNER' | 'ADMIN' | 'MEMBER';
 }
 
 export const CurrentUser = createParamDecorator(

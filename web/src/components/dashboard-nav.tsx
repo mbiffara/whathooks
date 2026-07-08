@@ -1,6 +1,7 @@
 "use client";
 
 import { Logo } from "@/components/logo";
+import { OrgSwitcher } from "@/components/org-switcher";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,6 +14,7 @@ const LINKS = [
   { href: "/dashboard/webhooks", label: "Webhooks" },
   { href: "/dashboard/api-keys", label: "API Keys" },
   { href: "/dashboard/logs", label: "Message Log" },
+  { href: "/dashboard/team", label: "Team" },
 ];
 
 export function DashboardNav() {
@@ -29,6 +31,7 @@ export function DashboardNav() {
       <div className="px-2 py-2">
         <Logo href="/dashboard" />
       </div>
+      <OrgSwitcher />
       <nav className="mt-4 flex flex-1 flex-col gap-1">
         {LINKS.map((l) => (
           <Link

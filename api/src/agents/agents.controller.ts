@@ -10,8 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { AgentsService } from './agents.service';
 import {
   AssignAgentDto,
@@ -19,7 +21,7 @@ import {
   UpdateAgentDto,
 } from './dto/agent.dto';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrgRolesGuard)
 @Controller('agents')
 export class AgentsController {
   constructor(private readonly agents: AgentsService) {}
@@ -35,6 +37,7 @@ export class AgentsController {
     return this.agents.list(this.orgOf(user));
   }
 
+  @OrgRoles('ADMIN')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateAgentDto) {
     return this.agents.create(this.orgOf(user), dto);
@@ -45,6 +48,7 @@ export class AgentsController {
     return this.agents.get(this.orgOf(user), id);
   }
 
+  @OrgRoles('ADMIN')
   @Patch(':id')
   update(
     @CurrentUser() user: AuthUser,
@@ -54,12 +58,14 @@ export class AgentsController {
     return this.agents.update(this.orgOf(user), id, dto);
   }
 
+  @OrgRoles('ADMIN')
   @Delete(':id')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.agents.remove(this.orgOf(user), id);
   }
 
   /** Assign or clear the agent for a session. */
+  @OrgRoles('ADMIN')
   @Post('/sessions/:sessionId')
   assign(
     @CurrentUser() user: AuthUser,

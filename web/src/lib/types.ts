@@ -162,3 +162,39 @@ export interface AdminOrgDetail {
   }[];
   counts: { conversations: number; messages: number };
 }
+
+// --- Team / organizations -------------------------------------------------
+
+export type OrgRole = "OWNER" | "ADMIN" | "MEMBER";
+
+export interface OrgMembership {
+  id: string;
+  name: string;
+  role: OrgRole;
+  joinedAt: string;
+}
+
+export interface TeamMember {
+  userId: string;
+  email: string;
+  name: string | null;
+  role: OrgRole;
+  joinedAt: string;
+}
+
+export type InvitationStatus = "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+
+export interface Invitation {
+  id: string;
+  email: string;
+  role: OrgRole;
+  status: InvitationStatus;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface InvitationCreated {
+  invitation: Invitation;
+  inviteUrl: string;
+  emailSent: boolean;
+}

@@ -10,8 +10,10 @@ import {
 } from '@nestjs/common';
 import { IsString, MaxLength, MinLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { ApiKeysService } from './api-keys.service';
 
 class CreateApiKeyDto {
@@ -21,7 +23,8 @@ class CreateApiKeyDto {
   name!: string;
 }
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrgRolesGuard)
+@OrgRoles('ADMIN')
 @Controller('api-keys')
 export class ApiKeysController {
   constructor(private readonly apiKeys: ApiKeysService) {}

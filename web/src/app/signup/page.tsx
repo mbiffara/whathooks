@@ -3,18 +3,20 @@
 import { Logo } from "@/components/logo";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const inviteToken = params.get("invite");
   const [form, setForm] = useState({
     name: "",
     organizationName: "",
-    email: "",
+    email: params.get("email") ?? "",
     password: "",
   });
   const [error, setError] = useState<string | null>(null);
@@ -30,17 +32,25 @@ export default function SignUpPage() {
     setError(null);
     setLoading(true);
     try {
+      const body = inviteToken
+        ? {
+            name: form.name,
+            email: form.email,
+            password: form.password,
+            inviteToken,
+          }
+        : form;
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+        const resBody = await res.json().catch(() => ({}));
         throw new Error(
-          Array.isArray(body.message)
-            ? body.message.join(", ")
-            : body.message ?? "Registration failed",
+          Array.isArray(resBody.message)
+            ? resBody.message.join(", ")
+            : resBody.message ?? "Registration failed",
         );
       }
       // Auto sign-in after registration.
@@ -66,8 +76,13 @@ export default function SignUpPage() {
           <Logo />
         </div>
         <h1 className="mb-6 text-center text-2xl font-bold">
-          Create your account
+          {inviteToken ? "Join your team" : "Create your account"}
         </h1>
+        {inviteToken && (
+          <p className="mb-4 text-center text-sm text-[var(--color-muted)]">
+            Create an account to accept your invitation.
+          </p>
+        )}
         <form onSubmit={onSubmit} className="card flex flex-col gap-4">
           <div>
             <label className="label">Your name</label>
@@ -79,16 +94,18 @@ export default function SignUpPage() {
               placeholder="Jane Doe"
             />
           </div>
-          <div>
-            <label className="label">Organization</label>
-            <input
-              required
-              className="input"
-              value={form.organizationName}
-              onChange={set("organizationName")}
-              placeholder="Acme Inc."
-            />
-          </div>
+          {!inviteToken && (
+            <div>
+              <label className="label">Organization</label>
+              <input
+                required
+                className="input"
+                value={form.organizationName}
+                onChange={set("organizationName")}
+                placeholder="Acme Inc."
+              />
+            </div>
+          )}
           <div>
             <label className="label">Email</label>
             <input
@@ -122,8 +139,27 @@ export default function SignUpPage() {
               Sign in
             </Link>
           </p>
+          <p className="text-center text-xs text-[var(--color-muted)]">
+            By creating an account you agree to the{" "}
+            <Link href="/terms" className="hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="hover:underline">
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </form>
       </div>
     </main>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
   );
 }

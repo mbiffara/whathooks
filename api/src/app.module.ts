@@ -10,6 +10,7 @@ import { HealthController } from './health/health.controller';
 import { MediaModule } from './media/media.module';
 import { MessagesModule } from './messages/messages.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
@@ -27,6 +28,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     MessagesModule,
     ConversationsModule,
     AgentsModule,
+    OrganizationsModule,
     MetricsModule,
     AdminModule,
   ],

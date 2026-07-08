@@ -13,6 +13,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { ConversationsService } from './conversations.service';
@@ -29,7 +30,7 @@ class AgentPauseDto {
   paused!: boolean;
 }
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrgRolesGuard)
 @Controller('conversations')
 export class ConversationsController {
   constructor(private readonly conversations: ConversationsService) {}

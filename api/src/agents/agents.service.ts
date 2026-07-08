@@ -66,7 +66,7 @@ export class AgentsService {
 
   async update(organizationId: string, id: string, dto: UpdateAgentDto) {
     const existing = await this.require(organizationId, id);
-    const provider = dto.provider ?? (existing.provider as AgentProviderName);
+    const provider = dto.provider ?? existing.provider;
 
     // If the provider changed and no explicit model was given, reset to the new
     // provider's default (an Anthropic model can't run on OpenAI, and vice versa).

@@ -10,12 +10,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { CreateWebhookDto, UpdateWebhookDto } from './dto/webhook.dto';
 import { WebhooksService } from './webhooks.service';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrgRolesGuard)
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooks: WebhooksService) {}
@@ -31,11 +33,13 @@ export class WebhooksController {
     return this.webhooks.list(this.orgOf(user));
   }
 
+  @OrgRoles('ADMIN')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateWebhookDto) {
     return this.webhooks.create(this.orgOf(user), dto);
   }
 
+  @OrgRoles('ADMIN')
   @Patch(':id')
   update(
     @CurrentUser() user: AuthUser,
@@ -45,6 +49,7 @@ export class WebhooksController {
     return this.webhooks.update(this.orgOf(user), id, dto);
   }
 
+  @OrgRoles('ADMIN')
   @Delete(':id')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.webhooks.remove(this.orgOf(user), id);

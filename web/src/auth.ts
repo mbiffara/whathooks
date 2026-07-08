@@ -30,21 +30,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: data.user.name,
           role: data.user.role,
           organizationId: data.user.organizationId,
+          orgRole: data.user.orgRole ?? null,
           accessToken: data.token,
         };
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         // values from authorize()
         token.uid = (user as { id: string }).id;
         token.accessToken = (user as { accessToken: string }).accessToken;
-        token.role = (user as { role: string }).role;
+        token.role = (user as { role: string }).role as "ADMIN" | "CLIENT";
         token.organizationId = (
           user as { organizationId: string | null }
         ).organizationId;
+        token.orgRole = (
+          user as { orgRole: "OWNER" | "ADMIN" | "MEMBER" | null }
+        ).orgRole;
+      }
+      // Org switch / invite accept: the client passes the reissued backend
+      // JWT and new active-org fields through session.update().
+      if (trigger === "update" && session) {
+        const update = session as {
+          accessToken?: string;
+          organizationId?: string | null;
+          orgRole?: "OWNER" | "ADMIN" | "MEMBER" | null;
+        };
+        if (update.accessToken) token.accessToken = update.accessToken;
+        if (update.organizationId !== undefined)
+          token.organizationId = update.organizationId;
+        if (update.orgRole !== undefined) token.orgRole = update.orgRole;
       }
       return token;
     },
@@ -54,6 +71,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.uid as string;
         session.user.role = token.role as "ADMIN" | "CLIENT";
         session.user.organizationId = token.organizationId as string | null;
+        session.user.orgRole =
+          (token.orgRole as "OWNER" | "ADMIN" | "MEMBER" | null) ?? null;
       }
       return session;
     },

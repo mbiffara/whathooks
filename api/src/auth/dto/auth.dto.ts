@@ -4,6 +4,7 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class RegisterDto {
@@ -20,10 +21,21 @@ export class RegisterDto {
   @MaxLength(120)
   name!: string;
 
+  // Required when creating a new organization; omitted when joining via invite.
+  @ValidateIf((o: RegisterDto) => !o.inviteToken)
   @IsString()
   @MinLength(1)
   @MaxLength(120)
-  organizationName!: string;
+  organizationName?: string;
+
+  @IsOptional()
+  @IsString()
+  inviteToken?: string;
+}
+
+export class SwitchOrgDto {
+  @IsString()
+  organizationId!: string;
 }
 
 export class LoginDto {

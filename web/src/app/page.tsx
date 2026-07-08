@@ -74,6 +74,57 @@ const features = [
   },
 ];
 
+const plans = [
+  {
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    desc: "Try the full flow with your own number.",
+    cta: "Start free",
+    highlighted: false,
+    items: [
+      "1 WhatsApp number",
+      "500 messages / month",
+      "1 webhook endpoint",
+      "7-day message history",
+      "Community support",
+    ],
+  },
+  {
+    name: "Pro",
+    price: "$29",
+    period: "per month",
+    desc: "For products with real conversation volume.",
+    cta: "Start with Pro",
+    highlighted: true,
+    items: [
+      "3 WhatsApp numbers",
+      "10,000 messages / month",
+      "Unlimited webhooks",
+      "AI agents (bring your own key)",
+      "Team members & roles",
+      "90-day message history",
+      "Email support",
+    ],
+  },
+  {
+    name: "Business",
+    price: "$99",
+    period: "per month",
+    desc: "Scale across numbers, teams, and workflows.",
+    cta: "Start with Business",
+    highlighted: false,
+    items: [
+      "10 WhatsApp numbers",
+      "100,000 messages / month",
+      "Unlimited webhooks & agents",
+      "Unlimited team members",
+      "Full message history",
+      "Priority support",
+    ],
+  },
+];
+
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
@@ -85,7 +136,7 @@ export default function Home() {
             <div>
               <span className="badge border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-brand)]" />
-                Powered by Baileys · No Business API approval
+                Your own number · No Business API approval
               </span>
               <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
                 WhatsApp as a{" "}
@@ -297,6 +348,87 @@ export default function Home() {
               </pre>
             </div>
           </div>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-16 md:py-24">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Simple pricing
+            </h2>
+            <p className="mt-3 text-[var(--color-muted)]">
+              Start free, upgrade when your volume grows. Cancel anytime.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`card flex flex-col ${
+                  plan.highlighted
+                    ? "border-[var(--color-brand)]/60 shadow-[0_0_40px_-12px_var(--color-brand)]"
+                    : ""
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold">{plan.name}</h3>
+                  {plan.highlighted && (
+                    <span className="badge bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
+                      Most popular
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4 flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">{plan.price}</span>
+                  <span className="text-sm text-[var(--color-muted)]">
+                    {plan.period}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-[var(--color-muted)]">
+                  {plan.desc}
+                </p>
+                <ul className="mt-6 flex flex-col gap-2.5 text-sm">
+                  {plan.items.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="mt-0.5 shrink-0 text-[var(--color-brand)]"
+                      >
+                        <path
+                          d="M5 13l4 4L19 7"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span className="text-[var(--color-muted)]">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-8 flex-1" />
+                <Link
+                  href="/signup"
+                  className={plan.highlighted ? "btn-primary w-full" : "btn-ghost w-full"}
+                >
+                  {plan.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-xs text-[var(--color-muted)]">
+            Message limits count both inbound and outbound messages. Need more?{" "}
+            <a
+              href="mailto:hello@whathooks.com"
+              className="text-[var(--color-brand)] hover:underline"
+            >
+              Talk to us
+            </a>
+            .
+          </p>
         </section>
 
         {/* Final CTA */}

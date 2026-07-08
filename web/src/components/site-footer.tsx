@@ -13,14 +13,12 @@ export function SiteFooter() {
           <Link href="/signin" className="hover:text-[var(--color-fg)]">
             Sign in
           </Link>
-          <a
-            href="https://github.com/whiskeysockets/Baileys"
-            className="hover:text-[var(--color-fg)]"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Powered by Baileys
-          </a>
+          <Link href="/terms" className="hover:text-[var(--color-fg)]">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-[var(--color-fg)]">
+            Privacy
+          </Link>
         </div>
         <span>© {new Date().getFullYear()} whathooks</span>
       </div>

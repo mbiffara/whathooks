@@ -159,18 +159,10 @@ export default function DocsPage() {
                 </li>
               </ul>
               <p className="mt-4 text-[var(--color-muted)]">
-                Connections are powered by an unofficial WhatsApp Web link via
-                the{" "}
-                <a
-                  href="https://github.com/whiskeysockets/Baileys"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[var(--color-brand)] hover:underline"
-                >
-                  Baileys
-                </a>{" "}
-                library. Reconnection after a dropped link is handled
-                automatically, and each number supports one linked device.
+                Your number is connected through a WhatsApp Web link, the same
+                mechanism as WhatsApp&apos;s &ldquo;linked devices&rdquo;.
+                Reconnection after a dropped link is handled automatically, and
+                each number supports one linked device.
               </p>
               <div className="card mt-6 border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-muted)]">
                 Because this uses an unofficial WhatsApp Web connection, treat it

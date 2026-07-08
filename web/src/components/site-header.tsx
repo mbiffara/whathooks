@@ -14,6 +14,12 @@ export function SiteHeader() {
             Docs
           </Link>
           <Link
+            href="/#pricing"
+            className="px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+          >
+            Pricing
+          </Link>
+          <Link
             href="/signin"
             className="px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)]"
           >

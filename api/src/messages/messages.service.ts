@@ -95,7 +95,9 @@ async function fetchRemoteMedia(
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) {
-      throw new BadRequestException(`Could not fetch media (HTTP ${res.status})`);
+      throw new BadRequestException(
+        `Could not fetch media (HTTP ${res.status})`,
+      );
     }
     const len = Number(res.headers.get('content-length') ?? 0);
     if (len > MAX_MEDIA_BYTES) {

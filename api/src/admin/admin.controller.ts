@@ -95,7 +95,13 @@ export class AdminController {
       where: { id },
       include: {
         users: {
-          select: { id: true, email: true, name: true, role: true, createdAt: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            createdAt: true,
+          },
           orderBy: { createdAt: 'asc' },
         },
         sessions: {

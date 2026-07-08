@@ -120,7 +120,11 @@ export class ConversationsService {
       file,
       caption,
     );
-    return { id: r.messageId, waMessageId: r.waMessageId, mediaUrl: r.mediaUrl };
+    return {
+      id: r.messageId,
+      waMessageId: r.waMessageId,
+      mediaUrl: r.mediaUrl,
+    };
   }
 
   private async assertSendable(organizationId: string, id: string) {

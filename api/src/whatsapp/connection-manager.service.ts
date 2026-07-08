@@ -58,7 +58,9 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   /** Restore previously-connected sockets after a restart. */
   async onModuleInit() {
     const sessions = await this.prisma.waSession.findMany({
-      where: { status: { in: ['CONNECTED', 'CONNECTING', 'QR', 'DISCONNECTED'] } },
+      where: {
+        status: { in: ['CONNECTED', 'CONNECTING', 'QR', 'DISCONNECTED'] },
+      },
       select: { id: true },
     });
     this.log.log(`Restoring ${sessions.length} WhatsApp session(s)`);
@@ -289,16 +291,16 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     let media: StagedMedia | undefined;
     if (described.media) {
       try {
-        const buffer = (await downloadMediaMessage(
+        const buffer = await downloadMediaMessage(
           msg,
           'buffer',
           {},
           {
             logger,
-            reuploadRequest: this.sessions.get(sessionId)!.sock
-              .updateMediaMessage,
+            reuploadRequest:
+              this.sessions.get(sessionId)!.sock.updateMediaMessage,
           },
-        )) as Buffer;
+        );
         media = { ...described.media, buffer };
       } catch (e) {
         this.log.warn(`Media download failed for ${sessionId}: ${e}`);
@@ -479,7 +481,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     sessionId: string,
     to: string,
     text: string,
-    opts: { source?: MessageSource; agentId?: string; mentions?: string[] } = {},
+    opts: {
+      source?: MessageSource;
+      agentId?: string;
+      mentions?: string[];
+    } = {},
   ): Promise<{ waMessageId: string | null; messageId: string }> {
     const live = this.sessions.get(sessionId);
     if (!live) throw new Error('Session is not connected');
@@ -516,7 +522,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     file: { buffer: Buffer; mimeType: string; fileName?: string | null },
     caption?: string | null,
     opts: { source?: MessageSource; agentId?: string } = {},
-  ): Promise<{ waMessageId: string | null; messageId: string; mediaUrl?: string }> {
+  ): Promise<{
+    waMessageId: string | null;
+    messageId: string;
+    mediaUrl?: string;
+  }> {
     const live = this.sessions.get(sessionId);
     if (!live) throw new Error('Session is not connected');
 
@@ -622,7 +632,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         text: p.text ?? null,
         status: p.status,
         timestamp: p.timestamp,
-        raw: p.raw ? (p.raw as object) : undefined,
+        raw: p.raw ? p.raw : undefined,
       },
     });
 
@@ -848,26 +858,26 @@ function buildBaileysMedia(
         image: file.buffer,
         mimetype: file.mimeType,
         caption: cap,
-      } as AnyMessageContent;
+      };
     case 'video':
       return {
         video: file.buffer,
         mimetype: file.mimeType,
         caption: cap,
-      } as AnyMessageContent;
+      };
     case 'audio':
       return {
         audio: file.buffer,
         mimetype: file.mimeType,
         ptt: false,
-      } as AnyMessageContent;
+      };
     default:
       return {
         document: file.buffer,
         mimetype: file.mimeType,
         fileName: file.fileName ?? 'file',
         caption: cap,
-      } as AnyMessageContent;
+      };
   }
 }
 function mediaLabel(type: MessageType): string {

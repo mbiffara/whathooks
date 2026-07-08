@@ -52,12 +52,7 @@ export class WhatsappService {
     return { ok: true };
   }
 
-  async sendTest(
-    organizationId: string,
-    id: string,
-    to: string,
-    text: string,
-  ) {
+  async sendTest(organizationId: string, id: string, to: string, text: string) {
     const session = await this.requireSession(organizationId, id);
     if (session.status !== 'CONNECTED' || !this.manager.isLive(id)) {
       throw new BadRequestException('Session is not connected');

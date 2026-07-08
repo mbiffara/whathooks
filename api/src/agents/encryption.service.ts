@@ -23,9 +23,13 @@ export class EncryptionService {
     if (raw && raw.length >= 16) {
       this.key = createHash('sha256').update(raw, 'utf8').digest();
     } else if (raw) {
-      this.log.error('AGENT_ENCRYPTION_KEY too short (need ≥16 chars) — ignored');
+      this.log.error(
+        'AGENT_ENCRYPTION_KEY too short (need ≥16 chars) — ignored',
+      );
     } else {
-      this.log.warn('AGENT_ENCRYPTION_KEY not set — agent API keys can’t be stored');
+      this.log.warn(
+        'AGENT_ENCRYPTION_KEY not set — agent API keys can’t be stored',
+      );
     }
   }
 
@@ -37,7 +41,10 @@ export class EncryptionService {
     if (!this.key) throw new Error('Encryption not configured');
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', this.key, iv);
-    const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const ct = Buffer.concat([
+      cipher.update(plaintext, 'utf8'),
+      cipher.final(),
+    ]);
     const tag = cipher.getAuthTag();
     return [
       iv.toString('base64'),

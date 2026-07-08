@@ -73,10 +73,17 @@ export class AgentRunnerService {
       where: { id: conversationId },
       select: { isGroup: true },
     });
-    const turns = await this.loadHistory(conversationId, convo?.isGroup ?? false);
+    const turns = await this.loadHistory(
+      conversationId,
+      convo?.isGroup ?? false,
+    );
     if (!turns.length) return null;
 
-    const system = buildSystemPrompt(agent, convo?.isGroup ?? false, agent.allowAutoStop);
+    const system = buildSystemPrompt(
+      agent,
+      convo?.isGroup ?? false,
+      agent.allowAutoStop,
+    );
     try {
       if (agent.provider === 'OPENAI') {
         return await this.replyOpenAI(agent, apiKey, system, turns);
@@ -195,8 +202,9 @@ export class AgentRunnerService {
     if (call && call.type === 'function') {
       handoff = true;
       try {
-        reason = (JSON.parse(call.function.arguments || '{}') as { reason?: string })
-          .reason;
+        reason = (
+          JSON.parse(call.function.arguments || '{}') as { reason?: string }
+        ).reason;
       } catch {
         /* ignore malformed args */
       }

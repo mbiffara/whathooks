@@ -40,7 +40,9 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
       this.log.log('CloudWatch metrics disabled (no METRICS_NAMESPACE)');
       return;
     }
-    this.log.log(`Publishing metrics to CloudWatch namespace "${this.namespace}"`);
+    this.log.log(
+      `Publishing metrics to CloudWatch namespace "${this.namespace}"`,
+    );
     this.timer = setInterval(() => void this.publish(), 60_000);
     setTimeout(() => void this.publish(), 10_000); // first sample soon after boot
   }

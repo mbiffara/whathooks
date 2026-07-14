@@ -134,10 +134,10 @@ export default function PrivacyPage() {
               We will announce material changes to this policy by email or in
               the dashboard. Questions:{" "}
               <a
-                href="mailto:privacy@whathooks.com"
+                href="mailto:privacy@logicalminds.co"
                 className="text-[var(--color-brand)] hover:underline"
               >
-                privacy@whathooks.com
+                privacy@logicalminds.co
               </a>
               .
             </p>

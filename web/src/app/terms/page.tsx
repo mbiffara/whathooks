@@ -143,10 +143,10 @@ export default function TermsPage() {
             <p className="mt-2">
               Questions about these terms:{" "}
               <a
-                href="mailto:legal@whathooks.com"
+                href="mailto:legal@logicalminds.co"
                 className="text-[var(--color-brand)] hover:underline"
               >
-                legal@whathooks.com
+                legal@logicalminds.co
               </a>
               .
             </p>

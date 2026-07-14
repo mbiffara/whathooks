@@ -422,7 +422,7 @@ export default function Home() {
           <p className="mt-6 text-center text-xs text-[var(--color-muted)]">
             Message limits count both inbound and outbound messages. Need more?{" "}
             <a
-              href="mailto:hello@whathooks.com"
+              href="mailto:hello@logicalminds.co"
               className="text-[var(--color-brand)] hover:underline"
             >
               Talk to us

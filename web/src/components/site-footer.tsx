@@ -20,7 +20,17 @@ export function SiteFooter() {
             Privacy
           </Link>
         </div>
-        <span>© {new Date().getFullYear()} whathooks</span>
+        <span>
+          © {new Date().getFullYear()} whathooks · powered by{" "}
+          <a
+            href="https://logicalminds.co"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[var(--color-fg)]"
+          >
+            logicalminds
+          </a>
+        </span>
       </div>
     </footer>
   );

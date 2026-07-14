@@ -47,6 +47,23 @@ export class LoginDto {
   password!: string;
 }
 
+export class ForgotPasswordDto {
+  @IsEmail()
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @MinLength(1)
+  token!: string;
+
+  // Same policy as RegisterDto.password.
+  @IsString()
+  @MinLength(8)
+  @MaxLength(72)
+  password!: string;
+}
+
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()

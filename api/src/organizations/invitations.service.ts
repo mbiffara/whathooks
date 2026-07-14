@@ -43,10 +43,12 @@ export class InvitationsService {
   }
 
   private inviteUrl(rawToken: string): string {
-    const origin = this.config.get<string>(
-      'WEB_ORIGIN',
-      'http://localhost:3000',
-    );
+    // WEB_ORIGIN may be a comma-separated CORS list in prod — link to the
+    // first entry (same convention as billing.service.webBase).
+    const origin = this.config
+      .get<string>('WEB_ORIGIN', 'http://localhost:3000')
+      .split(',')[0]
+      .trim();
     return `${origin}/invite/${rawToken}`;
   }
 

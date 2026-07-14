@@ -5,21 +5,35 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Membership, Organization, User } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { randomBytes } from 'crypto';
 import { hashToken } from '../api-keys/api-keys.service';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 import { JwtPayload } from './jwt.strategy';
 
 type MembershipWithOrg = Membership & { organization: Organization };
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+/** Max reset emails per address within the TTL window (abuse brake). */
+const RESET_MAX_OUTSTANDING = 3;
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly config: ConfigService,
+    private readonly mail: MailService,
   ) {}
 
   signFor(user: User): string {
@@ -162,6 +176,75 @@ export class AuthService {
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     return this.buildAuthResponse(user.id);
+  }
+
+  /**
+   * Issue a reset link. Always resolves to the same response so the endpoint
+   * can't be used to probe which emails are registered.
+   */
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ ok: true }> {
+    const email = dto.email.toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) return { ok: true };
+
+    // Brake: don't mint unlimited tokens/emails for one address.
+    const outstanding = await this.prisma.passwordResetToken.count({
+      where: {
+        userId: user.id,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (outstanding >= RESET_MAX_OUTSTANDING) return { ok: true };
+
+    const rawToken = randomBytes(24).toString('base64url');
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
+    });
+
+    const origin = this.config
+      .get<string>('WEB_ORIGIN', 'http://localhost:3000')
+      .split(',')[0]
+      .trim();
+    await this.mail.sendPasswordReset({
+      to: email,
+      resetUrl: `${origin}/reset-password?token=${rawToken}`,
+      validFor: '1 hour',
+    });
+    return { ok: true };
+  }
+
+  /** Redeem a reset token: set the new password, burn every open token. */
+  async resetPassword(dto: ResetPasswordDto): Promise<{ ok: true }> {
+    const token = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: hashToken(dto.token) },
+    });
+    if (!token || token.usedAt || token.expiresAt < new Date()) {
+      throw new BadRequestException(
+        'This reset link is invalid or has expired. Request a new one.',
+      );
+    }
+
+    const passwordHash = await argon2.hash(dto.password);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: token.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: token.id },
+        data: { usedAt: new Date() },
+      }),
+      // Any other outstanding links for this user die with the reset.
+      this.prisma.passwordResetToken.deleteMany({
+        where: { userId: token.userId, usedAt: null, id: { not: token.id } },
+      }),
+    ]);
+    return { ok: true };
   }
 
   async switchOrg(userId: string, organizationId: string) {

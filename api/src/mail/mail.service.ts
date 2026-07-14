@@ -1,6 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+export interface PasswordResetEmail {
+  to: string;
+  resetUrl: string;
+  /** Link lifetime shown in the email, e.g. "1 hour". */
+  validFor: string;
+}
+
 export interface InvitationEmail {
   to: string;
   orgName: string;
@@ -64,6 +71,51 @@ export class MailService {
       return true;
     } catch (err) {
       this.logger.warn(`Failed to send invitation to ${email.to}: ${err}`);
+      return false;
+    }
+  }
+
+  async sendPasswordReset(email: PasswordResetEmail): Promise<boolean> {
+    const apiKey = this.config.get<string>('RESEND_API_KEY');
+    if (!apiKey) {
+      this.logger.log(
+        `RESEND_API_KEY not set — skipping password reset email to ${email.to}`,
+      );
+      return false;
+    }
+
+    const from = this.config.get<string>(
+      'MAIL_FROM',
+      'whathooks <onboarding@resend.dev>',
+    );
+
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from,
+          to: [email.to],
+          subject: 'Reset your whathooks password',
+          html: [
+            `<p>Someone requested a password reset for your whathooks account.</p>`,
+            `<p><a href="${email.resetUrl}">Choose a new password</a></p>`,
+            `<p>This link is valid for ${email.validFor} and can be used once. If you didn't request it, you can ignore this email — your password is unchanged.</p>`,
+          ].join('\n'),
+        }),
+      });
+      if (!res.ok) {
+        this.logger.warn(
+          `Resend responded ${res.status} for password reset to ${email.to}`,
+        );
+        return false;
+      }
+      return true;
+    } catch (err) {
+      this.logger.warn(`Failed to send password reset to ${email.to}: ${err}`);
       return false;
     }
   }

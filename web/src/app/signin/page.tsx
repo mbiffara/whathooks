@@ -47,7 +47,15 @@ function SignInForm() {
         />
       </div>
       <div>
-        <label className="label">Password</label>
+        <div className="flex items-center justify-between">
+          <label className="label">Password</label>
+          <Link
+            href="/forgot-password"
+            className="text-xs text-[var(--color-muted)] hover:text-[var(--color-brand)]"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <input
           type="password"
           required

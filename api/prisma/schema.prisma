@@ -77,8 +77,23 @@ model User {
 
   memberships     Membership[]
   sentInvitations Invitation[] @relation("SentInvitations")
+  passwordResets  PasswordResetToken[]
 
   @@index([organizationId])
+}
+
+// Single-use, short-lived tokens for the forgot-password flow. Only the
+// SHA-256 hash is stored (same hashToken as API keys and invitations).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Membership {

@@ -20,6 +20,7 @@ const AGENT_INCLUDE = {
     },
   },
 } as const;
+import { QuotaService } from '../billing/quota.service';
 import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
@@ -30,6 +31,7 @@ export class ConversationsService {
     private readonly prisma: PrismaService,
     private readonly media: MediaService,
     private readonly manager: ConnectionManagerService,
+    private readonly quota: QuotaService,
   ) {}
 
   async list(
@@ -71,11 +73,14 @@ export class ConversationsService {
     opts: { before?: string; limit?: number },
   ) {
     await this.requireConversation(organizationId, id);
+    // Same retention window the flat message log applies (quota.service).
+    const since = await this.quota.historyWindowStart(organizationId);
     const limit = Math.min(opts.limit ?? 40, 100);
     const rows = await this.prisma.message.findMany({
       where: {
         conversationId: id,
         organizationId,
+        ...(since ? { createdAt: { gte: since } } : {}),
         ...(opts.before ? { timestamp: { lt: new Date(opts.before) } } : {}),
       },
       orderBy: { timestamp: 'desc' },
@@ -102,6 +107,7 @@ export class ConversationsService {
   }
 
   async sendText(organizationId: string, id: string, text: string) {
+    await this.quota.assertCanSend(organizationId);
     const c = await this.assertSendable(organizationId, id);
     const r = await this.manager.sendText(c.sessionId, c.remoteJid, text);
     return { id: r.messageId, waMessageId: r.waMessageId };
@@ -113,6 +119,7 @@ export class ConversationsService {
     file: { buffer: Buffer; mimeType: string; fileName?: string | null },
     caption?: string,
   ) {
+    await this.quota.assertCanSend(organizationId);
     const c = await this.assertSendable(organizationId, id);
     const r = await this.manager.sendMedia(
       c.sessionId,

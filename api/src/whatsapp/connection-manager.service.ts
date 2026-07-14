@@ -28,6 +28,7 @@ import { createHash } from 'crypto';
 import pino from 'pino';
 import { AgentRunnerService } from '../agents/agent-runner.service';
 import { MediaService } from '../media/media.service';
+import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { usePrismaAuthState } from './baileys-auth-state';
@@ -53,6 +54,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     private readonly webhooks: WebhookDispatchService,
     private readonly media: MediaService,
     private readonly agentRunner: AgentRunnerService,
+    private readonly quota: QuotaService,
   ) {}
 
   /** Restore previously-connected sockets after a restart. */
@@ -427,6 +429,19 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     });
     const agent = session?.agent;
     if (!agent || !agent.enabled) return;
+
+    // Agents send on the org's behalf, so they respect the same quota gate as
+    // manual sends (subscription + monthly cap). Skip quietly — an inbound
+    // message must never fail because the reply was over quota. Checked before
+    // generateReply so no LLM tokens are spent on a reply we can't send.
+    try {
+      await this.quota.assertCanSend(session.organizationId);
+    } catch {
+      this.log.warn(
+        `Agent reply skipped for org ${session.organizationId}: over quota or no active subscription`,
+      );
+      return;
+    }
 
     // An operator can pause the agent on a single conversation to reply manually.
     const convo = await this.prisma.conversation.findUnique({

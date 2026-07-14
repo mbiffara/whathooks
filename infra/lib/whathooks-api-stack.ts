@@ -114,6 +114,20 @@ export class WhathooksApiStack extends cdk.Stack {
       { generateSecretString: { excludePunctuation: true, passwordLength: 48 } },
     );
     agentEncryptionSecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
+    // Stripe billing secrets, created out-of-band (like the DATABASE_URL secret):
+    //   aws secretsmanager create-secret --name whathooks/stripe-secret-key --secret-string 'sk_live_...'
+    //   aws secretsmanager create-secret --name whathooks/stripe-webhook-secret --secret-string 'whsec_...'
+    // Imported by name; ECS resolves the partial ARN at container start.
+    const stripeKeySecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'StripeSecretKey',
+      'whathooks/stripe-secret-key',
+    );
+    const stripeWebhookSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'StripeWebhookSecret',
+      'whathooks/stripe-webhook-secret',
+    );
 
     // ---------------------------------------------------------------------
     // Media bucket (private; browser loads objects via presigned URLs)
@@ -173,6 +187,11 @@ export class WhathooksApiStack extends cdk.Stack {
           ? `https://${props.domainName}`
           : '',
         METRICS_NAMESPACE: 'whathooks',
+        // Stripe recurring Price ids (live). Not sensitive — the secret key and
+        // webhook signing secret live in `secrets:` below.
+        STRIPE_PRICE_STARTER: 'price_1TtAuDHVX3hp29uYq7BxWqgP',
+        STRIPE_PRICE_PRO: 'price_1TtAuJHVX3hp29uYkKt35bY1',
+        STRIPE_PRICE_BUSINESS: 'price_1TtAuLHVX3hp29uYzqo7cFof',
       },
       secrets: {
         // Whole secret value is the connection string → injected as DATABASE_URL.
@@ -180,6 +199,9 @@ export class WhathooksApiStack extends cdk.Stack {
         JWT_SECRET: ecs.Secret.fromSecretsManager(jwtSecret),
         AGENT_ENCRYPTION_KEY:
           ecs.Secret.fromSecretsManager(agentEncryptionSecret),
+        STRIPE_SECRET_KEY: ecs.Secret.fromSecretsManager(stripeKeySecret),
+        STRIPE_WEBHOOK_SECRET:
+          ecs.Secret.fromSecretsManager(stripeWebhookSecret),
       },
     });
 

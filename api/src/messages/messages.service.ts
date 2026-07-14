@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -14,9 +15,11 @@ export class MessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly manager: ConnectionManagerService,
+    private readonly quota: QuotaService,
   ) {}
 
   async send(organizationId: string, dto: SendMessageDto) {
+    await this.quota.assertCanSend(organizationId);
     const session = await this.prisma.waSession.findFirst({
       where: { id: dto.sessionId, organizationId },
     });
@@ -66,8 +69,13 @@ export class MessagesService {
     organizationId: string,
     opts: { sessionId?: string; limit?: number },
   ) {
+    const since = await this.quota.historyWindowStart(organizationId);
     const rows = await this.prisma.message.findMany({
-      where: { organizationId, sessionId: opts.sessionId },
+      where: {
+        organizationId,
+        sessionId: opts.sessionId,
+        ...(since ? { createdAt: { gte: since } } : {}),
+      },
       orderBy: { timestamp: 'desc' },
       take: Math.min(opts.limit ?? 50, 200),
       include: { conversation: { select: { remoteJid: true, name: true } } },

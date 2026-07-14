@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { WaSession } from '@prisma/client';
 import * as QRCode from 'qrcode';
+import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from './connection-manager.service';
 
@@ -13,6 +14,7 @@ export class WhatsappService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly manager: ConnectionManagerService,
+    private readonly quota: QuotaService,
   ) {}
 
   async list(organizationId: string) {
@@ -24,6 +26,7 @@ export class WhatsappService {
   }
 
   async create(organizationId: string, label: string) {
+    await this.quota.assertCanAddNumber(organizationId);
     const session = await this.prisma.waSession.create({
       data: { organizationId, label, status: 'PENDING' },
     });

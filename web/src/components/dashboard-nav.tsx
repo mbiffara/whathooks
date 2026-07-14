@@ -15,6 +15,7 @@ const LINKS = [
   { href: "/dashboard/api-keys", label: "API Keys" },
   { href: "/dashboard/logs", label: "Message Log" },
   { href: "/dashboard/team", label: "Team" },
+  { href: "/dashboard/billing", label: "Billing" },
 ];
 
 export function DashboardNav() {

@@ -4,7 +4,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  // rawBody: true preserves the unparsed request body so the Stripe webhook
+  // controller can verify signatures against the exact bytes Stripe sent.
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: false,
+    rawBody: true,
+  });
   const config = app.get(ConfigService);
 
   app.setGlobalPrefix('v1');
@@ -29,7 +34,7 @@ async function bootstrap() {
 
   const port = config.get<number>('PORT', 3001);
   await app.listen(port);
-  // eslint-disable-next-line no-console
+
   console.log(`whathooks api listening on http://localhost:${port}/v1`);
 }
 void bootstrap();

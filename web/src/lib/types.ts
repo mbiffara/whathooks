@@ -198,3 +198,28 @@ export interface InvitationCreated {
   inviteUrl: string;
   emailSent: boolean;
 }
+
+export type Plan = "STARTER" | "PRO" | "BUSINESS";
+
+export interface PlanLimits {
+  label: string;
+  messagesPerMonth: number;
+  historyDays: number | null;
+  waNumbers: number;
+  priceEnv: string;
+}
+
+export interface Subscription {
+  plan: Plan;
+  limits: PlanLimits;
+  status: string | null;
+  currentPeriodEnd: string | null;
+  hasCustomer: boolean;
+  usage: { used: number; limit: number };
+}
+
+export const PLAN_PRICING: Record<Plan, { label: string; price: string }> = {
+  STARTER: { label: "Starter", price: "$9.99" },
+  PRO: { label: "Pro", price: "$29.99" },
+  BUSINESS: { label: "Business", price: "$99" },
+};

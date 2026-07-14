@@ -4,6 +4,7 @@ import { AdminModule } from './admin/admin.module';
 import { AgentsModule } from './agents/agents.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { RedisModule } from './common/redis/redis.module';
 import { HealthController } from './health/health.controller';
@@ -22,6 +23,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     RedisModule,
     MediaModule,
     AuthModule,
+    BillingModule,
     WebhooksModule,
     WhatsappModule,
     ApiKeysModule,

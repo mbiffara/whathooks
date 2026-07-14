@@ -27,11 +27,28 @@ enum OrgRole {
   MEMBER // operate: view resources, read/send messages
 }
 
+// Subscription tier. Limits (messages/month, history window, WA numbers) are
+// defined in code (src/billing/plans.ts), not the DB.
+enum Plan {
+  STARTER // $9.99  — 5k msgs/mo, 30-day history, 1 number
+  PRO // $29.99 — 10k msgs/mo, 90-day history, 3 numbers
+  BUSINESS // $99   — 100k msgs/mo, full history, 10 numbers
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Billing (Stripe). plan is the entitlement tier; subscriptionStatus mirrors
+  // the Stripe subscription state (active | trialing | past_due | canceled | …).
+  plan                 Plan      @default(STARTER)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  subscriptionStatus   String?
+  currentPeriodEnd     DateTime?
 
   users         User[]
   memberships   Membership[]

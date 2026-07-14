@@ -237,6 +237,10 @@ model Webhook {
   secret         String // HMAC signing secret
   events         String[] // e.g. ["message.received", "session.status"]
   active         Boolean      @default(true)
+  // Optional projection rules that replace `data` in deliveries: rename
+  // fields, format dates, inject fixed values. Null/empty = default payload.
+  // Shape: [{ target, source?, value?, dateFormat? }] — see payload-mapping.ts
+  payloadMapping Json?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

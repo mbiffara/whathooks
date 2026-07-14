@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Webhook } from '@prisma/client';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { applyPayloadMapping, isMappingRules } from './payload-mapping';
 
 interface DispatchParams {
   organizationId: string;
@@ -36,12 +37,20 @@ export class WebhookDispatchService {
   }
 
   private async deliver(hook: Webhook, params: DispatchParams): Promise<void> {
-    const body = JSON.stringify({
+    const envelope = {
       event: params.event,
       sessionId: params.sessionId ?? null,
       data: params.payload,
       timestamp: new Date().toISOString(),
-    });
+    };
+    // Per-webhook projection: when mapping rules exist, `data` carries only
+    // the fields the customer configured (renames, formatted dates, fixed
+    // values). The envelope itself is stable so signatures/tooling keep
+    // working.
+    const data = isMappingRules(hook.payloadMapping)
+      ? applyPayloadMapping(hook.payloadMapping, envelope)
+      : params.payload;
+    const body = JSON.stringify({ ...envelope, data });
     const signature =
       'sha256=' + createHmac('sha256', hook.secret).update(body).digest('hex');
 

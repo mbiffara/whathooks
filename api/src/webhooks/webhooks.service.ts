@@ -1,8 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Webhook } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, Webhook } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateWebhookDto, UpdateWebhookDto } from './dto/webhook.dto';
+import {
+  CreateWebhookDto,
+  MappingRuleDto,
+  UpdateWebhookDto,
+} from './dto/webhook.dto';
+import { mappingRulesError } from './payload-mapping';
 
 @Injectable()
 export class WebhooksService {
@@ -30,6 +39,7 @@ export class WebhooksService {
         events: dto.events,
         sessionId: dto.sessionId ?? null,
         secret: `whsec_${randomBytes(24).toString('hex')}`,
+        payloadMapping: this.mappingInput(dto.payloadMapping),
       },
     });
     // Return the secret in full on creation so the client can store it.
@@ -44,6 +54,9 @@ export class WebhooksService {
         url: dto.url,
         events: dto.events,
         active: dto.active,
+        ...(dto.payloadMapping !== undefined
+          ? { payloadMapping: this.mappingInput(dto.payloadMapping) }
+          : {}),
       },
     });
     return this.toPublic(hook);
@@ -72,6 +85,16 @@ export class WebhooksService {
     return hook;
   }
 
+  /** Validate + normalize mapping rules for the Json column. */
+  private mappingInput(
+    rules: MappingRuleDto[] | undefined,
+  ): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+    if (!rules || rules.length === 0) return Prisma.JsonNull;
+    const error = mappingRulesError(rules);
+    if (error) throw new BadRequestException(error);
+    return rules as unknown as Prisma.InputJsonValue;
+  }
+
   private toPublic(h: Webhook) {
     return {
       id: h.id,
@@ -79,6 +102,7 @@ export class WebhooksService {
       events: h.events,
       sessionId: h.sessionId,
       active: h.active,
+      payloadMapping: h.payloadMapping ?? null,
       // mask the secret outside of creation
       secretHint: `${h.secret.slice(0, 12)}…`,
       createdAt: h.createdAt,

@@ -1,10 +1,5 @@
 export type WaStatus =
-  | "PENDING"
-  | "QR"
-  | "CONNECTING"
-  | "CONNECTED"
-  | "DISCONNECTED"
-  | "LOGGED_OUT";
+  "PENDING" | "QR" | "CONNECTING" | "CONNECTED" | "DISCONNECTED" | "LOGGED_OUT";
 
 export interface WaSession {
   id: string;
@@ -64,12 +59,21 @@ export interface WaSessionDetail extends WaSession {
   qrDataUrl: string | null;
 }
 
+/** One webhook payload-projection rule: exactly one of source/value. */
+export interface MappingRule {
+  target: string;
+  source?: string;
+  value?: string | number | boolean | null;
+  dateFormat?: string;
+}
+
 export interface Webhook {
   id: string;
   url: string;
   events: string[];
   sessionId: string | null;
   active: boolean;
+  payloadMapping: MappingRule[] | null;
   secretHint: string;
   secret?: string;
   createdAt: string;

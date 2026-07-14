@@ -15,22 +15,49 @@ const nav = [
 const sessionStatuses = [
   { name: "PENDING", meaning: "Session created, not yet initialized." },
   { name: "QR", meaning: "A QR code is ready to be scanned with WhatsApp." },
-  { name: "CONNECTING", meaning: "Pairing accepted, establishing the connection." },
-  { name: "CONNECTED", meaning: "Online and ready to send and receive messages." },
-  { name: "DISCONNECTED", meaning: "Connection dropped; reconnection is attempted automatically." },
-  { name: "LOGGED_OUT", meaning: "The device was unlinked; a new QR scan is required." },
+  {
+    name: "CONNECTING",
+    meaning: "Pairing accepted, establishing the connection.",
+  },
+  {
+    name: "CONNECTED",
+    meaning: "Online and ready to send and receive messages.",
+  },
+  {
+    name: "DISCONNECTED",
+    meaning: "Connection dropped; reconnection is attempted automatically.",
+  },
+  {
+    name: "LOGGED_OUT",
+    meaning: "The device was unlinked; a new QR scan is required.",
+  },
 ];
 
 const events = [
-  { name: "message.received", desc: "An inbound WhatsApp message arrived on a connected session." },
-  { name: "session.status", desc: "A session changed status (e.g. CONNECTED, DISCONNECTED, LOGGED_OUT)." },
-  { name: "session.qr", desc: "A new QR code was generated and is waiting to be scanned." },
+  {
+    name: "message.received",
+    desc: "An inbound WhatsApp message arrived on a connected session.",
+  },
+  {
+    name: "session.status",
+    desc: "A session changed status (e.g. CONNECTED, DISCONNECTED, LOGGED_OUT).",
+  },
+  {
+    name: "session.qr",
+    desc: "A new QR code was generated and is waiting to be scanned.",
+  },
 ];
 
 const headers = [
   { name: "X-Whathooks-Event", desc: "The event type, e.g. message.received." },
-  { name: "X-Whathooks-Signature", desc: "HMAC-SHA256 of the raw body, formatted as sha256=<hex>." },
-  { name: "X-Whathooks-Delivery", desc: "A unique ID for this delivery attempt." },
+  {
+    name: "X-Whathooks-Signature",
+    desc: "HMAC-SHA256 of the raw body, formatted as sha256=<hex>.",
+  },
+  {
+    name: "X-Whathooks-Delivery",
+    desc: "A unique ID for this delivery attempt.",
+  },
 ];
 
 const endpoints = [
@@ -62,6 +89,28 @@ function verifySignature(rawBody, header, secret) {
   const b = Buffer.from(expected, "hex");
 
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}`;
+
+const mappingExample = `// Mapping rules on the webhook:
+[
+  { "target": "phone",      "source": "data.from" },
+  { "target": "message",    "source": "data.text" },
+  { "target": "receivedAt", "source": "data.timestamp",
+    "dateFormat": "yyyy-MM-dd HH:mm" },
+  { "target": "origin",     "value": "whathooks" }
+]
+
+// What your endpoint receives:
+{
+  "event": "message.received",
+  "sessionId": "sess_8f2k19a7",
+  "data": {
+    "phone": "15551234567",
+    "message": "Hi! Is my order shipped yet?",
+    "receivedAt": "2026-07-14 19:30",
+    "origin": "whathooks"
+  },
+  "timestamp": "2026-07-14T22:30:00.000Z"
 }`;
 
 const payloadExample = `{
@@ -165,9 +214,9 @@ export default function DocsPage() {
                 each number supports one linked device.
               </p>
               <div className="card mt-6 border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-muted)]">
-                Because this uses an unofficial WhatsApp Web connection, treat it
-                like a linked device: keep the phone reachable and avoid behavior
-                that could get the number flagged by WhatsApp.
+                Because this uses an unofficial WhatsApp Web connection, treat
+                it like a linked device: keep the phone reachable and avoid
+                behavior that could get the number flagged by WhatsApp.
               </div>
             </section>
 
@@ -192,14 +241,16 @@ export default function DocsPage() {
                     2. Create a WhatsApp session &amp; scan the QR
                   </h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Create a session in the dashboard, then open WhatsApp on your
-                    phone &rarr; <span className="pill">Linked Devices</span>{" "}
-                    &rarr; <span className="pill">Link a Device</span> and scan
-                    the QR.
+                    Create a session in the dashboard, then open WhatsApp on
+                    your phone &rarr;{" "}
+                    <span className="pill">Linked Devices</span> &rarr;{" "}
+                    <span className="pill">Link a Device</span> and scan the QR.
                   </p>
                 </li>
                 <li className="card">
-                  <h3 className="text-lg font-semibold">3. Add a webhook URL</h3>
+                  <h3 className="text-lg font-semibold">
+                    3. Add a webhook URL
+                  </h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
                     Register an HTTPS endpoint to receive{" "}
                     <code className="pill">message.received</code> and session
@@ -207,7 +258,9 @@ export default function DocsPage() {
                   </p>
                 </li>
                 <li className="card">
-                  <h3 className="text-lg font-semibold">4. Create an API key</h3>
+                  <h3 className="text-lg font-semibold">
+                    4. Create an API key
+                  </h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
                     Generate an API key to send messages programmatically via{" "}
                     <code className="pill">POST /v1/messages</code>.
@@ -325,14 +378,46 @@ export default function DocsPage() {
               </pre>
 
               <h3 className="mt-8 text-lg font-semibold">
+                Customize the payload
+              </h3>
+              <p className="mt-2 text-sm text-[var(--color-muted)]">
+                Optionally give a webhook <em>mapping rules</em> to reshape{" "}
+                <code className="pill">data</code> to match your system: rename
+                fields, format dates, and inject fixed values. When rules are
+                set, <code className="pill">data</code> contains{" "}
+                <span className="font-medium text-[var(--color-fg)]">only</span>{" "}
+                the fields you map — the envelope stays the same. Each rule has
+                a <code className="pill">target</code> (output name) and either
+                a <code className="pill">source</code> (dot path like{" "}
+                <code className="pill">data.from</code>, also reaching{" "}
+                <code className="pill">event</code>,{" "}
+                <code className="pill">sessionId</code>,{" "}
+                <code className="pill">timestamp</code>) or a fixed{" "}
+                <code className="pill">value</code>. Add{" "}
+                <code className="pill">dateFormat</code> to a source rule to
+                format it as a date: <code className="pill">iso</code>,{" "}
+                <code className="pill">unix</code>,{" "}
+                <code className="pill">unix_ms</code>, or a UTC pattern using{" "}
+                <code className="pill">yyyy MM dd HH mm ss</code>. Configure it
+                on the webhook in the dashboard, or pass{" "}
+                <code className="pill">payloadMapping</code> when creating one
+                via API.
+              </p>
+              <pre className="mt-3">
+                <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
+                  {mappingExample}
+                </code>
+              </pre>
+
+              <h3 className="mt-8 text-lg font-semibold">
                 Signature verification
               </h3>
               <p className="mt-2 text-sm text-[var(--color-muted)]">
                 Verify each delivery by computing an HMAC-SHA256 of the{" "}
                 <span className="font-medium text-[var(--color-fg)]">raw</span>{" "}
                 request body using your webhook secret, then comparing it to the{" "}
-                <code className="pill">X-Whathooks-Signature</code> header. Always
-                compare with a constant-time function.
+                <code className="pill">X-Whathooks-Signature</code> header.
+                Always compare with a constant-time function.
               </p>
               <pre className="mt-3">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
@@ -343,23 +428,26 @@ export default function DocsPage() {
 
             {/* Sending messages */}
             <section id="sending">
-              <h2 className="mt-12 mb-4 text-2xl font-bold">Sending messages</h2>
+              <h2 className="mt-12 mb-4 text-2xl font-bold">
+                Sending messages
+              </h2>
               <p className="text-[var(--color-muted)]">
                 Send a message with{" "}
                 <code className="pill">POST /v1/messages</code>, authenticated
                 with an API key via the{" "}
                 <code className="pill">X-API-Key: &lt;token&gt;</code> header.{" "}
                 An{" "}
-                <code className="pill">Authorization: Bearer &lt;token&gt;</code>{" "}
+                <code className="pill">
+                  Authorization: Bearer &lt;token&gt;
+                </code>{" "}
                 header also works.
               </p>
               <p className="mt-4 text-sm text-[var(--color-muted)]">
                 The <code className="pill">to</code> field accepts a bare phone
                 number (digits only, with country code, no{" "}
                 <code className="pill">+</code>) or a full WhatsApp JID. The
-                target session must be{" "}
-                <code className="pill">CONNECTED</code> or the request returns{" "}
-                <code className="pill">400</code>.
+                target session must be <code className="pill">CONNECTED</code>{" "}
+                or the request returns <code className="pill">400</code>.
               </p>
               <pre className="mt-4">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
@@ -426,7 +514,9 @@ export default function DocsPage() {
 
             {/* Errors & limits */}
             <section id="errors">
-              <h2 className="mt-12 mb-4 text-2xl font-bold">Errors &amp; limits</h2>
+              <h2 className="mt-12 mb-4 text-2xl font-bold">
+                Errors &amp; limits
+              </h2>
               <ul className="mt-2 space-y-3 text-sm text-[var(--color-muted)]">
                 <li className="flex items-start gap-3">
                   <span className="badge shrink-0 bg-[var(--color-surface-2)] text-[var(--color-accent)]">
@@ -439,9 +529,8 @@ export default function DocsPage() {
                     400
                   </span>
                   <span>
-                    The session is not{" "}
-                    <code className="pill">CONNECTED</code>, or the request body
-                    is invalid.
+                    The session is not <code className="pill">CONNECTED</code>,
+                    or the request body is invalid.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
@@ -450,8 +539,8 @@ export default function DocsPage() {
                   </span>
                   <span>
                     Delivery requests time out after 10 seconds. For now we make
-                    a single delivery attempt per event &mdash; automatic retries
-                    are coming.
+                    a single delivery attempt per event &mdash; automatic
+                    retries are coming.
                   </span>
                 </li>
               </ul>

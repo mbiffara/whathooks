@@ -38,7 +38,11 @@ export class BillingService {
   }
 
   private priceIdFor(plan: Plan): string {
-    const id = this.config.get<string>(PLANS[plan].priceEnv);
+    const priceEnv = PLANS[plan].priceEnv;
+    if (!priceEnv) {
+      throw new BadRequestException(`${plan} is not a purchasable plan`);
+    }
+    const id = this.config.get<string>(priceEnv);
     if (!id) {
       throw new BadRequestException(`No Stripe price configured for ${plan}`);
     }
@@ -186,6 +190,11 @@ export class BillingService {
     });
     if (!org) {
       this.log.warn(`No org for Stripe customer ${customerId}`);
+      return;
+    }
+    if (org.plan === 'SPONSORED') {
+      // Comped orgs are managed manually — never let a Stripe event demote one.
+      this.log.warn(`Ignoring subscription event for sponsored org ${org.id}`);
       return;
     }
 

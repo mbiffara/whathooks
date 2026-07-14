@@ -3,32 +3,60 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Plan } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PLANS, currentMonthStart } from './plans';
+import {
+  ACTIVE_SUBSCRIPTION_STATUSES,
+  PLANS,
+  currentMonthStart,
+  planRequiresSubscription,
+} from './plans';
 
 /**
  * Enforces plan entitlements: monthly message cap (inbound + outbound),
  * connected-number cap, and the history-retention window. Read from the org's
  * current `plan`; limits live in plans.ts.
+ *
+ * Write actions (sending, connecting a number) additionally require an active
+ * subscription unless the plan is comped (SPONSORED). Reads are never gated —
+ * a lapsed org keeps its dashboard and history so it can resubscribe and pick
+ * up where it left off.
  */
 @Injectable()
 export class QuotaService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async planLimits(organizationId: string) {
+  private async orgBilling(organizationId: string) {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { plan: true },
+      select: { plan: true, subscriptionStatus: true },
     });
     if (!org) throw new NotFoundException('Organization not found');
-    return PLANS[org.plan];
+    return { ...org, limits: PLANS[org.plan] };
+  }
+
+  /** Throw unless the org is comped or has a live subscription. */
+  private assertSubscribed(org: {
+    plan: Plan;
+    subscriptionStatus: string | null;
+  }): void {
+    if (!planRequiresSubscription(org.plan)) return;
+    if (
+      org.subscriptionStatus &&
+      ACTIVE_SUBSCRIPTION_STATUSES.includes(org.subscriptionStatus)
+    ) {
+      return;
+    }
+    throw new ForbiddenException(
+      'An active subscription is required. Choose a plan in Billing to continue.',
+    );
   }
 
   /** Messages counted against this month's cap (inbound + outbound). */
   async messageUsage(
     organizationId: string,
-  ): Promise<{ used: number; limit: number }> {
-    const limits = await this.planLimits(organizationId);
+  ): Promise<{ used: number; limit: number | null }> {
+    const { limits } = await this.orgBilling(organizationId);
     const used = await this.prisma.message.count({
       where: {
         organizationId,
@@ -38,25 +66,30 @@ export class QuotaService {
     return { used, limit: limits.messagesPerMonth };
   }
 
-  /** Throw if sending another message would exceed the monthly cap. */
+  /** Throw if the org may not send: no live subscription, or over the cap. */
   async assertCanSend(organizationId: string): Promise<void> {
+    const org = await this.orgBilling(organizationId);
+    this.assertSubscribed(org);
     const { used, limit } = await this.messageUsage(organizationId);
-    if (used >= limit) {
+    if (limit != null && used >= limit) {
       throw new ForbiddenException(
         `Monthly message limit reached (${limit}). Upgrade your plan to send more.`,
       );
     }
   }
 
-  /** Throw if connecting another WhatsApp number would exceed the cap. */
+  /** Throw if the org may not connect another WhatsApp number. */
   async assertCanAddNumber(organizationId: string): Promise<void> {
-    const limits = await this.planLimits(organizationId);
+    const org = await this.orgBilling(organizationId);
+    this.assertSubscribed(org);
+    const limit = org.limits.waNumbers;
+    if (limit == null) return;
     const count = await this.prisma.waSession.count({
       where: { organizationId },
     });
-    if (count >= limits.waNumbers) {
+    if (count >= limit) {
       throw new ForbiddenException(
-        `Your plan allows ${limits.waNumbers} WhatsApp number(s). Upgrade to add more.`,
+        `Your plan allows ${limit} WhatsApp number(s). Upgrade to add more.`,
       );
     }
   }
@@ -66,7 +99,7 @@ export class QuotaService {
    * history is unlimited. Use as a `createdAt >= …` filter on message reads.
    */
   async historyWindowStart(organizationId: string): Promise<Date | null> {
-    const limits = await this.planLimits(organizationId);
+    const { limits } = await this.orgBilling(organizationId);
     if (limits.historyDays == null) return null;
     const cutoff = new Date();
     cutoff.setUTCDate(cutoff.getUTCDate() - limits.historyDays);

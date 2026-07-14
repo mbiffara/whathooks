@@ -199,14 +199,18 @@ export interface InvitationCreated {
   emailSent: boolean;
 }
 
-export type Plan = "STARTER" | "PRO" | "BUSINESS";
+export type Plan = "STARTER" | "PRO" | "BUSINESS" | "SPONSORED";
+
+/** Plans a user can buy (SPONSORED is assigned manually). */
+export type PurchasablePlan = Exclude<Plan, "SPONSORED">;
 
 export interface PlanLimits {
   label: string;
-  messagesPerMonth: number;
+  /** null = unlimited */
+  messagesPerMonth: number | null;
   historyDays: number | null;
-  waNumbers: number;
-  priceEnv: string;
+  /** null = unlimited */
+  waNumbers: number | null;
 }
 
 export interface Subscription {
@@ -215,11 +219,12 @@ export interface Subscription {
   status: string | null;
   currentPeriodEnd: string | null;
   hasCustomer: boolean;
-  usage: { used: number; limit: number };
+  usage: { used: number; limit: number | null };
 }
 
 export const PLAN_PRICING: Record<Plan, { label: string; price: string }> = {
   STARTER: { label: "Starter", price: "$9.99" },
   PRO: { label: "Pro", price: "$29.99" },
   BUSINESS: { label: "Business", price: "$99" },
+  SPONSORED: { label: "Sponsored", price: "—" },
 };

@@ -10,14 +10,18 @@ import { Plan } from '@prisma/client';
 export interface PlanLimits {
   /** Human label for UI. */
   label: string;
-  /** Monthly message cap (inbound + outbound). */
-  messagesPerMonth: number;
+  /** Monthly message cap (inbound + outbound); null = unlimited. */
+  messagesPerMonth: number | null;
   /** How far back message history is visible/retained; null = unlimited. */
   historyDays: number | null;
-  /** Max connected WhatsApp numbers (sessions). */
-  waNumbers: number;
-  /** Env var holding the Stripe recurring Price id for this tier. */
-  priceEnv: string;
+  /** Max connected WhatsApp numbers (sessions); null = unlimited. */
+  waNumbers: number | null;
+  /**
+   * Env var holding the Stripe recurring Price id for this tier. Absent for
+   * tiers that aren't purchasable (SPONSORED) — those also skip the
+   * active-subscription requirement.
+   */
+  priceEnv?: string;
 }
 
 export const PLANS: Record<Plan, PlanLimits> = {
@@ -42,7 +46,22 @@ export const PLANS: Record<Plan, PlanLimits> = {
     waNumbers: 10,
     priceEnv: 'STRIPE_PRICE_BUSINESS',
   },
+  SPONSORED: {
+    label: 'Sponsored',
+    messagesPerMonth: null,
+    historyDays: null,
+    waNumbers: null,
+  },
 };
+
+/** Subscription statuses that count as "paying" for quota purposes. `past_due`
+ * is included so Stripe's dunning/retry cycle can run before access is cut. */
+export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'];
+
+/** Whether this plan requires an active Stripe subscription to use the API. */
+export function planRequiresSubscription(plan: Plan): boolean {
+  return PLANS[plan].priceEnv !== undefined;
+}
 
 /** Resolve a Stripe Price id back to its Plan (used by webhook handling). */
 export function planForPriceId(
@@ -51,7 +70,8 @@ export function planForPriceId(
 ): Plan | null {
   if (!priceId) return null;
   for (const plan of Object.keys(PLANS) as Plan[]) {
-    if (env[PLANS[plan].priceEnv] === priceId) return plan;
+    const priceEnv = PLANS[plan].priceEnv;
+    if (priceEnv && env[priceEnv] === priceId) return plan;
   }
   return null;
 }

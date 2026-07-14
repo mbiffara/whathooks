@@ -33,6 +33,7 @@ enum Plan {
   STARTER // $9.99  — 5k msgs/mo, 30-day history, 1 number
   PRO // $29.99 — 10k msgs/mo, 90-day history, 3 numbers
   BUSINESS // $99   — 100k msgs/mo, full history, 10 numbers
+  SPONSORED // comped — unlimited, no subscription required; assigned manually
 }
 
 model Organization {

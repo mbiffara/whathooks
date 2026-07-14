@@ -1,14 +1,18 @@
 "use client";
 
 import { apiClient } from "@/lib/client-api";
-import { PLAN_PRICING, type Plan, type Subscription } from "@/lib/types";
+import {
+  PLAN_PRICING,
+  type PurchasablePlan,
+  type Subscription,
+} from "@/lib/types";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
-const PLAN_ORDER: Plan[] = ["STARTER", "PRO", "BUSINESS"];
+const PLAN_ORDER: PurchasablePlan[] = ["STARTER", "PRO", "BUSINESS"];
 
-const PLAN_FEATURES: Record<Plan, string[]> = {
+const PLAN_FEATURES: Record<PurchasablePlan, string[]> = {
   STARTER: ["1 WhatsApp number", "5,000 messages / month", "30-day history"],
   PRO: [
     "3 WhatsApp numbers",
@@ -72,9 +76,11 @@ function BillingContent() {
     return <p className="text-sm text-[var(--color-muted)]">Loading…</p>;
   }
 
-  const usagePct = sub
-    ? Math.min(100, Math.round((sub.usage.used / sub.usage.limit) * 100))
-    : 0;
+  const unlimited = sub?.usage.limit == null;
+  const usagePct =
+    sub && sub.usage.limit != null
+      ? Math.min(100, Math.round((sub.usage.used / sub.usage.limit) * 100))
+      : 0;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -110,9 +116,11 @@ function BillingContent() {
                 </div>
                 <div className="mt-1 text-xl font-semibold">
                   {sub.limits.label}
-                  <span className="ml-2 text-sm font-normal text-[var(--color-muted)]">
-                    {PLAN_PRICING[sub.plan].price}/mo
-                  </span>
+                  {sub.plan !== "SPONSORED" && (
+                    <span className="ml-2 text-sm font-normal text-[var(--color-muted)]">
+                      {PLAN_PRICING[sub.plan].price}/mo
+                    </span>
+                  )}
                 </div>
                 {sub.status && (
                   <div className="mt-1 text-xs text-[var(--color-muted)]">
@@ -140,26 +148,33 @@ function BillingContent() {
                 <span>Messages this month</span>
                 <span>
                   {sub.usage.used.toLocaleString()} /{" "}
-                  {sub.usage.limit.toLocaleString()}
+                  {unlimited ? "Unlimited" : sub.usage.limit!.toLocaleString()}
                 </span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
-                <div
-                  className={`h-full rounded-full ${
-                    usagePct >= 100
-                      ? "bg-red-500"
-                      : usagePct >= 80
-                        ? "bg-amber-500"
-                        : "bg-[var(--color-brand)]"
-                  }`}
-                  style={{ width: `${usagePct}%` }}
-                />
-              </div>
+              {!unlimited && (
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+                  <div
+                    className={`h-full rounded-full ${
+                      usagePct >= 100
+                        ? "bg-red-500"
+                        : usagePct >= 80
+                          ? "bg-amber-500"
+                          : "bg-[var(--color-brand)]"
+                    }`}
+                    style={{ width: `${usagePct}%` }}
+                  />
+                </div>
+              )}
             </div>
           </section>
 
           {/* Plans */}
-          {!isOwner ? (
+          {sub.plan === "SPONSORED" ? (
+            <p className="mt-6 text-sm text-[var(--color-muted)]">
+              You&apos;re on a sponsored plan with unlimited usage — no
+              subscription needed.
+            </p>
+          ) : !isOwner ? (
             <p className="mt-6 text-sm text-[var(--color-muted)]">
               Only the organization owner can change the plan.
             </p>

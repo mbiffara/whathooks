@@ -118,16 +118,18 @@ export class WhathooksApiStack extends cdk.Stack {
     // Stripe billing secrets, created out-of-band (like the DATABASE_URL secret):
     //   aws secretsmanager create-secret --name whathooks/stripe-secret-key --secret-string 'sk_live_...'
     //   aws secretsmanager create-secret --name whathooks/stripe-webhook-secret --secret-string 'whsec_...'
-    // Imported by name; ECS resolves the partial ARN at container start.
-    const stripeKeySecret = secretsmanager.Secret.fromSecretNameV2(
+    // Imported by complete ARN (suffix included): importing by name gives ECS a
+    // partial ARN, whose GetSecretValue was denied at task start and tripped the
+    // deployment circuit breaker. Full ARNs make the IAM grant an exact match.
+    const stripeKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
       'StripeSecretKey',
-      'whathooks/stripe-secret-key',
+      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/stripe-secret-key-Wx93N1',
     );
-    const stripeWebhookSecret = secretsmanager.Secret.fromSecretNameV2(
+    const stripeWebhookSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
       'StripeWebhookSecret',
-      'whathooks/stripe-webhook-secret',
+      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/stripe-webhook-secret-KUJqYV',
     );
 
     // ---------------------------------------------------------------------

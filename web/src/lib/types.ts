@@ -217,6 +217,8 @@ export interface Subscription {
   plan: Plan;
   limits: PlanLimits;
   status: string | null;
+  /** False for orgs with no live subscription (plan is only the default tier). */
+  subscribed: boolean;
   currentPeriodEnd: string | null;
   hasCustomer: boolean;
   usage: { used: number; limit: number | null };

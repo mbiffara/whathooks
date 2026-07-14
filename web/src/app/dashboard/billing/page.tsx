@@ -115,20 +115,25 @@ function BillingContent() {
                   Current plan
                 </div>
                 <div className="mt-1 text-xl font-semibold">
-                  {sub.limits.label}
-                  {sub.plan !== "SPONSORED" && (
+                  {sub.subscribed ? sub.limits.label : "No active plan"}
+                  {sub.subscribed && sub.plan !== "SPONSORED" && (
                     <span className="ml-2 text-sm font-normal text-[var(--color-muted)]">
                       {PLAN_PRICING[sub.plan].price}/mo
                     </span>
                   )}
                 </div>
-                {sub.status && (
+                {sub.subscribed && sub.status && (
                   <div className="mt-1 text-xs text-[var(--color-muted)]">
                     Status: {sub.status}
                     {sub.currentPeriodEnd &&
                       ` · renews ${new Date(
                         sub.currentPeriodEnd,
                       ).toLocaleDateString()}`}
+                  </div>
+                )}
+                {!sub.subscribed && (
+                  <div className="mt-1 text-xs text-[var(--color-muted)]">
+                    Pick a plan below to start sending messages.
                   </div>
                 )}
               </div>
@@ -143,29 +148,33 @@ function BillingContent() {
               )}
             </div>
 
-            <div className="mt-5">
-              <div className="mb-1 flex justify-between text-xs text-[var(--color-muted)]">
-                <span>Messages this month</span>
-                <span>
-                  {sub.usage.used.toLocaleString()} /{" "}
-                  {unlimited ? "Unlimited" : sub.usage.limit!.toLocaleString()}
-                </span>
-              </div>
-              {!unlimited && (
-                <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
-                  <div
-                    className={`h-full rounded-full ${
-                      usagePct >= 100
-                        ? "bg-red-500"
-                        : usagePct >= 80
-                          ? "bg-amber-500"
-                          : "bg-[var(--color-brand)]"
-                    }`}
-                    style={{ width: `${usagePct}%` }}
-                  />
+            {sub.subscribed && (
+              <div className="mt-5">
+                <div className="mb-1 flex justify-between text-xs text-[var(--color-muted)]">
+                  <span>Messages this month</span>
+                  <span>
+                    {sub.usage.used.toLocaleString()} /{" "}
+                    {unlimited
+                      ? "Unlimited"
+                      : sub.usage.limit!.toLocaleString()}
+                  </span>
                 </div>
-              )}
-            </div>
+                {!unlimited && (
+                  <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+                    <div
+                      className={`h-full rounded-full ${
+                        usagePct >= 100
+                          ? "bg-red-500"
+                          : usagePct >= 80
+                            ? "bg-amber-500"
+                            : "bg-[var(--color-brand)]"
+                      }`}
+                      style={{ width: `${usagePct}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           {/* Plans */}
@@ -181,7 +190,7 @@ function BillingContent() {
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               {PLAN_ORDER.map((plan) => {
-                const current = plan === sub.plan;
+                const current = sub.subscribed && plan === sub.plan;
                 return (
                   <div
                     key={plan}
@@ -213,9 +222,7 @@ function BillingContent() {
                       ))}
                     </ul>
                     <button
-                      onClick={() =>
-                        redirectTo("/billing/checkout", { plan })
-                      }
+                      onClick={() => redirectTo("/billing/checkout", { plan })}
                       disabled={current || busy !== null}
                       className={`mt-4 w-full ${
                         current ? "btn-ghost" : "btn-primary"

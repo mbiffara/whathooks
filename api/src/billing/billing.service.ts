@@ -8,7 +8,12 @@ import { ConfigService } from '@nestjs/config';
 import { Plan } from '@prisma/client';
 import Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
-import { PLANS, planForPriceId } from './plans';
+import {
+  ACTIVE_SUBSCRIPTION_STATUSES,
+  PLANS,
+  planForPriceId,
+  planRequiresSubscription,
+} from './plans';
 import { QuotaService } from './quota.service';
 
 @Injectable()
@@ -69,10 +74,17 @@ export class BillingService {
     });
     if (!org) throw new NotFoundException('Organization not found');
     const usage = await this.quota.messageUsage(organizationId);
+    // `plan` alone is not "has a plan": new orgs default to STARTER with no
+    // subscription. `subscribed` is the truth the UI should key off.
+    const subscribed =
+      !planRequiresSubscription(org.plan) ||
+      (org.subscriptionStatus !== null &&
+        ACTIVE_SUBSCRIPTION_STATUSES.includes(org.subscriptionStatus));
     return {
       plan: org.plan,
       limits: PLANS[org.plan],
       status: org.subscriptionStatus,
+      subscribed,
       currentPeriodEnd: org.currentPeriodEnd,
       hasCustomer: Boolean(org.stripeCustomerId),
       usage,

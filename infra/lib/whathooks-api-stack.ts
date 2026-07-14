@@ -131,6 +131,13 @@ export class WhathooksApiStack extends cdk.Stack {
       'StripeWebhookSecret',
       'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/stripe-webhook-secret-KUJqYV',
     );
+    // Resend API key for transactional email (invitations). Same out-of-band
+    // create + complete-ARN import pattern as the Stripe secrets.
+    const resendApiKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'ResendApiKey',
+      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/resend-api-key-FVI7So',
+    );
 
     // ---------------------------------------------------------------------
     // Media bucket (private; browser loads objects via presigned URLs)
@@ -201,6 +208,9 @@ export class WhathooksApiStack extends cdk.Stack {
         STRIPE_PRICE_BUSINESS: 'price_1TtAuLHVX3hp29uYzqo7cFof',
         // API-created portal configuration (not the Dashboard default).
         STRIPE_PORTAL_CONFIG: 'bpc_1TtBhkHVX3hp29uYjDbNpayS',
+        // Sender for transactional email (Resend). notify.logicalminds.co is
+        // the verified sending domain; without RESEND_API_KEY mail is skipped.
+        MAIL_FROM: 'whathooks <no-reply@notify.logicalminds.co>',
       },
       secrets: {
         // Whole secret value is the connection string → injected as DATABASE_URL.
@@ -211,6 +221,7 @@ export class WhathooksApiStack extends cdk.Stack {
         STRIPE_SECRET_KEY: ecs.Secret.fromSecretsManager(stripeKeySecret),
         STRIPE_WEBHOOK_SECRET:
           ecs.Secret.fromSecretsManager(stripeWebhookSecret),
+        RESEND_API_KEY: ecs.Secret.fromSecretsManager(resendApiKeySecret),
       },
     });
 

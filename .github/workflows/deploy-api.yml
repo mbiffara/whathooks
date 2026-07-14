@@ -19,6 +19,12 @@ permissions:
   id-token: write # for AWS OIDC
   contents: read
 
+# Never run two CDK deploys at once (CloudFormation rejects concurrent stack
+# updates); queue pushes instead.
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

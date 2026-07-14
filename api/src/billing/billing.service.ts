@@ -123,9 +123,13 @@ export class BillingService {
   /** Create a Customer Portal session (manage/cancel/update card). */
   async createPortalSession(organizationId: string): Promise<{ url: string }> {
     const customerId = await this.ensureCustomer(organizationId);
+    // Our portal configuration is created via the API (not the Dashboard), so
+    // it isn't the account default and must be referenced explicitly.
+    const configuration = this.config.get<string>('STRIPE_PORTAL_CONFIG');
     const session = await this.client().billingPortal.sessions.create({
       customer: customerId,
       return_url: `${this.webBase()}/dashboard/billing`,
+      ...(configuration ? { configuration } : {}),
     });
     return { url: session.url };
   }

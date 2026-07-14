@@ -197,6 +197,8 @@ export class WhathooksApiStack extends cdk.Stack {
         STRIPE_PRICE_STARTER: 'price_1TtAuDHVX3hp29uYq7BxWqgP',
         STRIPE_PRICE_PRO: 'price_1TtAuJHVX3hp29uYkKt35bY1',
         STRIPE_PRICE_BUSINESS: 'price_1TtAuLHVX3hp29uYzqo7cFof',
+        // API-created portal configuration (not the Dashboard default).
+        STRIPE_PORTAL_CONFIG: 'bpc_1TtBhkHVX3hp29uYjDbNpayS',
       },
       secrets: {
         // Whole secret value is the connection string → injected as DATABASE_URL.

@@ -7,7 +7,8 @@ import type {
   MessagesPage,
 } from "@/components/messages/types";
 import { previewText, relativeTime } from "@/components/messages/utils";
-import { apiClient } from "@/lib/client-api";
+import { UpgradeModal } from "@/components/upgrade-modal";
+import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { WaSession } from "@/lib/types";
 import { useSession } from "next-auth/react";
 import {
@@ -58,6 +59,7 @@ export default function MessagesPage() {
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [togglingAgent, setTogglingAgent] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -238,7 +240,20 @@ export default function MessagesPage() {
             body: fd,
           },
         );
-        if (!res.ok) throw new Error(`Send failed (${res.status})`);
+        if (!res.ok) {
+          let message = `Send failed (${res.status})`;
+          try {
+            const body = await res.json();
+            if (body.message) {
+              message = Array.isArray(body.message)
+                ? body.message.join(", ")
+                : body.message;
+            }
+          } catch {
+            /* ignore */
+          }
+          throw new ApiError(message, res.status);
+        }
       } else {
         await apiClient(`/conversations/${selectedId}/messages`, token, {
           method: "POST",
@@ -251,7 +266,11 @@ export default function MessagesPage() {
       await refetchThread();
       loadConversations();
     } catch (e) {
-      setSendError(e instanceof Error ? e.message : "Failed to send");
+      if (isSubscriptionRequired(e)) {
+        setShowUpgrade(true);
+      } else {
+        setSendError(e instanceof Error ? e.message : "Failed to send");
+      }
     } finally {
       setSending(false);
     }
@@ -469,6 +488,11 @@ export default function MessagesPage() {
               {sendError && (
                 <div className="mb-2 text-xs text-red-400">{sendError}</div>
               )}
+              <UpgradeModal
+                open={showUpgrade}
+                onClose={() => setShowUpgrade(false)}
+                action="Sending messages"
+              />
               {file && (
                 <div className="mb-2 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-xs">
                   <span className="truncate text-[var(--color-fg)]">

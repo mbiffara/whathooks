@@ -1,7 +1,8 @@
 "use client";
 
 import { StatusBadge } from "@/components/status-badge";
-import { apiClient } from "@/lib/client-api";
+import { UpgradeModal } from "@/components/upgrade-modal";
+import { apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { WaSession } from "@/lib/types";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -17,6 +18,7 @@ export default function SessionsPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -46,7 +48,11 @@ export default function SessionsPage() {
       });
       router.push(`/dashboard/sessions/${created.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create");
+      if (isSubscriptionRequired(e)) {
+        setShowUpgrade(true);
+      } else {
+        setError(e instanceof Error ? e.message : "Failed to create");
+      }
       setCreating(false);
     }
   }
@@ -76,6 +82,12 @@ export default function SessionsPage() {
       </form>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
+
+      <UpgradeModal
+        open={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        action="Connecting a WhatsApp number"
+      />
 
       {loading ? (
         <p className="text-sm text-[var(--color-muted)]">Loading…</p>

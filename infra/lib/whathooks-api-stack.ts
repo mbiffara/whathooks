@@ -5,6 +5,7 @@ import {
   aws_cloudwatch as cloudwatch,
   aws_cloudwatch_actions as cwActions,
   aws_ec2 as ec2,
+  aws_ecr_assets as ecrAssets,
   aws_ecs as ecs,
   aws_elasticloadbalancingv2 as elbv2,
   aws_iam as iam,
@@ -163,8 +164,12 @@ export class WhathooksApiStack extends cdk.Stack {
       },
     });
 
+    // Pin the image platform to match runtimePlatform below, so builds are
+    // correct from any host: native on Apple Silicon, QEMU-emulated on x86 CI
+    // (the deploy workflow sets up docker buildx + QEMU).
     const image = ecs.ContainerImage.fromAsset(
       path.join(__dirname, '..', '..', 'api'),
+      { platform: ecrAssets.Platform.LINUX_ARM64 },
     );
 
     taskDef.addContainer('api', {

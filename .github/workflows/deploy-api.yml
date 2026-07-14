@@ -1,12 +1,12 @@
 name: Deploy API
 
-# Manual trigger by default. Uncomment the `push` block to deploy automatically
-# when api/ or infra/ change on main.
+# Deploys automatically when api/ or infra/ change on main; note each deploy
+# rolls the single stateful task (brief API blip, sessions reconnect).
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [main]
-  #   paths: ["api/**", "infra/**", ".github/workflows/deploy-api.yml"]
+  push:
+    branches: [main]
+    paths: ["api/**", "infra/**", ".github/workflows/deploy-api.yml"]
 
 # Required GitHub secrets:
 #   AWS_DEPLOY_ROLE_ARN  — IAM role for OIDC (trust github.com), with CDK deploy perms
@@ -38,6 +38,13 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - run: npm ci
+
+      # The api image targets linux/arm64 (Graviton); x86 runners need QEMU +
+      # buildx so the CDK asset build can cross-compile.
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
 
       - name: CDK deploy
         run: npx cdk deploy --require-approval never

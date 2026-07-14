@@ -258,6 +258,79 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Dashboard inbox + teams */}
+        <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Not just an API
+            </h2>
+            <p className="mt-3 text-[var(--color-muted)]">
+              Everything also works from the dashboard — chat with your
+              customers and bring your whole team along.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-6 lg:grid-cols-2">
+            {/* Team inbox */}
+            <div className="card transition-colors hover:border-[var(--color-brand)]/40">
+              <h3 className="text-lg font-semibold">A built-in inbox</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
+                Send and receive messages right from the dashboard — full
+                conversation history, media, and replies in real time. No code
+                required to talk to your customers.
+              </p>
+              <div className="mt-6 flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                <div className="max-w-[80%] self-start rounded-lg rounded-bl-none bg-[var(--color-bg)] px-3 py-2 text-xs">
+                  Hi! Is my order shipped yet?
+                </div>
+                <div className="max-w-[80%] self-end rounded-lg rounded-br-none bg-[var(--color-brand)]/15 px-3 py-2 text-xs">
+                  Yes — it shipped this morning! 🎉
+                </div>
+                <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
+                  <span className="flex-1 text-xs text-[var(--color-muted)]">
+                    Type a reply…
+                  </span>
+                  <span className="rounded-md bg-[var(--color-brand)] px-2 py-1 text-[10px] font-semibold text-black">
+                    Send
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Teams */}
+            <div className="card transition-colors hover:border-[var(--color-brand)]/40">
+              <h3 className="text-lg font-semibold">Built for teams</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
+                Invite your whole team into one organization with roles — owners
+                handle billing, admins manage numbers and webhooks, members work
+                the inbox. Everyone shares the same numbers and history.
+              </p>
+              <div className="mt-6 flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                {[
+                  { name: "Ana Pereira", role: "Owner" },
+                  { name: "Luis Gómez", role: "Admin" },
+                  { name: "Sam Chen", role: "Member" },
+                ].map((member) => (
+                  <div
+                    key={member.name}
+                    className="flex items-center justify-between rounded-lg bg-[var(--color-bg)] px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--color-brand)]/15 text-[10px] font-bold text-[var(--color-brand)]">
+                        {member.name
+                          .split(" ")
+                          .map((part) => part[0])
+                          .join("")}
+                      </span>
+                      <span className="text-xs font-medium">{member.name}</span>
+                    </div>
+                    <span className="pill">{member.role}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* How it works */}
         <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
           <div className="max-w-2xl">
@@ -351,7 +424,10 @@ export default function Home() {
         </section>
 
         {/* Pricing */}
-        <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-16 md:py-24">
+        <section
+          id="pricing"
+          className="mx-auto max-w-6xl scroll-mt-20 px-6 py-16 md:py-24"
+        >
           <div className="max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               Simple pricing
@@ -412,7 +488,9 @@ export default function Home() {
                 <div className="mt-8 flex-1" />
                 <Link
                   href="/signup"
-                  className={plan.highlighted ? "btn-primary w-full" : "btn-ghost w-full"}
+                  className={
+                    plan.highlighted ? "btn-primary w-full" : "btn-ghost w-full"
+                  }
                 >
                   {plan.cta}
                 </Link>

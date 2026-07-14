@@ -76,23 +76,23 @@ const features = [
 
 const plans = [
   {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    desc: "Try the full flow with your own number.",
-    cta: "Start free",
+    name: "Starter",
+    price: "$9.99",
+    period: "per month",
+    desc: "Get started with your own number.",
+    cta: "Start with Starter",
     highlighted: false,
     items: [
       "1 WhatsApp number",
-      "500 messages / month",
+      "5,000 messages / month",
       "1 webhook endpoint",
-      "7-day message history",
+      "30-day message history",
       "Community support",
     ],
   },
   {
     name: "Pro",
-    price: "$29",
+    price: "$29.99",
     period: "per month",
     desc: "For products with real conversation volume.",
     cta: "Start with Pro",

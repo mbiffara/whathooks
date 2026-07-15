@@ -3,7 +3,7 @@
 import { StatusBadge } from "@/components/status-badge";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { apiClient, isSubscriptionRequired } from "@/lib/client-api";
-import type { WaSession } from "@/lib/types";
+import type { Subscription, WaSession } from "@/lib/types";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,9 @@ export default function SessionsPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  // Known-unsubscribed orgs get the upgrade modal on click instead of a
+  // round-trip to the API's 403 (which stays as the fallback).
+  const [needsPlan, setNeedsPlan] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -30,6 +33,10 @@ export default function SessionsPage() {
     } finally {
       setLoading(false);
     }
+    // Best-effort; if it fails we just fall back to the API 403 path.
+    apiClient<Subscription>("/billing/subscription", token)
+      .then((sub) => setNeedsPlan(!sub.subscribed))
+      .catch(() => {});
   }, [token]);
 
   useEffect(() => {
@@ -38,6 +45,10 @@ export default function SessionsPage() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
+    if (needsPlan) {
+      setShowUpgrade(true);
+      return;
+    }
     if (!token || !label.trim()) return;
     setCreating(true);
     setError(null);
@@ -66,7 +77,10 @@ export default function SessionsPage() {
         </p>
       </div>
 
-      <form onSubmit={create} className="card flex flex-col gap-3 sm:flex-row sm:items-end">
+      <form
+        onSubmit={create}
+        className="card flex flex-col gap-3 sm:flex-row sm:items-end"
+      >
         <div className="flex-1">
           <label className="label">New session label</label>
           <input
@@ -76,7 +90,13 @@ export default function SessionsPage() {
             onChange={(e) => setLabel(e.target.value)}
           />
         </div>
-        <button type="submit" className="btn-primary" disabled={creating || !label.trim()}>
+        <button
+          type="submit"
+          className="btn-primary"
+          // When a plan is needed, stay clickable so the click can explain
+          // why (upgrade modal) instead of presenting a dead button.
+          disabled={creating || (!needsPlan && !label.trim())}
+        >
           {creating ? "Creating…" : "Create & connect"}
         </button>
       </form>

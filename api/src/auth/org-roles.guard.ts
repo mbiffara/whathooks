@@ -27,7 +27,13 @@ export class OrgRolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const user = context.switchToHttp().getRequest().user as AuthUser;
+    const req = context
+      .switchToHttp()
+      .getRequest<{ apiKeyId?: string; user?: AuthUser }>();
+    // API-key requests (JwtOrApiKeyGuard) carry no user; the key itself is an
+    // org-scoped machine credential with full access to its organization.
+    if (req.apiKeyId) return true;
+    const user = req.user;
     if (!user) throw new ForbiddenException();
     if (user.role === 'ADMIN') return true;
     if (!user.organizationId) {

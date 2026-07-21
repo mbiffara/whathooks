@@ -8,10 +8,9 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import type { AuthUser } from '../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
+import { ApiOrg } from '../common/decorators/org.decorator';
 import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { IsString, MaxLength, MinLength } from 'class-validator';
 import { CreateSessionDto } from './dto/session.dto';
@@ -29,57 +28,62 @@ class TestMessageDto {
   text!: string;
 }
 
-@UseGuards(JwtAuthGuard, OrgRolesGuard)
+/**
+ * Session management for both the dashboard (JWT + org roles) and
+ * programmatic callers (API key, full org access) — the latter so products
+ * can create sessions and embed the pairing QR in their own UI.
+ */
+@UseGuards(JwtOrApiKeyGuard, OrgRolesGuard)
 @Controller('sessions')
 export class SessionsController {
   constructor(private readonly whatsapp: WhatsappService) {}
 
-  private orgOf(user: AuthUser): string {
-    if (!user.organizationId)
+  private orgOf(organizationId: string | undefined): string {
+    if (!organizationId)
       throw new BadRequestException('User has no organization');
-    return user.organizationId;
+    return organizationId;
   }
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
-    return this.whatsapp.list(this.orgOf(user));
+  list(@ApiOrg() org: string | undefined) {
+    return this.whatsapp.list(this.orgOf(org));
   }
 
   @OrgRoles('ADMIN')
   @Post()
-  create(@CurrentUser() user: AuthUser, @Body() dto: CreateSessionDto) {
-    return this.whatsapp.create(this.orgOf(user), dto.label);
+  create(@ApiOrg() org: string | undefined, @Body() dto: CreateSessionDto) {
+    return this.whatsapp.create(this.orgOf(org), dto.label);
   }
 
   @Get(':id')
-  get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.whatsapp.get(this.orgOf(user), id);
+  get(@ApiOrg() org: string | undefined, @Param('id') id: string) {
+    return this.whatsapp.get(this.orgOf(org), id);
   }
 
   @OrgRoles('ADMIN')
   @Post(':id/connect')
-  connect(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.whatsapp.connect(this.orgOf(user), id);
+  connect(@ApiOrg() org: string | undefined, @Param('id') id: string) {
+    return this.whatsapp.connect(this.orgOf(org), id);
   }
 
   @OrgRoles('ADMIN')
   @Post(':id/logout')
-  logout(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.whatsapp.logout(this.orgOf(user), id);
+  logout(@ApiOrg() org: string | undefined, @Param('id') id: string) {
+    return this.whatsapp.logout(this.orgOf(org), id);
   }
 
   @Post(':id/test-message')
   testMessage(
-    @CurrentUser() user: AuthUser,
+    @ApiOrg() org: string | undefined,
     @Param('id') id: string,
     @Body() dto: TestMessageDto,
   ) {
-    return this.whatsapp.sendTest(this.orgOf(user), id, dto.to, dto.text);
+    return this.whatsapp.sendTest(this.orgOf(org), id, dto.to, dto.text);
   }
 
   @OrgRoles('ADMIN')
   @Delete(':id')
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.whatsapp.remove(this.orgOf(user), id);
+  remove(@ApiOrg() org: string | undefined, @Param('id') id: string) {
+    return this.whatsapp.remove(this.orgOf(org), id);
   }
 }

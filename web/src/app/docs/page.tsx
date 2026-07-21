@@ -91,6 +91,20 @@ function verifySignature(rawBody, header, secret) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }`;
 
+const embedQrExample = `# 1. Create a session (starts pairing, a QR is generated)
+curl -X POST https://api.whathooks.com/v1/sessions \\
+  -H "X-API-Key: wh_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{ "label": "customer-42" }'
+# → { "id": "sess_8f2k19a7", "status": "PENDING", ... }
+
+# 2. Poll until status is "QR", then embed the code in your UI
+curl https://api.whathooks.com/v1/sessions/sess_8f2k19a7 \\
+  -H "X-API-Key: wh_live_..."
+# → { "status": "QR", "qrDataUrl": "data:image/png;base64,...", ... }
+
+# 3. Your user scans it with WhatsApp → status becomes "CONNECTED"`;
+
 const mappingExample = `// Mapping rules on the webhook:
 [
   { "target": "phone",      "source": "data.from" },
@@ -295,6 +309,29 @@ export default function DocsPage() {
                   </li>
                 ))}
               </ul>
+
+              <h3 className="mt-8 text-lg font-semibold">
+                Embed the QR in your product
+              </h3>
+              <p className="mt-2 text-sm text-[var(--color-muted)]">
+                Sessions are fully manageable with an API key, so your product
+                can onboard users without ever showing them the whathooks
+                dashboard: create a session, then render the pairing QR in your
+                own UI. <code className="pill">GET /v1/sessions/:id</code>{" "}
+                returns <code className="pill">qrDataUrl</code> — a
+                ready-to-embed PNG data URI (
+                <code className="pill">{`<img src={qrDataUrl} />`}</code>). QR
+                codes rotate, so poll the session while it&apos;s in the{" "}
+                <code className="pill">QR</code> status or subscribe to{" "}
+                <code className="pill">session.qr</code> webhooks for fresh
+                codes, and watch for <code className="pill">CONNECTED</code> to
+                dismiss the QR.
+              </p>
+              <pre className="mt-3">
+                <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
+                  {embedQrExample}
+                </code>
+              </pre>
             </section>
 
             {/* Webhooks */}

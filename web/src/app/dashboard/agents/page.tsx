@@ -1,14 +1,24 @@
 "use client";
 
 import { apiClient } from "@/lib/client-api";
+import Link from "next/link";
 import {
   AGENT_MODELS,
   AGENT_PROVIDERS,
   type Agent,
   type AgentProvider,
+  type Subscription,
 } from "@/lib/types";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
+
+type McpServerDraft = {
+  name: string;
+  url: string;
+  authToken: string; // blank on edit = keep existing token
+  hasAuth: boolean;
+  authTokenHint: string | null;
+};
 
 type Draft = {
   id?: string;
@@ -23,6 +33,7 @@ type Draft = {
   replyDelayMinSeconds: number;
   replyDelayMaxSeconds: number;
   enabled: boolean;
+  mcpServers: McpServerDraft[];
 };
 
 const EMPTY: Draft = {
@@ -36,7 +47,11 @@ const EMPTY: Draft = {
   replyDelayMinSeconds: 0,
   replyDelayMaxSeconds: 0,
   enabled: true,
+  mcpServers: [],
 };
+
+/** Plans allowed to configure MCP servers (mirrors the API gate). */
+const MCP_PLANS = ["PRO", "BUSINESS", "SPONSORED"];
 
 export default function AgentsPage() {
   const { data: auth } = useSession();
@@ -46,6 +61,7 @@ export default function AgentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mcpAllowed, setMcpAllowed] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -56,6 +72,10 @@ export default function AgentsPage() {
     } finally {
       setLoading(false);
     }
+    // Best-effort plan check for the MCP editor (API enforces it regardless).
+    apiClient<Subscription>("/billing/subscription", token)
+      .then((sub) => setMcpAllowed(MCP_PLANS.includes(sub.plan)))
+      .catch(() => {});
   }, [token]);
 
   useEffect(() => {
@@ -81,6 +101,20 @@ export default function AgentsPage() {
       };
       // Only send the key when the user entered one (blank = keep existing).
       if (draft.apiKey.trim()) payload.apiKey = draft.apiKey.trim();
+      // MCP servers: send the list only when the editor was usable, so a
+      // Starter org editing an agent never silently clears stored servers.
+      // Switching to OpenAI clears them explicitly (MCP is Anthropic-only).
+      if (draft.provider === "OPENAI") {
+        payload.mcpServers = [];
+      } else if (mcpAllowed) {
+        payload.mcpServers = draft.mcpServers
+          .filter((s) => s.name.trim() && s.url.trim())
+          .map((s) => ({
+            name: s.name.trim(),
+            url: s.url.trim(),
+            ...(s.authToken.trim() ? { authToken: s.authToken.trim() } : {}),
+          }));
+      }
       const body = JSON.stringify(payload);
       if (draft.id) {
         await apiClient(`/agents/${draft.id}`, token, {
@@ -125,7 +159,10 @@ export default function AgentsPage() {
           </p>
         </div>
         {!draft && (
-          <button onClick={() => setDraft({ ...EMPTY })} className="btn-primary">
+          <button
+            onClick={() => setDraft({ ...EMPTY })}
+            className="btn-primary"
+          >
             New agent
           </button>
         )}
@@ -150,7 +187,8 @@ export default function AgentsPage() {
           </div>
           <div>
             <label className="label">
-              Soul <span className="text-[var(--color-muted)]">— personality</span>
+              Soul{" "}
+              <span className="text-[var(--color-muted)]">— personality</span>
             </label>
             <textarea
               className="input min-h-24"
@@ -264,7 +302,10 @@ export default function AgentsPage() {
                 onChange={(e) =>
                   setDraft({
                     ...draft,
-                    replyDelayMinSeconds: Math.max(0, Number(e.target.value) || 0),
+                    replyDelayMinSeconds: Math.max(
+                      0,
+                      Number(e.target.value) || 0,
+                    ),
                   })
                 }
                 aria-label="Minimum delay seconds"
@@ -279,7 +320,10 @@ export default function AgentsPage() {
                 onChange={(e) =>
                   setDraft({
                     ...draft,
-                    replyDelayMaxSeconds: Math.max(0, Number(e.target.value) || 0),
+                    replyDelayMaxSeconds: Math.max(
+                      0,
+                      Number(e.target.value) || 0,
+                    ),
                   })
                 }
                 aria-label="Maximum delay seconds"
@@ -303,17 +347,148 @@ export default function AgentsPage() {
             <span>
               Allow auto-stop
               <span className="block text-xs text-[var(--color-muted)]">
-                Give the agent a tool to pause itself on a conversation (hand off
-                to a human) when it doesn’t know how to answer. You resume it from
-                the conversation.
+                Give the agent a tool to pause itself on a conversation (hand
+                off to a human) when it doesn’t know how to answer. You resume
+                it from the conversation.
               </span>
             </span>
           </label>
+          <div>
+            <label className="label">
+              MCP tools{" "}
+              <span className="text-[var(--color-muted)]">
+                — Anthropic agents only
+              </span>
+            </label>
+            {draft.provider === "OPENAI" ? (
+              <p className="text-xs text-[var(--color-muted)]">
+                MCP tools aren’t available for OpenAI agents yet. Switch the
+                provider to Anthropic to connect MCP servers.
+                {draft.mcpServers.length > 0 &&
+                  " Saving will remove this agent’s configured MCP servers."}
+              </p>
+            ) : !mcpAllowed ? (
+              <p className="text-xs text-[var(--color-muted)]">
+                Give your agent tools via MCP servers — available on the Pro
+                plan and higher.{" "}
+                <Link
+                  href="/dashboard/billing"
+                  className="text-[var(--color-brand)] hover:underline"
+                >
+                  Upgrade in Billing
+                </Link>
+                .
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-[var(--color-muted)]">
+                  The agent can call tools on these MCP servers while replying
+                  (connections are made by Anthropic, billed to your API key).
+                  Only add servers you trust — tools act on whatever your
+                  contacts write.
+                </p>
+                {draft.mcpServers.map((s, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2"
+                  >
+                    <input
+                      className="input h-9 w-36 flex-none text-xs"
+                      placeholder="name (e.g. linear)"
+                      value={s.name}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          mcpServers: draft.mcpServers.map((row, j) =>
+                            j === i ? { ...row, name: e.target.value } : row,
+                          ),
+                        })
+                      }
+                    />
+                    <input
+                      className="input h-9 min-w-48 flex-1 text-xs"
+                      placeholder="https://mcp.example.com/mcp"
+                      value={s.url}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          mcpServers: draft.mcpServers.map((row, j) =>
+                            j === i ? { ...row, url: e.target.value } : row,
+                          ),
+                        })
+                      }
+                    />
+                    <input
+                      className="input h-9 w-44 flex-none text-xs"
+                      type="password"
+                      autoComplete="off"
+                      placeholder={
+                        s.hasAuth
+                          ? `token unchanged (${s.authTokenHint ?? "•••"})`
+                          : "auth token (optional)"
+                      }
+                      value={s.authToken}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          mcpServers: draft.mcpServers.map((row, j) =>
+                            j === i
+                              ? { ...row, authToken: e.target.value }
+                              : row,
+                          ),
+                        })
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          mcpServers: draft.mcpServers.filter(
+                            (_, j) => j !== i,
+                          ),
+                        })
+                      }
+                      className="btn-ghost h-9 px-2 text-xs"
+                      aria-label="Remove MCP server"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                {draft.mcpServers.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        mcpServers: [
+                          ...draft.mcpServers,
+                          {
+                            name: "",
+                            url: "",
+                            authToken: "",
+                            hasAuth: false,
+                            authTokenHint: null,
+                          },
+                        ],
+                      })
+                    }
+                    className="btn-ghost self-start text-xs"
+                  >
+                    + Add MCP server
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={draft.enabled}
-              onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+              onChange={(e) =>
+                setDraft({ ...draft, enabled: e.target.checked })
+              }
             />
             Enabled
           </label>
@@ -350,6 +525,11 @@ export default function AgentsPage() {
                       {a.provider === "OPENAI" ? "OpenAI" : "Anthropic"}
                     </span>
                     <span className="pill">{a.model}</span>
+                    {(a.mcpServers?.length ?? 0) > 0 && (
+                      <span className="pill border-[var(--color-brand)]/40 text-[var(--color-brand)]">
+                        MCP · {a.mcpServers.length}
+                      </span>
+                    )}
                     <span>
                       {a.sessionCount} session{a.sessionCount === 1 ? "" : "s"}
                     </span>
@@ -385,6 +565,13 @@ export default function AgentsPage() {
                       replyDelayMinSeconds: a.replyDelayMinSeconds,
                       replyDelayMaxSeconds: a.replyDelayMaxSeconds,
                       enabled: a.enabled,
+                      mcpServers: (a.mcpServers ?? []).map((s) => ({
+                        name: s.name,
+                        url: s.url,
+                        authToken: "",
+                        hasAuth: s.hasAuth,
+                        authTokenHint: s.authTokenHint,
+                      })),
                     })
                   }
                   className="btn-ghost"

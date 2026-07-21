@@ -14,6 +14,14 @@ export interface WaSession {
 
 export type AgentProvider = "ANTHROPIC" | "OPENAI";
 
+/** MCP server on an agent (tokens never returned — only a hint). */
+export interface AgentMcpServer {
+  name: string;
+  url: string;
+  hasAuth: boolean;
+  authTokenHint: string | null;
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -22,6 +30,7 @@ export interface Agent {
   provider: AgentProvider;
   model: string;
   apiKeyHint: string;
+  mcpServers: AgentMcpServer[];
   maxTokens: number;
   allowAutoStop: boolean;
   replyDelayMinSeconds: number;

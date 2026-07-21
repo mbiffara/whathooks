@@ -4,8 +4,13 @@ import { Agent } from '@prisma/client';
 import OpenAI from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from './encryption.service';
+import { AgentMcpServer, isAgentMcpServers } from './mcp-servers';
 
 const HISTORY_LIMIT = 20;
+// MCP tool rounds run server-side at Anthropic; when a turn pauses at the
+// server-side iteration limit we resume it, but never indefinitely.
+const MAX_PAUSE_CONTINUATIONS = 4;
+const MCP_BETA = 'mcp-client-2025-11-20';
 
 type Turn = { role: 'user' | 'assistant'; text: string };
 
@@ -133,6 +138,13 @@ export class AgentRunnerService {
     turns: Turn[],
   ): Promise<AgentReply> {
     const client = new Anthropic({ apiKey });
+    const mcpServers = isAgentMcpServers(agent.mcpServers)
+      ? agent.mcpServers
+      : [];
+    if (mcpServers.length > 0) {
+      return this.replyAnthropicMcp(agent, client, system, turns, mcpServers);
+    }
+
     const tools: Anthropic.Tool[] = agent.allowAutoStop
       ? [
           {
@@ -149,19 +161,80 @@ export class AgentRunnerService {
       messages: turns.map((t) => ({ role: t.role, content: t.text })),
       ...(tools.length ? { tools } : {}),
     });
+    return extractAnthropicReply(response.content);
+  }
 
-    let text = '';
-    let handoff = false;
-    let reason: string | undefined;
-    for (const block of response.content) {
-      if (block.type === 'text') {
-        text += block.text;
-      } else if (block.type === 'tool_use' && block.name === HANDOFF_TOOL) {
-        handoff = true;
-        reason = (block.input as { reason?: string })?.reason;
-      }
+  /**
+   * Anthropic reply via the MCP connector: the API connects to the agent's
+   * MCP servers from Anthropic's infrastructure and runs tool calls
+   * server-side — we still make (almost) one request. The server-side loop
+   * can stop at its iteration limit with `pause_turn`; we resume by
+   * re-sending with the paused assistant turn appended.
+   */
+  private async replyAnthropicMcp(
+    agent: Agent,
+    client: Anthropic,
+    system: string,
+    turns: Turn[],
+    mcpServers: AgentMcpServer[],
+  ): Promise<AgentReply> {
+    const servers = mcpServers.map((s) => ({
+      type: 'url' as const,
+      url: s.url,
+      name: s.name,
+      ...(s.authTokenCiphertext
+        ? {
+            authorization_token: this.encryption.decrypt(s.authTokenCiphertext),
+          }
+        : {}),
+    }));
+    const tools: Anthropic.Beta.BetaToolUnion[] = [
+      ...mcpServers.map((s) => ({
+        type: 'mcp_toolset' as const,
+        mcp_server_name: s.name,
+      })),
+      ...(agent.allowAutoStop
+        ? [
+            {
+              name: HANDOFF_TOOL,
+              description: HANDOFF_DESCRIPTION,
+              input_schema: HANDOFF_SCHEMA,
+            },
+          ]
+        : []),
+    ];
+
+    const messages: Anthropic.Beta.BetaMessageParam[] = turns.map((t) => ({
+      role: t.role,
+      content: t.text,
+    }));
+    let response = await client.beta.messages.create({
+      model: agent.model,
+      max_tokens: agent.maxTokens,
+      system,
+      messages,
+      betas: [MCP_BETA],
+      mcp_servers: servers,
+      tools,
+    });
+    // Resume server-side tool loops that hit the iteration limit.
+    for (
+      let i = 0;
+      response.stop_reason === 'pause_turn' && i < MAX_PAUSE_CONTINUATIONS;
+      i++
+    ) {
+      messages.push({ role: 'assistant', content: response.content });
+      response = await client.beta.messages.create({
+        model: agent.model,
+        max_tokens: agent.maxTokens,
+        system,
+        messages,
+        betas: [MCP_BETA],
+        mcp_servers: servers,
+        tools,
+      });
     }
-    return { text: text.trim() || null, handoff, reason };
+    return extractAnthropicReply(response.content);
   }
 
   private async replyOpenAI(
@@ -211,6 +284,26 @@ export class AgentRunnerService {
     }
     return { text: message?.content?.trim() || null, handoff, reason };
   }
+}
+
+/** Pull the reply text + handoff signal out of Anthropic content blocks. */
+function extractAnthropicReply(
+  content: Array<Anthropic.ContentBlock | Anthropic.Beta.BetaContentBlock>,
+): AgentReply {
+  let text = '';
+  let handoff = false;
+  let reason: string | undefined;
+  for (const block of content) {
+    if (block.type === 'text') {
+      text += block.text;
+    } else if (block.type === 'tool_use' && block.name === HANDOFF_TOOL) {
+      handoff = true;
+      reason = (block.input as { reason?: string })?.reason;
+    }
+    // mcp_tool_use / mcp_tool_result blocks are the server-side tool calls —
+    // nothing to do client-side; the model folds results into its text.
+  }
+  return { text: text.trim() || null, handoff, reason };
 }
 
 function buildSystemPrompt(

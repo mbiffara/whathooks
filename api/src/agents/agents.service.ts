@@ -1,17 +1,27 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Agent } from '@prisma/client';
+import { Agent, Plan, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AgentProviderName,
   CreateAgentDto,
   DEFAULT_MODEL,
+  McpServerDto,
   UpdateAgentDto,
 } from './dto/agent.dto';
 import { EncryptionService } from './encryption.service';
+import {
+  AgentMcpServer,
+  isAgentMcpServers,
+  mcpServersError,
+} from './mcp-servers';
+
+/** Plans allowed to attach MCP servers to agents. */
+const MCP_PLANS: Plan[] = ['PRO', 'BUSINESS', 'SPONSORED'];
 
 @Injectable()
 export class AgentsService {
@@ -40,9 +50,16 @@ export class AgentsService {
   async create(organizationId: string, dto: CreateAgentDto) {
     this.ensureEncryption();
     const provider: AgentProviderName = dto.provider ?? 'ANTHROPIC';
+    const mcpServers = await this.mcpServersInput(
+      organizationId,
+      provider,
+      dto.mcpServers,
+      [],
+    );
     const apiKey = dto.apiKey.trim();
     const agent = await this.prisma.agent.create({
       data: {
+        mcpServers,
         organizationId,
         name: dto.name,
         soul: dto.soul,
@@ -67,6 +84,25 @@ export class AgentsService {
   async update(organizationId: string, id: string, dto: UpdateAgentDto) {
     const existing = await this.require(organizationId, id);
     const provider = dto.provider ?? existing.provider;
+
+    const existingServers = isAgentMcpServers(existing.mcpServers)
+      ? existing.mcpServers
+      : [];
+    let mcpServers: Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined;
+    if (dto.mcpServers !== undefined) {
+      mcpServers = await this.mcpServersInput(
+        organizationId,
+        provider,
+        dto.mcpServers,
+        existingServers,
+      );
+    } else if (provider === 'OPENAI' && existingServers.length > 0) {
+      // Switching an MCP-configured agent to OpenAI silently drops the servers
+      // (MCP is Anthropic-only) — require the caller to clear them explicitly.
+      throw new BadRequestException(
+        'This agent has MCP servers, which are only supported on Anthropic. Remove them before switching provider.',
+      );
+    }
 
     // If the provider changed and no explicit model was given, reset to the new
     // provider's default (an Anthropic model can't run on OpenAI, and vice versa).
@@ -112,6 +148,7 @@ export class AgentsService {
         replyDelayMinSeconds,
         replyDelayMaxSeconds,
         enabled: dto.enabled,
+        ...(mcpServers !== undefined ? { mcpServers } : {}),
       },
     });
     const sessionCount = await this.prisma.waSession.count({
@@ -145,6 +182,64 @@ export class AgentsService {
     return { ok: true, agentId: agentId || null };
   }
 
+  /**
+   * Validate + normalize a submitted MCP server list. Enforces the Anthropic-
+   * only and Pro+ gates, encrypts new auth tokens, and carries over the stored
+   * token for same-named servers submitted without one.
+   */
+  private async mcpServersInput(
+    organizationId: string,
+    provider: AgentProviderName,
+    servers: McpServerDto[] | undefined,
+    existing: AgentMcpServer[],
+  ): Promise<Prisma.InputJsonValue | typeof Prisma.JsonNull> {
+    if (!servers || servers.length === 0) return Prisma.JsonNull;
+
+    if (provider !== 'ANTHROPIC') {
+      throw new BadRequestException(
+        'MCP servers are only supported on Anthropic agents.',
+      );
+    }
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { plan: true },
+    });
+    if (!org || !MCP_PLANS.includes(org.plan)) {
+      throw new ForbiddenException(
+        'MCP tools require the Pro plan or higher. Upgrade in Billing to use them.',
+      );
+    }
+    const error = mcpServersError(servers);
+    if (error) throw new BadRequestException(error);
+    this.ensureEncryption();
+
+    const byName = new Map(existing.map((s) => [s.name, s]));
+    const stored: AgentMcpServer[] = servers.map((s) => {
+      const token = s.authToken?.trim();
+      if (token) {
+        return {
+          name: s.name,
+          url: s.url,
+          authTokenCiphertext: this.encryption.encrypt(token),
+          authTokenHint: this.encryption.hint(token),
+        };
+      }
+      // No token submitted — keep the one already stored under this name.
+      const prior = byName.get(s.name);
+      return {
+        name: s.name,
+        url: s.url,
+        ...(prior?.authTokenCiphertext
+          ? {
+              authTokenCiphertext: prior.authTokenCiphertext,
+              authTokenHint: prior.authTokenHint,
+            }
+          : {}),
+      };
+    });
+    return stored as unknown as Prisma.InputJsonValue;
+  }
+
   private ensureEncryption() {
     if (!this.encryption.isConfigured()) {
       throw new BadRequestException(
@@ -170,6 +265,14 @@ export class AgentsService {
       provider: a.provider,
       model: a.model,
       apiKeyHint: a.apiKeyHint, // never the ciphertext or the key itself
+      mcpServers: isAgentMcpServers(a.mcpServers)
+        ? a.mcpServers.map((s) => ({
+            name: s.name,
+            url: s.url,
+            hasAuth: Boolean(s.authTokenCiphertext),
+            authTokenHint: s.authTokenHint ?? null,
+          }))
+        : [],
       maxTokens: a.maxTokens,
       allowAutoStop: a.allowAutoStop,
       replyDelayMinSeconds: a.replyDelayMinSeconds,

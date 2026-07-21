@@ -1,0 +1,8 @@
+/* Brand typography for the design bundle. The app loads Geist via next/font at
+   runtime; designs get the same families from Google Fonts, and the CSS vars
+   the app's font stack references are defined here. */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
+:root {
+  --font-geist-sans: "Geist";
+  --font-geist-mono: "Geist Mono";
+}

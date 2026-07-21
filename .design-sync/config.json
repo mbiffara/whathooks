@@ -1,0 +1,29 @@
+{
+  "projectId": "b1087583-3b0b-431e-ac11-0696b554e657",
+  "shape": "package",
+  "pkg": "web",
+  "globalName": "whathooks",
+  "srcDir": "src/components",
+  "tsconfig": "tsconfig.json",
+  "buildCmd": "cd web && npx @tailwindcss/cli -i src/app/globals.css -o .ds-css/tw.css && cat ../.design-sync/fonts.css .ds-css/tw.css > .ds-css/ds.css",
+  "cssEntry": ".ds-css/ds.css",
+  "componentSrcMap": {
+    "Logo": "src/components/logo.tsx",
+    "StatusBadge": "src/components/status-badge.tsx",
+    "UpgradeModal": "src/components/upgrade-modal.tsx",
+    "DashboardMain": null,
+    "DashboardNav": null,
+    "OrgSwitcher": null,
+    "SiteFooter": null,
+    "SiteHeader": null,
+    "MessageBubble": null
+  },
+  "entry": "./web/.ds-entry.tsx",
+  "overrides": {
+    "UpgradeModal": {
+      "cardMode": "single",
+      "viewport": "720x480"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

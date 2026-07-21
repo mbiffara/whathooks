@@ -37,3 +37,10 @@ coverage/
 # local media store
 .media/
 api/.media/
+# design-sync (regenerated build state)
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+web/.ds-css/

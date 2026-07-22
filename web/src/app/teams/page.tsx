@@ -14,6 +14,8 @@ export async function generateMetadata() {
 
 const AVATARS = ["AP", "CR", "SM"];
 
+const BRANDS = ["Ree Creativos", "Logical Minds", "Tecabot", "SomosFin"];
+
 export default function TeamsPage() {
   const t = useTranslations("teams");
   const pains = t.raw("pains") as { title: string; desc: string }[];
@@ -181,6 +183,23 @@ twq('config','re0yu');`}
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Trusted by */}
+        <section className="mx-auto max-w-6xl px-6 pb-4 pt-2">
+          <p className="text-center text-xs uppercase tracking-wider text-[var(--color-muted)]">
+            {t("trustedBy")}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+            {BRANDS.map((brand) => (
+              <span
+                key={brand}
+                className="text-lg font-semibold tracking-tight text-[var(--color-muted)]/80 transition-colors hover:text-[var(--color-fg)]"
+              >
+                {brand}
+              </span>
+            ))}
           </div>
         </section>
 

@@ -397,5 +397,214 @@
         "unsupported": "Mensaje no compatible"
       }
     }
+  },
+  "landing": {
+    "badge": "Tu propio número · Sin aprobación de la Business API",
+    "heroTitle": "WhatsApp como <brand>webhook</brand>.",
+    "heroSubtitle": "Conecta tu propio número de WhatsApp escaneando un QR. Cada mensaje que recibes se envía por POST a tu endpoint, y respondes con una sola llamada REST. Sin Business API, sin esperas.",
+    "connectCta": "Conecta tu WhatsApp",
+    "readDocs": "Leer la documentación",
+    "setupNote": "Listo en minutos · Cancela cuando quieras",
+    "theFlow": "El flujo",
+    "scanQr": "Escanea el QR",
+    "scanQrDesc": "Vincula tu número con WhatsApp",
+    "inboundMessage": "Mensaje entrante",
+    "inboundSample": "“¡Hola! ¿Ya enviaron mi pedido?”",
+    "webhookReply": "Tu webhook → responde vía API",
+    "webhookReplyDesc": "POST /v1/messages para responder",
+    "notJustApi": "No es solo una API",
+    "notJustApiDesc": "Todo funciona también desde el dashboard — chatea con tus clientes y trae a todo tu equipo.",
+    "inboxTitle": "Una bandeja de entrada integrada",
+    "inboxDesc": "Envía y recibe mensajes directamente desde el dashboard — historial completo de conversaciones, multimedia y respuestas en tiempo real. No necesitas código para hablar con tus clientes.",
+    "chatIn": "¡Hola! ¿Ya enviaron mi pedido?",
+    "chatOut": "¡Sí — salió esta mañana! 🎉",
+    "typeReply": "Escribe una respuesta…",
+    "sendBtn": "Enviar",
+    "teamsTitle": "Hecho para equipos",
+    "teamsDesc": "Invita a todo tu equipo a una organización con roles — los propietarios manejan la facturación, los admins administran números y webhooks, los miembros atienden la bandeja. Todos comparten los mismos números e historial.",
+    "roleOwner": "Propietario",
+    "roleAdmin": "Admin",
+    "roleMember": "Miembro",
+    "howItWorks": "Cómo funciona",
+    "howItWorksDesc": "De una cuenta nueva a una integración bidireccional con WhatsApp en tres pasos.",
+    "steps": [
+      {
+        "title": "Escanea un QR para vincular tu número",
+        "desc": "Abre el dashboard, escanea el QR con WhatsApp en tu teléfono y tu número queda activo en segundos. Sin trámites de la Business API."
+      },
+      {
+        "title": "Recibe cada mensaje en tu webhook",
+        "desc": "Cada mensaje entrante se entrega a tu endpoint como un evento JSON firmado en el momento en que llega."
+      },
+      {
+        "title": "Responde con un simple POST a nuestra API",
+        "desc": "Envía la respuesta con una sola llamada REST. Nosotros manejamos la conexión con WhatsApp, los reintentos y el estado de entrega."
+      }
+    ],
+    "featuresTitle": "Todo lo que necesitas para lanzar",
+    "featuresDesc": "La infraestructura para conversaciones reales de WhatsApp — resuelta.",
+    "features": [
+      {
+        "title": "Vinculación por QR en segundos",
+        "desc": "Vincula un número real de WhatsApp escaneando un QR — sin revisión de apps ni filas de aprobación."
+      },
+      {
+        "title": "Webhooks firmados (HMAC-SHA256)",
+        "desc": "Cada entrega va firmada para que verifiques que realmente vino de whathooks."
+      },
+      {
+        "title": "Envía texto vía API REST",
+        "desc": "Responde a cualquier conversación con una sola petición POST autenticada."
+      },
+      {
+        "title": "Varios números por cuenta",
+        "desc": "Corre varias sesiones en paralelo, cada una con su propio webhook y clave API."
+      },
+      {
+        "title": "Registros de entrega y reintentos",
+        "desc": "Inspecciona cada evento, revisa los códigos de respuesta y deja que las entregas fallidas se reintenten automáticamente."
+      },
+      {
+        "title": "Dashboard autoservicio",
+        "desc": "Conecta números, rota claves y mira el tráfico en vivo sin abrir un ticket."
+      }
+    ],
+    "apiTitle": "Una API limpia y predecible",
+    "apiDesc": "Recibe eventos estructurados y responde con una sola petición.",
+    "inboundWebhook": "Webhook entrante",
+    "yourEndpoint": "POST · tu endpoint",
+    "sendReply": "Enviar una respuesta",
+    "pricingTitle": "Precios simples",
+    "pricingDesc": "Empieza y mejora tu plan cuando crezca tu volumen. Cancela cuando quieras.",
+    "mostPopular": "Más popular",
+    "perMonth": "al mes",
+    "plans": {
+      "starter": {
+        "desc": "Empieza con tu propio número.",
+        "cta": "Empezar con Starter",
+        "items": [
+          "1 número de WhatsApp",
+          "5.000 mensajes / mes",
+          "1 endpoint de webhook",
+          "Historial de mensajes de 30 días",
+          "Soporte de la comunidad"
+        ]
+      },
+      "pro": {
+        "desc": "Para productos con volumen real de conversaciones.",
+        "cta": "Empezar con Pro",
+        "items": [
+          "3 números de WhatsApp",
+          "10.000 mensajes / mes",
+          "Webhooks ilimitados",
+          "Agentes IA (con tu propia clave)",
+          "Miembros de equipo y roles",
+          "Historial de mensajes de 90 días",
+          "Soporte por correo"
+        ]
+      },
+      "business": {
+        "desc": "Escala en números, equipos y flujos de trabajo.",
+        "cta": "Empezar con Business",
+        "items": [
+          "10 números de WhatsApp",
+          "100.000 mensajes / mes",
+          "Webhooks y agentes ilimitados",
+          "Miembros de equipo ilimitados",
+          "Historial completo de mensajes",
+          "Soporte prioritario"
+        ]
+      }
+    },
+    "pricingFootnote": "Los límites de mensajes cuentan tanto los entrantes como los salientes. ¿Necesitas más? <link>Escríbenos</link>.",
+    "ctaTitle": "Convierte tu número de WhatsApp en un webhook hoy",
+    "ctaDesc": "Escanea un QR, apúntanos a tu endpoint y empieza a manejar conversaciones desde tu código. Sin aprobación de la Business API."
+  },
+  "docs": {
+    "nav": {
+      "introduction": "Introducción",
+      "quickstart": "Inicio rápido",
+      "connecting": "Conectar un número",
+      "webhooks": "Webhooks",
+      "sending": "Enviar mensajes",
+      "apiReference": "Referencia de la API",
+      "errors": "Errores y límites"
+    },
+    "docsLabel": "Documentación",
+    "badge": "Referencia de la API",
+    "title": "Documentación de whathooks",
+    "subtitle": "Conecta un número de WhatsApp, recibe los mensajes entrantes en tu webhook y envía respuestas a través de nuestra API REST.",
+    "introTitle": "Introducción",
+    "introP1": "whathooks permite que tus clientes conecten su propio número de WhatsApp escaneando un código QR. Una vez vinculado, la integración funciona en dos direcciones:",
+    "introInbound": "<hl>Entrante → webhook.</hl> Cada mensaje que recibe tu número se envía por POST como JSON a la URL de webhook que configures.",
+    "introOutbound": "<hl>Saliente → API.</hl> Envías respuestas llamando a nuestra API REST en <pill>/v1</pill>.",
+    "introP2": "Tu número se conecta mediante un enlace de WhatsApp Web, el mismo mecanismo que los “dispositivos vinculados” de WhatsApp. La reconexión tras una caída se maneja automáticamente, y cada número admite un dispositivo vinculado.",
+    "introNote": "Como esto usa una conexión no oficial de WhatsApp Web, trátala como un dispositivo vinculado: mantén el teléfono accesible y evita comportamientos que puedan hacer que WhatsApp marque el número.",
+    "quickstartTitle": "Inicio rápido",
+    "quickstartIntro": "De cero a un mensaje enviado en cuatro pasos.",
+    "qs1Title": "1. Crea una cuenta y organización",
+    "qs1Desc": "Regístrate y crea una organización. Todas las sesiones, webhooks y claves API viven bajo tu organización.",
+    "qs2Title": "2. Crea una sesión de WhatsApp y escanea el QR",
+    "qs2Desc": "Crea una sesión en el dashboard, luego abre WhatsApp en tu teléfono → <pill>Dispositivos vinculados</pill> → <pill>Vincular un dispositivo</pill> y escanea el QR.",
+    "qs3Title": "3. Agrega una URL de webhook",
+    "qs3Desc": "Registra un endpoint HTTPS para recibir <pill>message.received</pill> y eventos de sesión.",
+    "qs4Title": "4. Crea una clave API",
+    "qs4Desc": "Genera una clave API para enviar mensajes de forma programática vía <pill>POST /v1/messages</pill>.",
+    "createAccount": "Crea tu cuenta",
+    "connectingTitle": "Conectar un número",
+    "connectingIntro": "Una sesión pasa por una serie de estados mientras se vincula y permanece en línea. Puedes consultar la sesión o suscribirte a los webhooks <pill>session.status</pill> para seguirla.",
+    "statuses": {
+      "PENDING": "Sesión creada, aún sin inicializar.",
+      "QR": "Hay un código QR listo para escanear con WhatsApp.",
+      "CONNECTING": "Emparejamiento aceptado, estableciendo la conexión.",
+      "CONNECTED": "En línea y lista para enviar y recibir mensajes.",
+      "DISCONNECTED": "La conexión se cortó; la reconexión se intenta automáticamente.",
+      "LOGGED_OUT": "El dispositivo fue desvinculado; se requiere escanear un nuevo QR."
+    },
+    "embedTitle": "Integra el QR en tu producto",
+    "embedDesc": "Las sesiones se administran por completo con una clave API, así que tu producto puede incorporar usuarios sin mostrarles nunca el dashboard de whathooks: crea una sesión y muestra el QR de emparejamiento en tu propia interfaz. <pill>GET /v1/sessions/:id</pill> devuelve <pill>qrDataUrl</pill> — un data URI PNG listo para incrustar (<imgtag></imgtag>). Los códigos QR rotan, así que consulta la sesión mientras esté en el estado <pill>QR</pill> o suscríbete a los webhooks <pill>session.qr</pill> para recibir códigos frescos, y espera <pill>CONNECTED</pill> para ocultar el QR.",
+    "webhooksTitle": "Webhooks",
+    "webhooksIntro": "Cuando algo ocurre en una sesión, enviamos por POST un cuerpo JSON a la URL de webhook que configuraste.",
+    "eventsTitle": "Eventos",
+    "eventCol": "Evento",
+    "descriptionCol": "Descripción",
+    "events": {
+      "messageReceived": "Llegó un mensaje entrante de WhatsApp a una sesión conectada.",
+      "sessionStatus": "Una sesión cambió de estado (ej. CONNECTED, DISCONNECTED, LOGGED_OUT).",
+      "sessionQr": "Se generó un nuevo código QR y está esperando ser escaneado."
+    },
+    "headersTitle": "Encabezados de entrega",
+    "headersIntro": "Cada entrega incluye estos encabezados en la petición:",
+    "headerCol": "Encabezado",
+    "headers": {
+      "event": "El tipo de evento, ej. message.received.",
+      "signature": "HMAC-SHA256 del cuerpo sin procesar, con el formato sha256=<hex>.",
+      "delivery": "Un ID único para este intento de entrega."
+    },
+    "envelopeTitle": "Estructura del payload",
+    "envelopeDesc": "Todos los cuerpos de entrega comparten la misma estructura: <envtag></envtag>. Abajo hay una entrega <pill>message.received</pill> completa:",
+    "customizeTitle": "Personaliza el payload",
+    "customizeDesc": "Opcionalmente dale a un webhook <em>reglas de mapeo</em> para reformatear <pill>data</pill> según tu sistema: renombrar campos, dar formato a fechas e inyectar valores fijos. Con reglas configuradas, <pill>data</pill> contiene <hl>solo</hl> los campos que mapees — la estructura externa no cambia. Cada regla tiene un <pill>target</pill> (nombre de salida) y o bien un <pill>source</pill> (ruta con puntos como <pill>data.from</pill>, que también alcanza <pill>event</pill>, <pill>sessionId</pill>, <pill>timestamp</pill>) o un <pill>value</pill> fijo. Agrega <pill>dateFormat</pill> a una regla con source para formatearla como fecha: <pill>iso</pill>, <pill>unix</pill>, <pill>unix_ms</pill> o un patrón UTC usando <pill>yyyy MM dd HH mm ss</pill>. Configúralo en el webhook desde el dashboard, o pasa <pill>payloadMapping</pill> al crear uno vía API.",
+    "signatureTitle": "Verificación de firma",
+    "signatureDesc": "Verifica cada entrega calculando un HMAC-SHA256 del cuerpo <hl>sin procesar</hl> de la petición usando el secreto de tu webhook, y compáralo con el encabezado <pill>X-Whathooks-Signature</pill>. Compara siempre con una función de tiempo constante.",
+    "sendingTitle": "Enviar mensajes",
+    "sendingIntro": "Envía un mensaje con <pill>POST /v1/messages</pill>, autenticado con una clave API mediante el encabezado <apikeytag></apikeytag>. Un encabezado <bearertag></bearertag> también funciona.",
+    "sendingTo": "El campo <pill>to</pill> acepta un número de teléfono simple (solo dígitos, con código de país, sin <pill>+</pill>) o un JID completo de WhatsApp. La sesión de destino debe estar <pill>CONNECTED</pill> o la petición devuelve <pill>400</pill>.",
+    "sendingSuccess": "Una petición exitosa responde con el mensaje en cola:",
+    "apiRefTitle": "Referencia de la API",
+    "apiRefIntro": "URL base en producción: <pill>https://api.whathooks.com/v1</pill>. Las peticiones del dashboard usan un <hl>JWT</hl> (de <pill>/v1/auth/login</pill>), mientras que las peticiones programáticas usan una <hl>clave API</hl>.",
+    "methodCol": "Método",
+    "pathCol": "Ruta",
+    "authCol": "Autenticación",
+    "auth": {
+      "public": "Pública",
+      "jwtOrKey": "JWT / clave API",
+      "key": "Clave API"
+    },
+    "errorsTitle": "Errores y límites",
+    "err401": "Credenciales faltantes o inválidas (JWT o clave API).",
+    "err400": "La sesión no está <pill>CONNECTED</pill> o el cuerpo de la petición es inválido.",
+    "errWebhooksLabel": "Webhooks",
+    "errWebhooks": "Las entregas expiran a los 10 segundos. Por ahora hacemos un solo intento de entrega por evento — los reintentos automáticos vienen en camino."
   }
 }

@@ -2,6 +2,7 @@ import { GoogleAnalytics } from "@/components/google-analytics";
 import { AdClickTracker } from "@/components/ad-click-tracker";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Script from "next/script";
 
@@ -29,106 +30,29 @@ const replySnippet = `curl -X POST https://api.whathooks.com/v1/messages \\
     "text": "Hello! Yes, it shipped this morning."
   }'`;
 
-const steps = [
-  {
-    title: "Scan a QR to link your number",
-    desc: "Open the dashboard, scan the QR with WhatsApp on your phone, and your number is live in seconds. No Business API paperwork.",
-  },
-  {
-    title: "Receive every message on your webhook",
-    desc: "Each inbound message is delivered to your endpoint as a signed JSON event the moment it arrives.",
-  },
-  {
-    title: "Reply with a simple POST to our API",
-    desc: "Send a text back through one REST call. We handle the WhatsApp connection, retries, and delivery state for you.",
-  },
-];
+const FEATURE_ICONS = ["📷", "🔐", "✉️", "📱", "🔁", "⚡"];
 
-const features = [
-  {
-    icon: "📷",
-    title: "QR pairing in seconds",
-    desc: "Link a real WhatsApp number by scanning a QR — no app review, no approval queue.",
-  },
-  {
-    icon: "🔐",
-    title: "Signed webhooks (HMAC-SHA256)",
-    desc: "Every delivery is signed so you can verify it genuinely came from whathooks.",
-  },
-  {
-    icon: "✉️",
-    title: "Send text via REST API",
-    desc: "Reply to any conversation with a single authenticated POST request.",
-  },
-  {
-    icon: "📱",
-    title: "Multiple numbers per account",
-    desc: "Run many sessions side by side, each with its own webhook and API key.",
-  },
-  {
-    icon: "🔁",
-    title: "Delivery logs & retries",
-    desc: "Inspect every event, see response codes, and let failed deliveries retry automatically.",
-  },
-  {
-    icon: "⚡",
-    title: "Self-serve dashboard",
-    desc: "Connect numbers, rotate keys, and watch live traffic without filing a ticket.",
-  },
-];
-
-const plans = [
-  {
-    name: "Starter",
-    price: "$9.99",
-    period: "per month",
-    desc: "Get started with your own number.",
-    cta: "Start with Starter",
-    highlighted: false,
-    items: [
-      "1 WhatsApp number",
-      "5,000 messages / month",
-      "1 webhook endpoint",
-      "30-day message history",
-      "Community support",
-    ],
-  },
-  {
-    name: "Pro",
-    price: "$29.99",
-    period: "per month",
-    desc: "For products with real conversation volume.",
-    cta: "Start with Pro",
-    highlighted: true,
-    items: [
-      "3 WhatsApp numbers",
-      "10,000 messages / month",
-      "Unlimited webhooks",
-      "AI agents (bring your own key)",
-      "Team members & roles",
-      "90-day message history",
-      "Email support",
-    ],
-  },
-  {
-    name: "Business",
-    price: "$99",
-    period: "per month",
-    desc: "Scale across numbers, teams, and workflows.",
-    cta: "Start with Business",
-    highlighted: false,
-    items: [
-      "10 WhatsApp numbers",
-      "100,000 messages / month",
-      "Unlimited webhooks & agents",
-      "Unlimited team members",
-      "Full message history",
-      "Priority support",
-    ],
-  },
+/** Plan names and prices are shared across locales; copy lives in messages. */
+const PLAN_META = [
+  { key: "starter", name: "Starter", price: "$9.99", highlighted: false },
+  { key: "pro", name: "Pro", price: "$29.99", highlighted: true },
+  { key: "business", name: "Business", price: "$99", highlighted: false },
 ];
 
 export default function Home() {
+  const t = useTranslations("landing");
+  const steps = t.raw("steps") as { title: string; desc: string }[];
+  const features = (t.raw("features") as { title: string; desc: string }[]).map(
+    (f, i) => ({ ...f, icon: FEATURE_ICONS[i] }),
+  );
+  const plans = PLAN_META.map((meta) => ({
+    ...meta,
+    ...(t.raw(`plans.${meta.key}`) as {
+      desc: string;
+      cta: string;
+      items: string[];
+    }),
+  }));
   return (
     <div className="flex min-h-screen flex-col">
       <GoogleAnalytics />
@@ -148,34 +72,35 @@ twq('config','re0yu');`}
             <div>
               <span className="badge border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-brand)]" />
-                Your own number · No Business API approval
+                {t("badge")}
               </span>
               <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                WhatsApp as a{" "}
-                <span className="text-[var(--color-brand)]">webhook</span>.
+                {t.rich("heroTitle", {
+                  brand: (c) => (
+                    <span className="text-[var(--color-brand)]">{c}</span>
+                  ),
+                })}
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--color-muted)]">
-                Connect your own WhatsApp number with a QR scan. Every message
-                you receive is POSTed to your endpoint, and you reply with a
-                single REST call. No Business API, no waiting.
+                {t("heroSubtitle")}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href="/signup" className="btn-primary">
-                  Connect your WhatsApp
+                  {t("connectCta")}
                 </Link>
                 <Link href="/docs" className="btn-ghost">
-                  Read the docs
+                  {t("readDocs")}
                 </Link>
               </div>
               <p className="mt-5 text-sm text-[var(--color-muted)]">
-                Set up in minutes · Cancel anytime
+                {t("setupNote")}
               </p>
             </div>
 
             {/* Flow visual */}
             <div className="card border-[var(--color-border)] bg-[var(--color-surface)]/80 p-6 md:p-7">
               <p className="mb-5 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]">
-                The flow
+                {t("theFlow")}
               </p>
               <div className="flex flex-col gap-3">
                 {/* QR */}
@@ -195,9 +120,9 @@ twq('config','re0yu');`}
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">Scan the QR</p>
+                    <p className="text-sm font-semibold">{t("scanQr")}</p>
                     <p className="text-xs text-[var(--color-muted)]">
-                      Link your number with WhatsApp
+                      {t("scanQrDesc")}
                     </p>
                   </div>
                 </div>
@@ -217,11 +142,13 @@ twq('config','re0yu');`}
                 {/* Inbound */}
                 <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">Inbound message</p>
+                    <p className="text-sm font-semibold">
+                      {t("inboundMessage")}
+                    </p>
                     <span className="pill">message.received</span>
                   </div>
                   <p className="mt-2 rounded-md bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-fg)]">
-                    “Hi! Is my order shipped yet?”
+                    {t("inboundSample")}
                   </p>
                 </div>
 
@@ -257,11 +184,9 @@ twq('config','re0yu');`}
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">
-                      Your webhook → reply via API
-                    </p>
+                    <p className="text-sm font-semibold">{t("webhookReply")}</p>
                     <p className="text-xs text-[var(--color-muted)]">
-                      POST /v1/messages to respond
+                      {t("webhookReplyDesc")}
                     </p>
                   </div>
                 </div>
@@ -274,35 +199,32 @@ twq('config','re0yu');`}
         <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
           <div className="max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Not just an API
+              {t("notJustApi")}
             </h2>
             <p className="mt-3 text-[var(--color-muted)]">
-              Everything also works from the dashboard — chat with your
-              customers and bring your whole team along.
+              {t("notJustApiDesc")}
             </p>
           </div>
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
             {/* Team inbox */}
             <div className="card transition-colors hover:border-[var(--color-brand)]/40">
-              <h3 className="text-lg font-semibold">A built-in inbox</h3>
+              <h3 className="text-lg font-semibold">{t("inboxTitle")}</h3>
               <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
-                Send and receive messages right from the dashboard — full
-                conversation history, media, and replies in real time. No code
-                required to talk to your customers.
+                {t("inboxDesc")}
               </p>
               <div className="mt-6 flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
                 <div className="max-w-[80%] self-start rounded-lg rounded-bl-none bg-[var(--color-bg)] px-3 py-2 text-xs">
-                  Hi! Is my order shipped yet?
+                  {t("chatIn")}
                 </div>
                 <div className="max-w-[80%] self-end rounded-lg rounded-br-none bg-[var(--color-brand)]/15 px-3 py-2 text-xs">
-                  Yes — it shipped this morning! 🎉
+                  {t("chatOut")}
                 </div>
                 <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
                   <span className="flex-1 text-xs text-[var(--color-muted)]">
-                    Type a reply…
+                    {t("typeReply")}
                   </span>
                   <span className="rounded-md bg-[var(--color-brand)] px-2 py-1 text-[10px] font-semibold text-black">
-                    Send
+                    {t("sendBtn")}
                   </span>
                 </div>
               </div>
@@ -310,17 +232,15 @@ twq('config','re0yu');`}
 
             {/* Teams */}
             <div className="card transition-colors hover:border-[var(--color-brand)]/40">
-              <h3 className="text-lg font-semibold">Built for teams</h3>
+              <h3 className="text-lg font-semibold">{t("teamsTitle")}</h3>
               <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
-                Invite your whole team into one organization with roles — owners
-                handle billing, admins manage numbers and webhooks, members work
-                the inbox. Everyone shares the same numbers and history.
+                {t("teamsDesc")}
               </p>
               <div className="mt-6 flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
                 {[
-                  { name: "Ana Pereira", role: "Owner" },
-                  { name: "Luis Gómez", role: "Admin" },
-                  { name: "Sam Chen", role: "Member" },
+                  { name: "Ana Pereira", role: t("roleOwner") },
+                  { name: "Luis Gómez", role: t("roleAdmin") },
+                  { name: "Sam Chen", role: t("roleMember") },
                 ].map((member) => (
                   <div
                     key={member.name}
@@ -347,11 +267,10 @@ twq('config','re0yu');`}
         <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
           <div className="max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              How it works
+              {t("howItWorks")}
             </h2>
             <p className="mt-3 text-[var(--color-muted)]">
-              From a fresh account to a two-way WhatsApp integration in three
-              steps.
+              {t("howItWorksDesc")}
             </p>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -373,10 +292,10 @@ twq('config','re0yu');`}
         <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
           <div className="max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Everything you need to ship
+              {t("featuresTitle")}
             </h2>
             <p className="mt-3 text-[var(--color-muted)]">
-              The plumbing for real WhatsApp conversations — handled.
+              {t("featuresDesc")}
             </p>
           </div>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -403,18 +322,16 @@ twq('config','re0yu');`}
         <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
           <div className="max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              A clean, predictable API
+              {t("apiTitle")}
             </h2>
-            <p className="mt-3 text-[var(--color-muted)]">
-              Receive structured events, reply with a single request.
-            </p>
+            <p className="mt-3 text-[var(--color-muted)]">{t("apiDesc")}</p>
           </div>
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
             <div className="card">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Inbound webhook</h3>
+                <h3 className="text-sm font-semibold">{t("inboundWebhook")}</h3>
                 <span className="badge bg-[var(--color-surface-2)] text-[var(--color-muted)]">
-                  POST · your endpoint
+                  {t("yourEndpoint")}
                 </span>
               </div>
               <pre className="overflow-x-auto rounded-lg bg-[var(--color-surface-2)] p-4 font-mono text-xs leading-relaxed text-[var(--color-fg)]">
@@ -423,7 +340,7 @@ twq('config','re0yu');`}
             </div>
             <div className="card">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Send a reply</h3>
+                <h3 className="text-sm font-semibold">{t("sendReply")}</h3>
                 <span className="badge bg-[var(--color-surface-2)] text-[var(--color-muted)]">
                   POST · /v1/messages
                 </span>
@@ -442,11 +359,9 @@ twq('config','re0yu');`}
         >
           <div className="max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Simple pricing
+              {t("pricingTitle")}
             </h2>
-            <p className="mt-3 text-[var(--color-muted)]">
-              Start free, upgrade when your volume grows. Cancel anytime.
-            </p>
+            <p className="mt-3 text-[var(--color-muted)]">{t("pricingDesc")}</p>
           </div>
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {plans.map((plan) => (
@@ -462,14 +377,14 @@ twq('config','re0yu');`}
                   <h3 className="text-base font-semibold">{plan.name}</h3>
                   {plan.highlighted && (
                     <span className="badge bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
-                      Most popular
+                      {t("mostPopular")}
                     </span>
                   )}
                 </div>
                 <div className="mt-4 flex items-baseline gap-2">
                   <span className="text-4xl font-bold">{plan.price}</span>
                   <span className="text-sm text-[var(--color-muted)]">
-                    {plan.period}
+                    {t("perMonth")}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-[var(--color-muted)]">
@@ -510,14 +425,16 @@ twq('config','re0yu');`}
             ))}
           </div>
           <p className="mt-6 text-center text-xs text-[var(--color-muted)]">
-            Message limits count both inbound and outbound messages. Need more?{" "}
-            <a
-              href="mailto:hello@logicalminds.co"
-              className="text-[var(--color-brand)] hover:underline"
-            >
-              Talk to us
-            </a>
-            .
+            {t.rich("pricingFootnote", {
+              link: (c) => (
+                <a
+                  href="mailto:hello@logicalminds.co"
+                  className="text-[var(--color-brand)] hover:underline"
+                >
+                  {c}
+                </a>
+              ),
+            })}
           </p>
         </section>
 
@@ -525,18 +442,17 @@ twq('config','re0yu');`}
         <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
           <div className="card overflow-hidden border-[var(--color-brand)]/30 bg-[var(--color-surface)] px-6 py-14 text-center md:px-12 md:py-16">
             <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
-              Turn your WhatsApp number into a webhook today
+              {t("ctaTitle")}
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-[var(--color-muted)]">
-              Scan a QR, point us at your endpoint, and start handling
-              conversations in code. No Business API approval required.
+              {t("ctaDesc")}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link href="/signup" className="btn-primary">
-                Connect your WhatsApp
+                {t("connectCta")}
               </Link>
               <Link href="/docs" className="btn-ghost">
-                Read the docs
+                {t("readDocs")}
               </Link>
             </div>
           </div>

@@ -1,77 +1,52 @@
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
-const nav = [
-  { id: "introduction", label: "Introduction" },
-  { id: "quickstart", label: "Quickstart" },
-  { id: "connecting", label: "Connecting a number" },
-  { id: "webhooks", label: "Webhooks" },
-  { id: "sending", label: "Sending messages" },
-  { id: "api-reference", label: "API reference" },
-  { id: "errors", label: "Errors & limits" },
+const NAV_IDS = [
+  { id: "introduction", key: "introduction" },
+  { id: "quickstart", key: "quickstart" },
+  { id: "connecting", key: "connecting" },
+  { id: "webhooks", key: "webhooks" },
+  { id: "sending", key: "sending" },
+  { id: "api-reference", key: "apiReference" },
+  { id: "errors", key: "errors" },
 ];
 
-const sessionStatuses = [
-  { name: "PENDING", meaning: "Session created, not yet initialized." },
-  { name: "QR", meaning: "A QR code is ready to be scanned with WhatsApp." },
-  {
-    name: "CONNECTING",
-    meaning: "Pairing accepted, establishing the connection.",
-  },
-  {
-    name: "CONNECTED",
-    meaning: "Online and ready to send and receive messages.",
-  },
-  {
-    name: "DISCONNECTED",
-    meaning: "Connection dropped; reconnection is attempted automatically.",
-  },
-  {
-    name: "LOGGED_OUT",
-    meaning: "The device was unlinked; a new QR scan is required.",
-  },
+const SESSION_STATUSES = [
+  "PENDING",
+  "QR",
+  "CONNECTING",
+  "CONNECTED",
+  "DISCONNECTED",
+  "LOGGED_OUT",
+] as const;
+
+const EVENTS = [
+  { name: "message.received", key: "messageReceived" },
+  { name: "session.status", key: "sessionStatus" },
+  { name: "session.qr", key: "sessionQr" },
 ];
 
-const events = [
-  {
-    name: "message.received",
-    desc: "An inbound WhatsApp message arrived on a connected session.",
-  },
-  {
-    name: "session.status",
-    desc: "A session changed status (e.g. CONNECTED, DISCONNECTED, LOGGED_OUT).",
-  },
-  {
-    name: "session.qr",
-    desc: "A new QR code was generated and is waiting to be scanned.",
-  },
-];
-
-const headers = [
-  { name: "X-Whathooks-Event", desc: "The event type, e.g. message.received." },
-  {
-    name: "X-Whathooks-Signature",
-    desc: "HMAC-SHA256 of the raw body, formatted as sha256=<hex>.",
-  },
-  {
-    name: "X-Whathooks-Delivery",
-    desc: "A unique ID for this delivery attempt.",
-  },
+const HEADERS = [
+  { name: "X-Whathooks-Event", key: "event" },
+  { name: "X-Whathooks-Signature", key: "signature" },
+  { name: "X-Whathooks-Delivery", key: "delivery" },
 ];
 
 const endpoints = [
-  { method: "POST", path: "/v1/auth/register", auth: "Public" },
-  { method: "POST", path: "/v1/auth/login", auth: "Public" },
-  { method: "GET", path: "/v1/sessions", auth: "JWT / API key" },
-  { method: "POST", path: "/v1/sessions", auth: "JWT / API key" },
-  { method: "GET", path: "/v1/sessions/:id", auth: "JWT / API key" },
-  { method: "POST", path: "/v1/sessions/:id/logout", auth: "JWT / API key" },
-  { method: "GET", path: "/v1/webhooks", auth: "JWT / API key" },
-  { method: "POST", path: "/v1/webhooks", auth: "JWT / API key" },
-  { method: "POST", path: "/v1/messages", auth: "API key" },
-  { method: "GET", path: "/v1/messages", auth: "JWT / API key" },
+  { method: "POST", path: "/v1/auth/register", auth: "public" },
+  { method: "POST", path: "/v1/auth/login", auth: "public" },
+  { method: "GET", path: "/v1/sessions", auth: "jwtOrKey" },
+  { method: "POST", path: "/v1/sessions", auth: "jwtOrKey" },
+  { method: "GET", path: "/v1/sessions/:id", auth: "jwtOrKey" },
+  { method: "POST", path: "/v1/sessions/:id/logout", auth: "jwtOrKey" },
+  { method: "GET", path: "/v1/webhooks", auth: "jwtOrKey" },
+  { method: "POST", path: "/v1/webhooks", auth: "jwtOrKey" },
+  { method: "POST", path: "/v1/messages", auth: "key" },
+  { method: "GET", path: "/v1/messages", auth: "jwtOrKey" },
 ];
 
 const verifyExample = `import crypto from "crypto";
@@ -162,6 +137,24 @@ const sendResponse = `{
 }`;
 
 export default function DocsPage() {
+  const t = useTranslations("docs");
+  // Shared rich-text tags for the prose blocks.
+  const rich = {
+    pill: (c: ReactNode) => <code className="pill">{c}</code>,
+    hl: (c: ReactNode) => (
+      <span className="font-medium text-[var(--color-fg)]">{c}</span>
+    ),
+    em: (c: ReactNode) => <em>{c}</em>,
+    // Literal code fragments that would clash with ICU syntax live here.
+    imgtag: () => <code className="pill">{`<img src={qrDataUrl} />`}</code>,
+    envtag: () => (
+      <code className="pill">{`{ event, sessionId, data, timestamp }`}</code>
+    ),
+    apikeytag: () => <code className="pill">X-API-Key: &lt;token&gt;</code>,
+    bearertag: () => (
+      <code className="pill">Authorization: Bearer &lt;token&gt;</code>
+    ),
+  };
   return (
     <>
       <GoogleAnalytics />
@@ -171,15 +164,15 @@ export default function DocsPage() {
           <aside className="hidden lg:block">
             <nav className="lg:sticky lg:top-20 space-y-1 text-sm">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-                Documentation
+                {t("docsLabel")}
               </p>
-              {nav.map((item) => (
+              {NAV_IDS.map((item) => (
                 <a
                   key={item.id}
                   href={`#${item.id}`}
                   className="block rounded-md px-3 py-2 text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
                 >
-                  {item.label}
+                  {t(`nav.${item.key}`)}
                 </a>
               ))}
             </nav>
@@ -188,104 +181,67 @@ export default function DocsPage() {
           <div className="max-w-3xl">
             <div className="mb-8">
               <span className="badge bg-[var(--color-surface-2)] text-[var(--color-accent)]">
-                API reference
+                {t("badge")}
               </span>
               <h1 className="mt-4 text-4xl font-bold tracking-tight">
-                whathooks documentation
+                {t("title")}
               </h1>
-              <p className="mt-3 text-[var(--color-muted)]">
-                Connect a WhatsApp number, receive inbound messages on your
-                webhook, and send replies through our REST API.
-              </p>
+              <p className="mt-3 text-[var(--color-muted)]">{t("subtitle")}</p>
             </div>
 
             {/* Introduction */}
             <section id="introduction">
-              <h2 className="mt-12 mb-4 text-2xl font-bold">Introduction</h2>
-              <p className="text-[var(--color-muted)]">
-                whathooks lets your clients connect their own WhatsApp number by
-                scanning a QR code. Once linked, the integration works in two
-                directions:
-              </p>
+              <h2 className="mt-12 mb-4 text-2xl font-bold">
+                {t("introTitle")}
+              </h2>
+              <p className="text-[var(--color-muted)]">{t("introP1")}</p>
               <ul className="mt-4 space-y-2 text-[var(--color-muted)]">
-                <li>
-                  <span className="text-[var(--color-fg)] font-medium">
-                    Inbound &rarr; webhook.
-                  </span>{" "}
-                  Every message your number receives is POSTed as JSON to a
-                  webhook URL you configure.
-                </li>
-                <li>
-                  <span className="text-[var(--color-fg)] font-medium">
-                    Outbound &rarr; API.
-                  </span>{" "}
-                  You send replies by calling our REST API at{" "}
-                  <code className="pill">/v1</code>.
-                </li>
+                <li>{t.rich("introInbound", rich)}</li>
+                <li>{t.rich("introOutbound", rich)}</li>
               </ul>
-              <p className="mt-4 text-[var(--color-muted)]">
-                Your number is connected through a WhatsApp Web link, the same
-                mechanism as WhatsApp&apos;s &ldquo;linked devices&rdquo;.
-                Reconnection after a dropped link is handled automatically, and
-                each number supports one linked device.
-              </p>
+              <p className="mt-4 text-[var(--color-muted)]">{t("introP2")}</p>
               <div className="card mt-6 border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-muted)]">
-                Because this uses an unofficial WhatsApp Web connection, treat
-                it like a linked device: keep the phone reachable and avoid
-                behavior that could get the number flagged by WhatsApp.
+                {t("introNote")}
               </div>
             </section>
 
             {/* Quickstart */}
             <section id="quickstart">
-              <h2 className="mt-12 mb-4 text-2xl font-bold">Quickstart</h2>
+              <h2 className="mt-12 mb-4 text-2xl font-bold">
+                {t("quickstartTitle")}
+              </h2>
               <p className="text-[var(--color-muted)]">
-                Get from zero to a sent message in four steps.
+                {t("quickstartIntro")}
               </p>
               <ol className="mt-4 space-y-4">
                 <li className="card">
-                  <h3 className="text-lg font-semibold">
-                    1. Create an account &amp; organization
-                  </h3>
+                  <h3 className="text-lg font-semibold">{t("qs1Title")}</h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Sign up and create an organization. All sessions, webhooks,
-                    and API keys live under your organization.
+                    {t("qs1Desc")}
                   </p>
                 </li>
                 <li className="card">
-                  <h3 className="text-lg font-semibold">
-                    2. Create a WhatsApp session &amp; scan the QR
-                  </h3>
+                  <h3 className="text-lg font-semibold">{t("qs2Title")}</h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Create a session in the dashboard, then open WhatsApp on
-                    your phone &rarr;{" "}
-                    <span className="pill">Linked Devices</span> &rarr;{" "}
-                    <span className="pill">Link a Device</span> and scan the QR.
+                    {t.rich("qs2Desc", rich)}
                   </p>
                 </li>
                 <li className="card">
-                  <h3 className="text-lg font-semibold">
-                    3. Add a webhook URL
-                  </h3>
+                  <h3 className="text-lg font-semibold">{t("qs3Title")}</h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Register an HTTPS endpoint to receive{" "}
-                    <code className="pill">message.received</code> and session
-                    events.
+                    {t.rich("qs3Desc", rich)}
                   </p>
                 </li>
                 <li className="card">
-                  <h3 className="text-lg font-semibold">
-                    4. Create an API key
-                  </h3>
+                  <h3 className="text-lg font-semibold">{t("qs4Title")}</h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Generate an API key to send messages programmatically via{" "}
-                    <code className="pill">POST /v1/messages</code>.
+                    {t.rich("qs4Desc", rich)}
                   </p>
                 </li>
               </ol>
               <div className="mt-6">
                 <Link href="/signup" className="btn-primary">
-                  Create your account
+                  {t("createAccount")}
                 </Link>
               </div>
             </section>
@@ -293,41 +249,25 @@ export default function DocsPage() {
             {/* Connecting a number */}
             <section id="connecting">
               <h2 className="mt-12 mb-4 text-2xl font-bold">
-                Connecting a number
+                {t("connectingTitle")}
               </h2>
               <p className="text-[var(--color-muted)]">
-                A session moves through a series of statuses as it links and
-                stays online. You can poll a session or subscribe to{" "}
-                <code className="pill">session.status</code> webhooks to track
-                it.
+                {t.rich("connectingIntro", rich)}
               </p>
               <ul className="mt-4 space-y-3">
-                {sessionStatuses.map((s) => (
-                  <li key={s.name} className="flex items-start gap-3">
-                    <span className="pill shrink-0">{s.name}</span>
+                {SESSION_STATUSES.map((name) => (
+                  <li key={name} className="flex items-start gap-3">
+                    <span className="pill shrink-0">{name}</span>
                     <span className="text-sm text-[var(--color-muted)]">
-                      {s.meaning}
+                      {t(`statuses.${name}`)}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              <h3 className="mt-8 text-lg font-semibold">
-                Embed the QR in your product
-              </h3>
+              <h3 className="mt-8 text-lg font-semibold">{t("embedTitle")}</h3>
               <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Sessions are fully manageable with an API key, so your product
-                can onboard users without ever showing them the whathooks
-                dashboard: create a session, then render the pairing QR in your
-                own UI. <code className="pill">GET /v1/sessions/:id</code>{" "}
-                returns <code className="pill">qrDataUrl</code> — a
-                ready-to-embed PNG data URI (
-                <code className="pill">{`<img src={qrDataUrl} />`}</code>). QR
-                codes rotate, so poll the session while it&apos;s in the{" "}
-                <code className="pill">QR</code> status or subscribe to{" "}
-                <code className="pill">session.qr</code> webhooks for fresh
-                codes, and watch for <code className="pill">CONNECTED</code> to
-                dismiss the QR.
+                {t.rich("embedDesc", rich)}
               </p>
               <pre className="mt-3">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
@@ -338,23 +278,24 @@ export default function DocsPage() {
 
             {/* Webhooks */}
             <section id="webhooks">
-              <h2 className="mt-12 mb-4 text-2xl font-bold">Webhooks</h2>
-              <p className="text-[var(--color-muted)]">
-                When something happens on a session, we POST a JSON body to your
-                configured webhook URL.
-              </p>
+              <h2 className="mt-12 mb-4 text-2xl font-bold">
+                {t("webhooksTitle")}
+              </h2>
+              <p className="text-[var(--color-muted)]">{t("webhooksIntro")}</p>
 
-              <h3 className="mt-8 text-lg font-semibold">Events</h3>
+              <h3 className="mt-8 text-lg font-semibold">{t("eventsTitle")}</h3>
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted)]">
-                      <th className="py-2 pr-4 font-medium">Event</th>
-                      <th className="py-2 font-medium">Description</th>
+                      <th className="py-2 pr-4 font-medium">{t("eventCol")}</th>
+                      <th className="py-2 font-medium">
+                        {t("descriptionCol")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {events.map((e) => (
+                    {EVENTS.map((e) => (
                       <tr
                         key={e.name}
                         className="border-b border-[var(--color-border)]"
@@ -363,7 +304,7 @@ export default function DocsPage() {
                           <code className="pill">{e.name}</code>
                         </td>
                         <td className="py-2 text-[var(--color-muted)]">
-                          {e.desc}
+                          {t(`events.${e.key}`)}
                         </td>
                       </tr>
                     ))}
@@ -371,20 +312,26 @@ export default function DocsPage() {
                 </table>
               </div>
 
-              <h3 className="mt-8 text-lg font-semibold">Delivery headers</h3>
+              <h3 className="mt-8 text-lg font-semibold">
+                {t("headersTitle")}
+              </h3>
               <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Every delivery includes these request headers:
+                {t("headersIntro")}
               </p>
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted)]">
-                      <th className="py-2 pr-4 font-medium">Header</th>
-                      <th className="py-2 font-medium">Description</th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("headerCol")}
+                      </th>
+                      <th className="py-2 font-medium">
+                        {t("descriptionCol")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {headers.map((h) => (
+                    {HEADERS.map((h) => (
                       <tr
                         key={h.name}
                         className="border-b border-[var(--color-border)]"
@@ -393,7 +340,7 @@ export default function DocsPage() {
                           <code className="pill">{h.name}</code>
                         </td>
                         <td className="py-2 text-[var(--color-muted)]">
-                          {h.desc}
+                          {t(`headers.${h.key}`)}
                         </td>
                       </tr>
                     ))}
@@ -401,14 +348,11 @@ export default function DocsPage() {
                 </table>
               </div>
 
-              <h3 className="mt-8 text-lg font-semibold">Payload envelope</h3>
+              <h3 className="mt-8 text-lg font-semibold">
+                {t("envelopeTitle")}
+              </h3>
               <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Every delivery body shares the same envelope:{" "}
-                <code className="pill">
-                  {`{ event, sessionId, data, timestamp }`}
-                </code>
-                . Below is a full <code className="pill">message.received</code>{" "}
-                delivery:
+                {t.rich("envelopeDesc", rich)}
               </p>
               <pre className="mt-3">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
@@ -417,30 +361,10 @@ export default function DocsPage() {
               </pre>
 
               <h3 className="mt-8 text-lg font-semibold">
-                Customize the payload
+                {t("customizeTitle")}
               </h3>
               <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Optionally give a webhook <em>mapping rules</em> to reshape{" "}
-                <code className="pill">data</code> to match your system: rename
-                fields, format dates, and inject fixed values. When rules are
-                set, <code className="pill">data</code> contains{" "}
-                <span className="font-medium text-[var(--color-fg)]">only</span>{" "}
-                the fields you map — the envelope stays the same. Each rule has
-                a <code className="pill">target</code> (output name) and either
-                a <code className="pill">source</code> (dot path like{" "}
-                <code className="pill">data.from</code>, also reaching{" "}
-                <code className="pill">event</code>,{" "}
-                <code className="pill">sessionId</code>,{" "}
-                <code className="pill">timestamp</code>) or a fixed{" "}
-                <code className="pill">value</code>. Add{" "}
-                <code className="pill">dateFormat</code> to a source rule to
-                format it as a date: <code className="pill">iso</code>,{" "}
-                <code className="pill">unix</code>,{" "}
-                <code className="pill">unix_ms</code>, or a UTC pattern using{" "}
-                <code className="pill">yyyy MM dd HH mm ss</code>. Configure it
-                on the webhook in the dashboard, or pass{" "}
-                <code className="pill">payloadMapping</code> when creating one
-                via API.
+                {t.rich("customizeDesc", rich)}
               </p>
               <pre className="mt-3">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
@@ -449,14 +373,10 @@ export default function DocsPage() {
               </pre>
 
               <h3 className="mt-8 text-lg font-semibold">
-                Signature verification
+                {t("signatureTitle")}
               </h3>
               <p className="mt-2 text-sm text-[var(--color-muted)]">
-                Verify each delivery by computing an HMAC-SHA256 of the{" "}
-                <span className="font-medium text-[var(--color-fg)]">raw</span>{" "}
-                request body using your webhook secret, then comparing it to the{" "}
-                <code className="pill">X-Whathooks-Signature</code> header.
-                Always compare with a constant-time function.
+                {t.rich("signatureDesc", rich)}
               </p>
               <pre className="mt-3">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
@@ -468,25 +388,13 @@ export default function DocsPage() {
             {/* Sending messages */}
             <section id="sending">
               <h2 className="mt-12 mb-4 text-2xl font-bold">
-                Sending messages
+                {t("sendingTitle")}
               </h2>
               <p className="text-[var(--color-muted)]">
-                Send a message with{" "}
-                <code className="pill">POST /v1/messages</code>, authenticated
-                with an API key via the{" "}
-                <code className="pill">X-API-Key: &lt;token&gt;</code> header.{" "}
-                An{" "}
-                <code className="pill">
-                  Authorization: Bearer &lt;token&gt;
-                </code>{" "}
-                header also works.
+                {t.rich("sendingIntro", rich)}
               </p>
               <p className="mt-4 text-sm text-[var(--color-muted)]">
-                The <code className="pill">to</code> field accepts a bare phone
-                number (digits only, with country code, no{" "}
-                <code className="pill">+</code>) or a full WhatsApp JID. The
-                target session must be <code className="pill">CONNECTED</code>{" "}
-                or the request returns <code className="pill">400</code>.
+                {t.rich("sendingTo", rich)}
               </p>
               <pre className="mt-4">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
@@ -494,7 +402,7 @@ export default function DocsPage() {
                 </code>
               </pre>
               <p className="mt-4 text-sm text-[var(--color-muted)]">
-                A successful request responds with the queued message:
+                {t("sendingSuccess")}
               </p>
               <pre className="mt-3">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
@@ -505,26 +413,21 @@ export default function DocsPage() {
 
             {/* API reference */}
             <section id="api-reference">
-              <h2 className="mt-12 mb-4 text-2xl font-bold">API reference</h2>
+              <h2 className="mt-12 mb-4 text-2xl font-bold">
+                {t("apiRefTitle")}
+              </h2>
               <p className="text-[var(--color-muted)]">
-                Base URL in production:{" "}
-                <code className="pill">https://api.whathooks.com/v1</code>.
-                Dashboard requests use a{" "}
-                <span className="font-medium text-[var(--color-fg)]">JWT</span>{" "}
-                (from <code className="pill">/v1/auth/login</code>), while
-                programmatic requests use an{" "}
-                <span className="font-medium text-[var(--color-fg)]">
-                  API key
-                </span>
-                .
+                {t.rich("apiRefIntro", rich)}
               </p>
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted)]">
-                      <th className="py-2 pr-4 font-medium">Method</th>
-                      <th className="py-2 pr-4 font-medium">Path</th>
-                      <th className="py-2 font-medium">Auth</th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("methodCol")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">{t("pathCol")}</th>
+                      <th className="py-2 font-medium">{t("authCol")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -542,7 +445,7 @@ export default function DocsPage() {
                           {e.path}
                         </td>
                         <td className="py-2 align-top text-[var(--color-muted)]">
-                          {e.auth}
+                          {t(`auth.${e.auth}`)}
                         </td>
                       </tr>
                     ))}
@@ -554,33 +457,26 @@ export default function DocsPage() {
             {/* Errors & limits */}
             <section id="errors">
               <h2 className="mt-12 mb-4 text-2xl font-bold">
-                Errors &amp; limits
+                {t("errorsTitle")}
               </h2>
               <ul className="mt-2 space-y-3 text-sm text-[var(--color-muted)]">
                 <li className="flex items-start gap-3">
                   <span className="badge shrink-0 bg-[var(--color-surface-2)] text-[var(--color-accent)]">
                     401
                   </span>
-                  <span>Missing or invalid credentials (JWT or API key).</span>
+                  <span>{t("err401")}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="badge shrink-0 bg-[var(--color-surface-2)] text-[var(--color-accent)]">
                     400
                   </span>
-                  <span>
-                    The session is not <code className="pill">CONNECTED</code>,
-                    or the request body is invalid.
-                  </span>
+                  <span>{t.rich("err400", rich)}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="badge shrink-0 bg-[var(--color-surface-2)] text-[var(--color-accent)]">
-                    Webhooks
+                    {t("errWebhooksLabel")}
                   </span>
-                  <span>
-                    Delivery requests time out after 10 seconds. For now we make
-                    a single delivery attempt per event &mdash; automatic
-                    retries are coming.
-                  </span>
+                  <span>{t("errWebhooks")}</span>
                 </li>
               </ul>
             </section>

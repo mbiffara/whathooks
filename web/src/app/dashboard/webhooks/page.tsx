@@ -355,7 +355,7 @@ export default function WebhooksPage() {
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
       {newSecret && (
         <div className="card border-[var(--color-brand)]/40">
           <p className="text-sm font-medium">{t("secretNotice")}</p>

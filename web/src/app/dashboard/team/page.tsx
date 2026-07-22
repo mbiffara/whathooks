@@ -12,9 +12,9 @@ import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
 const ROLE_BADGE: Record<OrgRole, string> = {
-  OWNER: "bg-amber-500/15 text-amber-300",
-  ADMIN: "bg-sky-500/15 text-sky-300",
-  MEMBER: "bg-zinc-500/15 text-zinc-300",
+  OWNER: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
+  ADMIN: "bg-[var(--color-info-bg)] text-[var(--color-info)]",
+  MEMBER: "bg-[var(--color-neutral-bg)] text-[var(--color-neutral)]",
 };
 
 export default function TeamPage() {
@@ -141,7 +141,7 @@ export default function TeamPage() {
         <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
       {canManage && (
         <form

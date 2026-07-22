@@ -3,11 +3,11 @@ import { useTranslations } from "next-intl";
 
 const CLS: Record<WaStatus, string> = {
   CONNECTED: "bg-[var(--color-brand)]/15 text-[var(--color-brand)]",
-  QR: "bg-amber-500/15 text-amber-300",
-  CONNECTING: "bg-amber-500/15 text-amber-300",
-  PENDING: "bg-white/10 text-[var(--color-muted)]",
-  DISCONNECTED: "bg-orange-500/15 text-orange-300",
-  LOGGED_OUT: "bg-red-500/15 text-red-300",
+  QR: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
+  CONNECTING: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
+  PENDING: "bg-[var(--color-chip)] text-[var(--color-muted)]",
+  DISCONNECTED: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
+  LOGGED_OUT: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
 };
 
 export function StatusBadge({ status }: { status: WaStatus }) {

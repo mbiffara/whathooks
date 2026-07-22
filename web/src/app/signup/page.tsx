@@ -135,7 +135,7 @@ function SignUpForm() {
               placeholder={t("passwordPlaceholder")}
             />
           </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? t("creating") : t("createAccount")}
           </button>

@@ -80,13 +80,13 @@ export function InviteActions({
   return (
     <div className="flex flex-col gap-3">
       {mismatch && (
-        <p className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-300">
+        <p className="rounded-lg bg-[var(--color-warning-bg)] p-3 text-sm text-[var(--color-warning)]">
           This invitation was sent to {inviteEmail}, but you are signed in as{" "}
           {session.user?.email}. You can still join {orgName} with this
           account.
         </p>
       )}
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
       <button className="btn-primary" onClick={join} disabled={joining}>
         {joining ? "Joining…" : `Join ${orgName}`}
       </button>

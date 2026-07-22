@@ -9,9 +9,89 @@
   --color-fg: #e8f0ec;
   --color-brand: #25d366;
   --color-brand-dark: #1da851;
+  --color-brand-hover: #34e07e;
+  --color-on-brand: #000000;
   --color-accent: #34e07e;
+  /* Semantic states (text-safe on the current background) */
+  --color-danger: #f87171;
+  --color-danger-bg: rgb(239 68 68 / 0.15);
+  --color-warning: #fcd34d;
+  --color-warning-bg: rgb(245 158 11 / 0.15);
+  --color-success: #6ee7b7;
+  --color-success-bg: rgb(16 185 129 / 0.15);
+  --color-info: #7dd3fc;
+  --color-info-bg: rgb(14 165 233 / 0.15);
+  --color-neutral: #d4d4d8;
+  --color-neutral-bg: rgb(113 113 122 / 0.15);
+  --color-chip: rgb(255 255 255 / 0.1);
+  /* Brand-strip logo treatment (flattened marks on the page background) */
+  --logo-flat-filter: brightness(0) invert(1);
+  --logo-boxed-filter: invert(1) grayscale(1);
+  --logo-boxed-blend: screen;
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/*
+ * Light palette. Applied when the OS prefers light (and no explicit choice
+ * pins dark), or when the user explicitly picks light. Keep both blocks in
+ * sync — CSS can't share a declaration list across these two selectors.
+ */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --color-bg: #f6faf7;
+    --color-surface: #ffffff;
+    --color-surface-2: #ecf3ee;
+    --color-border: #d7e3da;
+    --color-muted: #5b6b62;
+    --color-fg: #142019;
+    --color-brand: #1da851;
+    --color-brand-dark: #17843f;
+    --color-brand-hover: #178a43;
+    --color-on-brand: #ffffff;
+    --color-accent: #128a41;
+    --color-danger: #dc2626;
+    --color-danger-bg: rgb(220 38 38 / 0.1);
+    --color-warning: #b45309;
+    --color-warning-bg: rgb(217 119 6 / 0.12);
+    --color-success: #047857;
+    --color-success-bg: rgb(5 150 105 / 0.12);
+    --color-info: #0369a1;
+    --color-info-bg: rgb(3 105 161 / 0.1);
+    --color-neutral: #52525b;
+    --color-neutral-bg: rgb(113 113 122 / 0.12);
+    --color-chip: rgb(0 0 0 / 0.06);
+    --logo-flat-filter: brightness(0);
+    --logo-boxed-filter: grayscale(1);
+    --logo-boxed-blend: multiply;
+  }
+}
+:root[data-theme="light"] {
+  --color-bg: #f6faf7;
+  --color-surface: #ffffff;
+  --color-surface-2: #ecf3ee;
+  --color-border: #d7e3da;
+  --color-muted: #5b6b62;
+  --color-fg: #142019;
+  --color-brand: #1da851;
+  --color-brand-dark: #17843f;
+  --color-brand-hover: #178a43;
+  --color-on-brand: #ffffff;
+  --color-accent: #128a41;
+  --color-danger: #dc2626;
+  --color-danger-bg: rgb(220 38 38 / 0.1);
+  --color-warning: #b45309;
+  --color-warning-bg: rgb(217 119 6 / 0.12);
+  --color-success: #047857;
+  --color-success-bg: rgb(5 150 105 / 0.12);
+  --color-info: #0369a1;
+  --color-info-bg: rgb(3 105 161 / 0.1);
+  --color-neutral: #52525b;
+  --color-neutral-bg: rgb(113 113 122 / 0.12);
+  --color-chip: rgb(0 0 0 / 0.06);
+  --logo-flat-filter: brightness(0);
+  --logo-boxed-filter: grayscale(1);
+  --logo-boxed-blend: multiply;
 }
 
 html {
@@ -33,13 +113,13 @@ body {
     @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply bg-[var(--color-brand)] text-black hover:bg-[var(--color-accent)];
+    @apply bg-[var(--color-brand)] text-[var(--color-on-brand)] hover:bg-[var(--color-brand-hover)];
   }
   .btn-ghost {
     @apply border border-[var(--color-border)] text-[var(--color-fg)] hover:bg-[var(--color-surface-2)];
   }
   .btn-danger {
-    @apply border border-red-500/40 text-red-300 hover:bg-red-500/10;
+    @apply border border-red-500/40 text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)];
   }
   .card {
     @apply rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5;
@@ -55,5 +135,13 @@ body {
   }
   .pill {
     @apply rounded-md bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-accent)];
+  }
+  /* Brand-strip logo flattening: white marks on dark, black on light. */
+  .logo-flat {
+    filter: var(--logo-flat-filter);
+  }
+  .logo-boxed {
+    filter: var(--logo-boxed-filter);
+    mix-blend-mode: var(--logo-boxed-blend);
   }
 }

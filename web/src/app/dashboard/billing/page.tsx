@@ -75,17 +75,17 @@ function BillingContent() {
       <p className="mt-1 text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
 
       {checkout === "success" && (
-        <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+        <div className="mt-4 rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
           {t("checkoutSuccess")}
         </div>
       )}
       {checkout === "cancel" && (
-        <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+        <div className="mt-4 rounded-lg border border-amber-500/30 bg-[var(--color-warning-bg)] px-4 py-3 text-sm text-[var(--color-warning)]">
           {t("checkoutCancel")}
         </div>
       )}
       {error && (
-        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mt-4 rounded-lg border border-red-500/30 bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
           {error}
         </div>
       )}

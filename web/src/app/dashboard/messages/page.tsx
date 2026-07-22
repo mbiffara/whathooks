@@ -374,7 +374,7 @@ export default function MessagesPage() {
                         {preview || " "}
                       </span>
                       {c.unreadCount > 0 && (
-                        <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand)] px-1.5 text-[10px] font-semibold text-black">
+                        <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand)] px-1.5 text-[10px] font-semibold text-[var(--color-on-brand)]">
                           {c.unreadCount}
                         </span>
                       )}
@@ -410,13 +410,13 @@ export default function MessagesPage() {
               {selectedConv.agent && (
                 <div className="flex shrink-0 items-center gap-2">
                   {!selectedConv.agent.enabled ? (
-                    <span className="badge bg-white/10 text-[var(--color-muted)]">
+                    <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
                       {t("agentDisabled", { name: selectedConv.agent.name })}
                     </span>
                   ) : selectedConv.agentPaused ? (
                     <>
                       <span
-                        className="badge max-w-[22rem] truncate bg-amber-500/15 text-amber-400"
+                        className="badge max-w-[22rem] truncate bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
                         title={selectedConv.agentPausedReason ?? undefined}
                       >
                         {selectedConv.agentPausedReason
@@ -494,7 +494,7 @@ export default function MessagesPage() {
                 </div>
               )}
               {sendError && (
-                <div className="mb-2 text-xs text-red-400">{sendError}</div>
+                <div className="mb-2 text-xs text-[var(--color-danger)]">{sendError}</div>
               )}
               <UpgradeModal
                 open={showUpgrade}

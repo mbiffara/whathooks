@@ -102,7 +102,7 @@ export default function SessionsPage() {
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
       <UpgradeModal
         open={showUpgrade}

@@ -62,12 +62,12 @@ export default async function AdminOrgPage({
                 org.billing.subscriptionStatus === "active"
                   ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
                   : org.billing.subscriptionStatus === "trialing"
-                    ? "bg-amber-500/15 text-amber-300"
+                    ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
                     : org.billing.subscriptionStatus === "past_due"
-                      ? "bg-orange-500/15 text-orange-300"
+                      ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
                       : org.billing.subscriptionStatus
-                        ? "bg-red-500/15 text-red-300"
-                        : "bg-white/10 text-[var(--color-muted)]"
+                        ? "bg-[var(--color-danger-bg)] text-[var(--color-danger)]"
+                        : "bg-[var(--color-chip)] text-[var(--color-muted)]"
               }`}
             >
               {org.billing.subscriptionStatus ?? "no subscription"}
@@ -154,7 +154,7 @@ export default async function AdminOrgPage({
                   className={`badge ${
                     u.role === "ADMIN"
                       ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                      : "bg-white/10 text-[var(--color-muted)]"
+                      : "bg-[var(--color-chip)] text-[var(--color-muted)]"
                   }`}
                 >
                   {u.role}
@@ -210,7 +210,7 @@ export default async function AdminOrgPage({
                 </td>
                 <td className="cell">
                   {k.revokedAt ? (
-                    <span className="badge bg-red-500/15 text-red-300">
+                    <span className="badge bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
                       revoked
                     </span>
                   ) : (

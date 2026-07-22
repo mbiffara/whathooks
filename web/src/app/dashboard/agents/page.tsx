@@ -168,7 +168,7 @@ export default function AgentsPage() {
         )}
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
       {draft && (
         <form onSubmit={save} className="card flex flex-col gap-4">
@@ -546,7 +546,7 @@ export default function AgentsPage() {
                   className={`badge ${
                     a.enabled
                       ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                      : "bg-white/10 text-[var(--color-muted)]"
+                      : "bg-[var(--color-chip)] text-[var(--color-muted)]"
                   }`}
                 >
                   {a.enabled ? tc("enabled") : tc("disabled")}

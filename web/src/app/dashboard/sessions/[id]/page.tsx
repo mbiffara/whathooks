@@ -167,7 +167,7 @@ export default function SessionDetailPage() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
       <div className="card">
         <h2 className="mb-1 font-semibold">{t("aiAgent")}</h2>
@@ -189,7 +189,7 @@ export default function SessionDetailPage() {
         </select>
         {session.agentId &&
           agents.find((a) => a.id === session.agentId)?.enabled === false && (
-            <p className="mt-2 text-xs text-amber-300">
+            <p className="mt-2 text-xs text-[var(--color-warning)]">
               {t("agentDisabledWarning")}
             </p>
           )}

@@ -105,7 +105,12 @@
       "english": "English",
       "spanish": "Español",
       "name": "Name",
-      "saved": "Saved"
+      "saved": "Saved",
+      "theme": "Theme",
+      "themeHint": "System follows your device's appearance setting.",
+      "themeSystem": "System",
+      "themeLight": "Light",
+      "themeDark": "Dark"
     },
     "overview": {
       "title": "Overview",

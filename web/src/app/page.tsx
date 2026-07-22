@@ -253,7 +253,7 @@ twq('config','re0yu');`}
                   <span className="flex-1 text-xs text-[var(--color-muted)]">
                     {t("typeReply")}
                   </span>
-                  <span className="rounded-md bg-[var(--color-brand)] px-2 py-1 text-[10px] font-semibold text-black">
+                  <span className="rounded-md bg-[var(--color-brand)] px-2 py-1 text-[10px] font-semibold text-[var(--color-on-brand)]">
                     {t("sendBtn")}
                   </span>
                 </div>
@@ -306,7 +306,7 @@ twq('config','re0yu');`}
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {steps.map((step, i) => (
               <div key={step.title} className="card">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-[var(--color-brand)] text-base font-bold text-black">
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-[var(--color-brand)] text-base font-bold text-[var(--color-on-brand)]">
                   {i + 1}
                 </div>
                 <h3 className="mt-5 text-lg font-semibold">{step.title}</h3>

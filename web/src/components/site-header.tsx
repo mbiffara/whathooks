@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { LocaleSwitcher } from "./locale-switcher";
+import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./logo";
 
 export async function SiteHeader() {
@@ -37,8 +38,9 @@ export async function SiteHeader() {
           <Link href="/signup" className="btn-primary whitespace-nowrap">
             {t("getStarted")}
           </Link>
-          <span className="hidden sm:block">
+          <span className="hidden items-center gap-1 sm:flex">
             <LocaleSwitcher />
+            <ThemeToggle />
           </span>
         </nav>
       </div>

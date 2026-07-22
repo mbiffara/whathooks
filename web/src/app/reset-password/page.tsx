@@ -91,7 +91,7 @@ function ResetPasswordForm() {
         />
       </div>
       {error && (
-        <p className="text-sm text-red-400">
+        <p className="text-sm text-[var(--color-danger)]">
           {error}{" "}
           {/expired|invalid/i.test(error) && (
             <Link href="/forgot-password" className="text-[var(--color-brand)]">

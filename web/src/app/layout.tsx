@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
+import { cookies } from "next/headers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -56,9 +57,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getLocale();
+  // Explicit theme choice (cookie) renders server-side so there's no flash;
+  // without it the OS preference applies via CSS alone.
+  const themeCookie = (await cookies()).get("THEME")?.value;
+  const theme =
+    themeCookie === "light" || themeCookie === "dark" ? themeCookie : undefined;
   return (
     <html
       lang={locale}
+      data-theme={theme}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

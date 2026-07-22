@@ -1,6 +1,11 @@
 "use client";
 
 import { setLocaleCookie } from "@/components/locale-switcher";
+import {
+  getThemePref,
+  setThemePref,
+  type ThemePref,
+} from "@/components/theme-toggle";
 import { apiClient } from "@/lib/client-api";
 import { useLocale, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
@@ -20,6 +25,16 @@ export default function SettingsPage() {
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const [name, setName] = useState("");
+  const [theme, setTheme] = useState<ThemePref>("system");
+
+  useEffect(() => {
+    setTheme(getThemePref());
+  }, []);
+
+  function changeTheme(next: ThemePref) {
+    setThemePref(next);
+    setTheme(next);
+  }
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +88,7 @@ export default function SettingsPage() {
         <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
       <div className="card flex flex-col gap-4">
         <div>
@@ -89,6 +104,21 @@ export default function SettingsPage() {
           </select>
           <p className="mt-1 text-xs text-[var(--color-muted)]">
             {t("languageHint")}
+          </p>
+        </div>
+        <div>
+          <label className="label">{t("theme")}</label>
+          <select
+            className="input"
+            value={theme}
+            onChange={(e) => changeTheme(e.target.value as ThemePref)}
+          >
+            <option value="system">{t("themeSystem")}</option>
+            <option value="light">{t("themeLight")}</option>
+            <option value="dark">{t("themeDark")}</option>
+          </select>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">
+            {t("themeHint")}
           </p>
         </div>
         <form

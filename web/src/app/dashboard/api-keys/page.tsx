@@ -86,7 +86,7 @@ export default function ApiKeysPage() {
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
       {newToken && (
         <div className="card border-[var(--color-brand)]/40">
           <p className="text-sm font-medium">{t("newKeyNotice")}</p>
@@ -113,7 +113,7 @@ export default function ApiKeysPage() {
                 <div className="font-medium">
                   {k.name}
                   {k.revokedAt && (
-                    <span className="ml-2 badge bg-red-500/15 text-red-300">
+                    <span className="ml-2 badge bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
                       {t("revoked")}
                     </span>
                   )}

@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
                 placeholder="you@company.com"
               />
             </div>
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
             <button type="submit" className="btn-primary" disabled={loading}>
               {loading ? t("sending") : t("sendResetLink")}
             </button>

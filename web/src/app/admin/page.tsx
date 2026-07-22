@@ -4,20 +4,20 @@ import Link from "next/link";
 
 const SUB_BADGE: Record<string, string> = {
   active: "bg-[var(--color-brand)]/15 text-[var(--color-brand)]",
-  trialing: "bg-amber-500/15 text-amber-300",
-  past_due: "bg-orange-500/15 text-orange-300",
-  canceled: "bg-red-500/15 text-red-300",
+  trialing: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
+  past_due: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
+  canceled: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
 };
 
 function SubscriptionBadge({ status }: { status: string | null }) {
   if (!status) {
     return (
-      <span className="badge bg-white/10 text-[var(--color-muted)]">none</span>
+      <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">none</span>
     );
   }
   return (
     <span
-      className={`badge ${SUB_BADGE[status] ?? "bg-white/10 text-[var(--color-muted)]"}`}
+      className={`badge ${SUB_BADGE[status] ?? "bg-[var(--color-chip)] text-[var(--color-muted)]"}`}
     >
       {status}
     </span>

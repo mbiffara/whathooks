@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
+import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
 
@@ -14,12 +15,54 @@ export async function generateMetadata() {
 
 const AVATARS = ["AP", "CR", "SM"];
 
+/**
+ * Client logos, rendered as uniform white marks on the dark background
+ * (brightness-0 + invert flattens any color; 141.jpg has a white
+ * background, so it gets invert + screen blending instead).
+ */
 const BRANDS = [
-  "Ree Creativos",
-  "Logical Minds",
-  "Tecabot",
-  "SomosFin",
-  "Timeless Private Club",
+  {
+    name: "Ree Creativos",
+    src: "/brands/ree-creativos.png",
+    w: 2028,
+    h: 687,
+    cls: "h-7 w-auto opacity-70",
+  },
+  {
+    name: "Logical Minds",
+    src: "/brands/logical-minds.svg",
+    w: 1200,
+    h: 230,
+    cls: "h-5 w-auto opacity-70 brightness-0 invert",
+  },
+  {
+    name: "Tecabot",
+    src: "/brands/tecabot.png",
+    w: 150,
+    h: 36,
+    cls: "h-5 w-auto opacity-70 brightness-0 invert",
+  },
+  {
+    name: "SomosFin",
+    src: "/brands/somosfin.svg",
+    w: 5074,
+    h: 677,
+    cls: "h-4 w-auto opacity-70 brightness-0 invert",
+  },
+  {
+    name: "Timeless Private Club",
+    src: "/brands/timeless.png",
+    w: 377,
+    h: 86,
+    cls: "h-8 w-auto opacity-70 brightness-0 invert",
+  },
+  {
+    name: "141 Distribución y Transporte",
+    src: "/brands/141.jpg",
+    w: 500,
+    h: 263,
+    cls: "h-9 w-auto opacity-80 invert grayscale mix-blend-screen",
+  },
 ];
 
 export default function TeamsPage() {
@@ -199,12 +242,15 @@ twq('config','re0yu');`}
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {BRANDS.map((brand) => (
-              <span
-                key={brand}
-                className="text-lg font-semibold tracking-tight text-[var(--color-muted)]/80 transition-colors hover:text-[var(--color-fg)]"
-              >
-                {brand}
-              </span>
+              <Image
+                key={brand.name}
+                src={brand.src}
+                alt={brand.name}
+                width={brand.w}
+                height={brand.h}
+                className={brand.cls}
+                unoptimized
+              />
             ))}
           </div>
         </section>

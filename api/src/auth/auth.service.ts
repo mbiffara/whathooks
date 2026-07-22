@@ -154,7 +154,9 @@ export class AuthService {
       // conversion can be attributed from the Stripe webhook.
       const org = await tx.organization.create({
         data: {
-          name: dto.organizationName!,
+          // Signup no longer asks for an org name — default to the user's
+          // name so ad-cold visitors have one less field to fill.
+          name: dto.organizationName?.trim() || dto.name.trim(),
           adClickId: dto.twclid?.trim() || null,
         },
       });

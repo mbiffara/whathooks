@@ -19,7 +19,6 @@ function SignUpForm() {
   const inviteToken = params.get("invite");
   const [form, setForm] = useState({
     name: "",
-    organizationName: "",
     email: params.get("email") ?? "",
     password: "",
   });
@@ -104,18 +103,6 @@ function SignUpForm() {
               placeholder="Jane Doe"
             />
           </div>
-          {!inviteToken && (
-            <div>
-              <label className="label">{t("organization")}</label>
-              <input
-                required
-                className="input"
-                value={form.organizationName}
-                onChange={set("organizationName")}
-                placeholder="Acme Inc."
-              />
-            </div>
-          )}
           <div>
             <label className="label">{t("email")}</label>
             <input

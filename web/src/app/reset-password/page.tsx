@@ -1,5 +1,6 @@
 "use client";
 
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { Logo } from "@/components/logo";
 import { apiClient } from "@/lib/client-api";
 import Link from "next/link";
@@ -18,6 +19,7 @@ function ResetPasswordForm() {
   if (!token) {
     return (
       <div className="card text-center text-sm text-[var(--color-muted)]">
+        <GoogleAnalytics />
         This reset link is missing its token.{" "}
         <Link href="/forgot-password" className="text-[var(--color-brand)]">
           Request a new one

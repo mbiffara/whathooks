@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { AdClickTracker } from "@/components/ad-click-tracker";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -130,6 +131,7 @@ const plans = [
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
+      <GoogleAnalytics />
       {/* X (Twitter) conversion tracking base code */}
       <Script id="x-pixel" strategy="afterInteractive">
         {`!function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);

@@ -1,5 +1,6 @@
 "use client";
 
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { Logo } from "@/components/logo";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
@@ -35,6 +36,7 @@ function SignInForm() {
 
   return (
     <form onSubmit={onSubmit} className="card flex flex-col gap-4">
+      <GoogleAnalytics />
       <div>
         <label className="label">Email</label>
         <input

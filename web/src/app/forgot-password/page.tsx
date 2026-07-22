@@ -1,5 +1,6 @@
 "use client";
 
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { Logo } from "@/components/logo";
 import { apiClient } from "@/lib/client-api";
 import Link from "next/link";
@@ -30,6 +31,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
+      <GoogleAnalytics />
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />

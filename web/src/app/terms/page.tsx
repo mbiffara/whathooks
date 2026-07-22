@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import type { Metadata } from "next";
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div className="flex min-h-screen flex-col">
+      <GoogleAnalytics />
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="text-3xl font-bold tracking-tight">Terms of Service</h1>
@@ -37,8 +39,8 @@ export default function TermsPage() {
               independent product and is not affiliated with, endorsed by, or
               sponsored by WhatsApp LLC or Meta Platforms, Inc. Your use of
               WhatsApp remains subject to WhatsApp&apos;s own terms of service,
-              and you acknowledge that WhatsApp may restrict or ban numbers
-              that violate those terms. whathooks cannot prevent, and is not
+              and you acknowledge that WhatsApp may restrict or ban numbers that
+              violate those terms. whathooks cannot prevent, and is not
               responsible for, actions WhatsApp takes against your number.
             </p>
             <p className="mt-2">
@@ -80,7 +82,10 @@ export default function TermsPage() {
               (if you enable AI agents) generate replies. You retain all rights
               to your content and grant us only the license needed to operate
               the service. See the{" "}
-              <Link href="/privacy" className="text-[var(--color-brand)] hover:underline">
+              <Link
+                href="/privacy"
+                className="text-[var(--color-brand)] hover:underline"
+              >
                 Privacy Policy
               </Link>{" "}
               for details on what we store and for how long.
@@ -100,11 +105,11 @@ export default function TermsPage() {
           <section>
             <h2>6. Availability and changes</h2>
             <p className="mt-2">
-              We aim for high availability but the service is provided
-              &ldquo;as is&rdquo; without warranties of any kind. Connections
-              depend on WhatsApp&apos;s infrastructure and your phone remaining
-              linked, which are outside our control. We may modify or
-              discontinue features with reasonable notice.
+              We aim for high availability but the service is provided &ldquo;as
+              is&rdquo; without warranties of any kind. Connections depend on
+              WhatsApp&apos;s infrastructure and your phone remaining linked,
+              which are outside our control. We may modify or discontinue
+              features with reasonable notice.
             </p>
           </section>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { readAdClickId } from "@/components/ad-click-tracker";
 import { Logo } from "@/components/logo";
 import { signIn } from "next-auth/react";
@@ -75,6 +76,7 @@ function SignUpForm() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6 py-12">
+      <GoogleAnalytics />
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />

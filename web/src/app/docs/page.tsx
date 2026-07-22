@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
@@ -163,6 +164,7 @@ const sendResponse = `{
 export default function DocsPage() {
   return (
     <>
+      <GoogleAnalytics />
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-6 py-12">
         <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-12">

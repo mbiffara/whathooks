@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { Logo } from "@/components/logo";
 import Link from "next/link";
 import { InviteActions } from "./invite-actions";
@@ -38,6 +39,7 @@ export default async function InvitePage({
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6 py-12">
+      <GoogleAnalytics />
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
           <Logo />

@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import type { Metadata } from "next";
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <div className="flex min-h-screen flex-col">
+      <GoogleAnalytics />
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="text-3xl font-bold tracking-tight">Privacy Policy</h1>
@@ -31,8 +33,8 @@ export default function PrivacyPage() {
                 <span className="font-medium text-[var(--color-fg)]">
                   WhatsApp session data
                 </span>{" "}
-                — the phone number you link and the encrypted credentials
-                needed to keep the connection alive.
+                — the phone number you link and the encrypted credentials needed
+                to keep the connection alive.
               </li>
               <li>
                 <span className="font-medium text-[var(--color-fg)]">
@@ -82,20 +84,21 @@ export default function PrivacyPage() {
               provider for transactional email (such as invitation emails), and
               Stripe for subscription billing (Stripe receives your billing
               details; we never store your card). Each receives only what it
-              needs. We disclose data to authorities only when legally
-              required.
+              needs. We disclose data to authorities only when legally required.
             </p>
           </section>
 
           <section>
-            <h2>5. Advertising and cookies</h2>
+            <h2>5. Advertising, analytics, and cookies</h2>
             <p className="mt-2">
-              Our public marketing pages (such as the landing page) include a
+              Our public pages (such as the landing page and docs) include a
               conversion-measurement tag from X (Twitter) that uses cookies to
-              measure the effectiveness of our ads. It is not present in the
-              logged-in dashboard, and it never receives your conversations or
-              account data. You can opt out of interest-based advertising via
-              your X settings or your browser&apos;s cookie controls.
+              measure the effectiveness of our ads, and Google Analytics to
+              understand site traffic. Neither is present in the logged-in
+              dashboard, and neither receives your conversations or account
+              data. You can opt out via your X settings, Google&apos;s ads
+              settings or analytics opt-out, or your browser&apos;s cookie
+              controls.
             </p>
           </section>
 
@@ -104,9 +107,9 @@ export default function PrivacyPage() {
             <p className="mt-2">
               Data is retained while your organization is active. Deleting a
               WhatsApp session deletes its credentials; deleting your
-              organization deletes its sessions, conversations, messages,
-              media, webhooks, API keys, and team data. Residual copies in
-              backups are purged on the backup rotation schedule.
+              organization deletes its sessions, conversations, messages, media,
+              webhooks, API keys, and team data. Residual copies in backups are
+              purged on the backup rotation schedule.
             </p>
           </section>
 

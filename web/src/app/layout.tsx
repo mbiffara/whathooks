@@ -20,13 +20,16 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = t("title");
   const description = t("description");
   return {
-    metadataBase: new URL("https://whathooks.app"),
+    // www is the canonical host (the apex 308s to it).
+    metadataBase: new URL("https://www.whathooks.app"),
     title,
     description,
+    // "./" resolves per-route, so every page canonicalizes to its own URL.
+    alternates: { canonical: "./" },
     openGraph: {
       title,
       description,
-      url: "https://whathooks.app",
+      url: "./",
       siteName: "whathooks",
       type: "website",
       images: [

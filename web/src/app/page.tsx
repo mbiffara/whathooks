@@ -64,6 +64,33 @@ a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,
 twq('config','re0yu');`}
       </Script>
       <AdClickTracker />
+      {/* Structured data for search: what whathooks is, and its price range. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "whathooks",
+            url: "https://www.whathooks.app",
+            applicationCategory: "DeveloperApplication",
+            operatingSystem: "Web",
+            description:
+              "Connect your WhatsApp number via QR, receive messages on your webhook, and reply through a simple API. Shared team inbox and AI agents included.",
+            offers: {
+              "@type": "AggregateOffer",
+              lowPrice: "9.99",
+              highPrice: "99",
+              priceCurrency: "USD",
+            },
+            publisher: {
+              "@type": "Organization",
+              name: "logicalminds",
+              url: "https://logicalminds.co",
+            },
+          }),
+        }}
+      />
       <SiteHeader />
       <main className="flex-1">
         {/* Hero */}

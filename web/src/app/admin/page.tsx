@@ -2,6 +2,28 @@ import { apiServer } from "@/lib/api";
 import type { AdminOrg, AdminOverview } from "@/lib/types";
 import Link from "next/link";
 
+const SUB_BADGE: Record<string, string> = {
+  active: "bg-[var(--color-brand)]/15 text-[var(--color-brand)]",
+  trialing: "bg-amber-500/15 text-amber-300",
+  past_due: "bg-orange-500/15 text-orange-300",
+  canceled: "bg-red-500/15 text-red-300",
+};
+
+function SubscriptionBadge({ status }: { status: string | null }) {
+  if (!status) {
+    return (
+      <span className="badge bg-white/10 text-[var(--color-muted)]">none</span>
+    );
+  }
+  return (
+    <span
+      className={`badge ${SUB_BADGE[status] ?? "bg-white/10 text-[var(--color-muted)]"}`}
+    >
+      {status}
+    </span>
+  );
+}
+
 export default async function AdminPage() {
   const [overview, orgs] = await Promise.all([
     apiServer<AdminOverview>("/admin/overview").catch(() => null),
@@ -32,7 +54,9 @@ export default async function AdminPage() {
         {stats.map((s) => (
           <div key={s.label} className="card">
             <div className="text-2xl font-bold">{s.value}</div>
-            <div className="mt-1 text-xs text-[var(--color-muted)]">{s.label}</div>
+            <div className="mt-1 text-xs text-[var(--color-muted)]">
+              {s.label}
+            </div>
           </div>
         ))}
       </div>
@@ -44,6 +68,7 @@ export default async function AdminPage() {
           <thead>
             <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
               <th className="px-4 py-3 font-medium">Organization</th>
+              <th className="px-4 py-3 font-medium">Plan</th>
               <th className="px-4 py-3 font-medium">Users</th>
               <th className="px-4 py-3 font-medium">Sessions</th>
               <th className="px-4 py-3 font-medium">Webhooks</th>
@@ -66,6 +91,12 @@ export default async function AdminPage() {
                   >
                     {o.name}
                   </Link>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs">{o.plan}</span>
+                    <SubscriptionBadge status={o.subscriptionStatus} />
+                  </div>
                 </td>
                 <td className="px-4 py-3">{o.users}</td>
                 <td className="px-4 py-3">{o.sessions}</td>

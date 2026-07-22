@@ -131,6 +131,8 @@ export interface AdminOrg {
   id: string;
   name: string;
   createdAt: string;
+  plan: Plan;
+  subscriptionStatus: string | null;
   users: number;
   sessions: number;
   webhooks: number;
@@ -142,6 +144,15 @@ export interface AdminOrgDetail {
   id: string;
   name: string;
   createdAt: string;
+  billing: {
+    plan: Plan;
+    planLabel: string;
+    subscriptionStatus: string | null;
+    currentPeriodEnd: string | null;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+    usage: { used: number; limit: number | null };
+  };
   users: {
     id: string;
     email: string;

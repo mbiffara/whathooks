@@ -9,6 +9,7 @@ import { readFileSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { PLANS, TRIAL_LIMITS, currentMonthStart } from '../billing/plans';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
 
@@ -81,6 +82,8 @@ export class AdminController {
       id: o.id,
       name: o.name,
       createdAt: o.createdAt,
+      plan: o.plan,
+      subscriptionStatus: o.subscriptionStatus,
       users: o._count.users,
       sessions: o._count.sessions,
       webhooks: o._count.webhooks,
@@ -143,10 +146,35 @@ export class AdminController {
       },
     });
     if (!org) throw new NotFoundException('Organization not found');
+    // This month's message usage against the effective cap (trial caps apply
+    // while the subscription is trialing).
+    const used = await this.prisma.message.count({
+      where: {
+        organizationId: id,
+        createdAt: { gte: currentMonthStart(new Date()) },
+      },
+    });
+    const planLimit = PLANS[org.plan].messagesPerMonth;
+    const trialing = org.subscriptionStatus === 'trialing';
+    const limit =
+      trialing && planLimit != null
+        ? Math.min(planLimit, TRIAL_LIMITS.messagesPerMonth)
+        : trialing
+          ? TRIAL_LIMITS.messagesPerMonth
+          : planLimit;
     return {
       id: org.id,
       name: org.name,
       createdAt: org.createdAt,
+      billing: {
+        plan: org.plan,
+        planLabel: PLANS[org.plan].label,
+        subscriptionStatus: org.subscriptionStatus,
+        currentPeriodEnd: org.currentPeriodEnd,
+        stripeCustomerId: org.stripeCustomerId,
+        stripeSubscriptionId: org.stripeSubscriptionId,
+        usage: { used, limit },
+      },
       users: org.users,
       sessions: org.sessions,
       webhooks: org.webhooks,

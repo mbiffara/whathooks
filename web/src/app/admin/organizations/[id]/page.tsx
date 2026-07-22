@@ -51,6 +51,73 @@ export default async function AdminOrgPage({
         ))}
       </div>
 
+      <Section title="Billing">
+        <div className="card flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-lg font-semibold">
+              {org.billing.planLabel}
+            </span>
+            <span
+              className={`badge ${
+                org.billing.subscriptionStatus === "active"
+                  ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
+                  : org.billing.subscriptionStatus === "trialing"
+                    ? "bg-amber-500/15 text-amber-300"
+                    : org.billing.subscriptionStatus === "past_due"
+                      ? "bg-orange-500/15 text-orange-300"
+                      : org.billing.subscriptionStatus
+                        ? "bg-red-500/15 text-red-300"
+                        : "bg-white/10 text-[var(--color-muted)]"
+              }`}
+            >
+              {org.billing.subscriptionStatus ?? "no subscription"}
+            </span>
+            {org.billing.currentPeriodEnd && (
+              <span className="text-xs text-[var(--color-muted)]">
+                {org.billing.subscriptionStatus === "trialing"
+                  ? "trial ends"
+                  : "renews"}{" "}
+                {new Date(org.billing.currentPeriodEnd).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-[var(--color-muted)]">
+            Messages this month:{" "}
+            <span className="font-medium text-[var(--color-fg)]">
+              {org.billing.usage.used.toLocaleString()}
+            </span>{" "}
+            /{" "}
+            {org.billing.usage.limit == null
+              ? "Unlimited"
+              : org.billing.usage.limit.toLocaleString()}
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {org.billing.stripeCustomerId ? (
+              <a
+                href={`https://dashboard.stripe.com/customers/${org.billing.stripeCustomerId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pill hover:text-[var(--color-brand)]"
+              >
+                {org.billing.stripeCustomerId} ↗
+              </a>
+            ) : (
+              <span className="pill">no Stripe customer</span>
+            )}
+            {org.billing.stripeSubscriptionId && (
+              <a
+                href={`https://dashboard.stripe.com/subscriptions/${org.billing.stripeSubscriptionId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pill hover:text-[var(--color-brand)]"
+              >
+                {org.billing.stripeSubscriptionId} ↗
+              </a>
+            )}
+          </div>
+        </div>
+      </Section>
+
       <Section title="WhatsApp sessions">
         {org.sessions.length === 0 ? (
           <Empty>No sessions.</Empty>

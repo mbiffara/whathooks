@@ -81,5 +81,31 @@
     "expired": "Esta invitación expiró. Pide a tu equipo una nueva.",
     "aTeammate": "Alguien de tu equipo",
     "invitedYou": "{inviter} invitó a <hl>{email}</hl> a unirse como <hl>{role}</hl>."
+  },
+  "dash": {
+    "nav": {
+      "overview": "Resumen",
+      "sessions": "Sesiones de WhatsApp",
+      "messages": "Mensajes",
+      "agents": "Agentes",
+      "webhooks": "Webhooks",
+      "apiKeys": "Claves API",
+      "logs": "Registro de mensajes",
+      "team": "Equipo",
+      "billing": "Facturación",
+      "settings": "Configuración",
+      "admin": "Consola admin",
+      "signOut": "Cerrar sesión"
+    },
+    "settings": {
+      "title": "Configuración",
+      "subtitle": "Las preferencias de tu cuenta.",
+      "language": "Idioma",
+      "languageHint": "Se usa en el panel y en los correos que te enviamos.",
+      "english": "English",
+      "spanish": "Español",
+      "name": "Nombre",
+      "saved": "Guardado"
+    }
   }
 }

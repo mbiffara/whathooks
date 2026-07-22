@@ -81,5 +81,31 @@
     "expired": "This invitation has expired. Ask your team for a new one.",
     "aTeammate": "A teammate",
     "invitedYou": "{inviter} invited <hl>{email}</hl> to join as <hl>{role}</hl>."
+  },
+  "dash": {
+    "nav": {
+      "overview": "Overview",
+      "sessions": "WhatsApp Sessions",
+      "messages": "Messages",
+      "agents": "Agents",
+      "webhooks": "Webhooks",
+      "apiKeys": "API Keys",
+      "logs": "Message Log",
+      "team": "Team",
+      "billing": "Billing",
+      "settings": "Settings",
+      "admin": "Admin console",
+      "signOut": "Sign out"
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Your account preferences.",
+      "language": "Language",
+      "languageHint": "Used across the dashboard and in emails we send you.",
+      "english": "English",
+      "spanish": "Español",
+      "name": "Name",
+      "saved": "Saved"
+    }
   }
 }

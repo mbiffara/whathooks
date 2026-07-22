@@ -2,23 +2,26 @@
 
 import { Logo } from "@/components/logo";
 import { OrgSwitcher } from "@/components/org-switcher";
+import { useTranslations } from "next-intl";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/dashboard", label: "Overview", exact: true },
-  { href: "/dashboard/sessions", label: "WhatsApp Sessions" },
-  { href: "/dashboard/messages", label: "Messages" },
-  { href: "/dashboard/agents", label: "Agents" },
-  { href: "/dashboard/webhooks", label: "Webhooks" },
-  { href: "/dashboard/api-keys", label: "API Keys" },
-  { href: "/dashboard/logs", label: "Message Log" },
-  { href: "/dashboard/team", label: "Team" },
-  { href: "/dashboard/billing", label: "Billing" },
+const LINKS: { href: string; key: string; exact?: boolean }[] = [
+  { href: "/dashboard", key: "overview", exact: true },
+  { href: "/dashboard/sessions", key: "sessions" },
+  { href: "/dashboard/messages", key: "messages" },
+  { href: "/dashboard/agents", key: "agents" },
+  { href: "/dashboard/webhooks", key: "webhooks" },
+  { href: "/dashboard/api-keys", key: "apiKeys" },
+  { href: "/dashboard/logs", key: "logs" },
+  { href: "/dashboard/team", key: "team" },
+  { href: "/dashboard/billing", key: "billing" },
+  { href: "/dashboard/settings", key: "settings" },
 ];
 
 export function DashboardNav() {
+  const t = useTranslations("dash.nav");
   const pathname = usePathname();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
@@ -44,7 +47,7 @@ export function DashboardNav() {
                 : "text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
             }`}
           >
-            {l.label}
+            {t(l.key)}
           </Link>
         ))}
         {isAdmin && (
@@ -56,7 +59,7 @@ export function DashboardNav() {
                 : "text-[var(--color-brand)] hover:bg-[var(--color-surface-2)]"
             }`}
           >
-            Admin Console
+            {t("admin")}
           </Link>
         )}
       </nav>
@@ -68,7 +71,7 @@ export function DashboardNav() {
           onClick={() => signOut({ callbackUrl: "/" })}
           className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
         >
-          Sign out
+          {t("signOut")}
         </button>
       </div>
     </aside>

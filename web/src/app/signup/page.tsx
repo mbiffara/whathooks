@@ -2,7 +2,7 @@
 
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { readAdClickId } from "@/components/ad-click-tracker";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Logo } from "@/components/logo";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
@@ -13,6 +13,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
 function SignUpForm() {
   const t = useTranslations("auth");
+  const locale = useLocale();
   const router = useRouter();
   const params = useSearchParams();
   const inviteToken = params.get("invite");
@@ -45,8 +46,9 @@ function SignUpForm() {
             password: form.password,
             inviteToken,
             twclid,
+            locale,
           }
-        : { ...form, twclid };
+        : { ...form, twclid, locale };
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

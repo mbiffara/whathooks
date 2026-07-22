@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -10,13 +11,14 @@ import { useEffect } from "react";
 export function UpgradeModal({
   open,
   onClose,
-  action = "This action",
+  action,
 }: {
   open: boolean;
   onClose: () => void;
-  /** What the user tried to do, e.g. "Connecting a WhatsApp number". */
+  /** What the user tried to do (already translated), e.g. "Connecting a WhatsApp number". */
   action?: string;
 }) {
+  const t = useTranslations("dash.upgrade");
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -39,18 +41,17 @@ export function UpgradeModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="upgrade-modal-title" className="text-lg font-semibold">
-          Paid plan required
+          {t("title")}
         </h2>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
-          {action} requires an active subscription. Pick a plan to continue —
-          you can cancel anytime.
+          {t("body", { action: action ?? t("defaultAction") })}
         </p>
         <div className="mt-5 flex justify-end gap-3">
           <button onClick={onClose} className="btn-ghost">
-            Not now
+            {t("notNow")}
           </button>
           <Link href="/dashboard/billing" className="btn-primary">
-            View plans
+            {t("viewPlans")}
           </Link>
         </div>
       </div>

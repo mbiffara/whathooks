@@ -4,12 +4,15 @@ import { StatusBadge } from "@/components/status-badge";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { Subscription, WaSession } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 export default function SessionsPage() {
+  const t = useTranslations("dash.sessions");
+  const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const router = useRouter();
@@ -29,7 +32,7 @@ export default function SessionsPage() {
       const data = await apiClient<WaSession[]>("/sessions", token);
       setSessions(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {
       setLoading(false);
     }
@@ -37,7 +40,7 @@ export default function SessionsPage() {
     apiClient<Subscription>("/billing/subscription", token)
       .then((sub) => setNeedsPlan(!sub.subscribed))
       .catch(() => {});
-  }, [token]);
+  }, [token, tc]);
 
   useEffect(() => {
     load();
@@ -62,7 +65,7 @@ export default function SessionsPage() {
       if (isSubscriptionRequired(e)) {
         setShowUpgrade(true);
       } else {
-        setError(e instanceof Error ? e.message : "Failed to create");
+        setError(e instanceof Error ? e.message : tc("failedToCreate"));
       }
       setCreating(false);
     }
@@ -71,10 +74,8 @@ export default function SessionsPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold">WhatsApp Sessions</h1>
-        <p className="text-sm text-[var(--color-muted)]">
-          Each session links one WhatsApp number to whathooks.
-        </p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
       </div>
 
       <form
@@ -82,10 +83,10 @@ export default function SessionsPage() {
         className="card flex flex-col gap-3 sm:flex-row sm:items-end"
       >
         <div className="flex-1">
-          <label className="label">New session label</label>
+          <label className="label">{t("newSessionLabel")}</label>
           <input
             className="input"
-            placeholder="e.g. Support line"
+            placeholder={t("labelPlaceholder")}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
           />
@@ -97,7 +98,7 @@ export default function SessionsPage() {
           // why (upgrade modal) instead of presenting a dead button.
           disabled={creating || (!needsPlan && !label.trim())}
         >
-          {creating ? "Creating…" : "Create & connect"}
+          {creating ? t("creating") : t("createConnect")}
         </button>
       </form>
 
@@ -106,14 +107,14 @@ export default function SessionsPage() {
       <UpgradeModal
         open={showUpgrade}
         onClose={() => setShowUpgrade(false)}
-        action="Connecting a WhatsApp number"
+        action={t("upgradeAction")}
       />
 
       {loading ? (
-        <p className="text-sm text-[var(--color-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
       ) : sessions.length === 0 ? (
         <div className="card text-center text-sm text-[var(--color-muted)]">
-          No sessions yet. Create one above to get a QR code.
+          {t("noSessions")}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -126,7 +127,7 @@ export default function SessionsPage() {
               <div>
                 <div className="font-medium">{s.label}</div>
                 <div className="text-sm text-[var(--color-muted)]">
-                  {s.phoneNumber ? `+${s.phoneNumber}` : "Not linked yet"}
+                  {s.phoneNumber ? `+${s.phoneNumber}` : t("notLinked")}
                 </div>
               </div>
               <StatusBadge status={s.status} />

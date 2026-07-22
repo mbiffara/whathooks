@@ -6,29 +6,16 @@ import {
   type PurchasablePlan,
   type Subscription,
 } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 const PLAN_ORDER: PurchasablePlan[] = ["STARTER", "PRO", "BUSINESS"];
 
-const PLAN_FEATURES: Record<PurchasablePlan, string[]> = {
-  STARTER: ["1 WhatsApp number", "5,000 messages / month", "30-day history"],
-  PRO: [
-    "3 WhatsApp numbers",
-    "10,000 messages / month",
-    "90-day history",
-    "AI agents & team roles",
-  ],
-  BUSINESS: [
-    "10 WhatsApp numbers",
-    "100,000 messages / month",
-    "Full history",
-    "Priority support",
-  ],
-};
-
 function BillingContent() {
+  const t = useTranslations("dash.billing");
+  const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const isOwner = auth?.user?.orgRole === "OWNER";
@@ -46,11 +33,11 @@ function BillingContent() {
       setSub(await apiClient<Subscription>("/billing/subscription", token));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, tc]);
 
   useEffect(() => {
     void load();
@@ -67,13 +54,13 @@ function BillingContent() {
       });
       window.location.href = url;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
       setBusy(null);
     }
   }
 
   if (loading) {
-    return <p className="text-sm text-[var(--color-muted)]">Loading…</p>;
+    return <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>;
   }
 
   const unlimited = sub?.usage.limit == null;
@@ -84,19 +71,17 @@ function BillingContent() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="text-2xl font-semibold">Billing</h1>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Manage your subscription and see this month&apos;s usage.
-      </p>
+      <h1 className="text-2xl font-semibold">{t("title")}</h1>
+      <p className="mt-1 text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
 
       {checkout === "success" && (
         <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-          Payment received — your subscription is active.
+          {t("checkoutSuccess")}
         </div>
       )}
       {checkout === "cancel" && (
         <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-          Checkout canceled — no changes were made.
+          {t("checkoutCancel")}
         </div>
       )}
       {error && (
@@ -112,28 +97,31 @@ function BillingContent() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-sm text-[var(--color-muted)]">
-                  Current plan
+                  {t("currentPlan")}
                 </div>
                 <div className="mt-1 text-xl font-semibold">
-                  {sub.subscribed ? sub.limits.label : "No active plan"}
+                  {sub.subscribed ? sub.limits.label : t("noActivePlan")}
                   {sub.subscribed && sub.plan !== "SPONSORED" && (
                     <span className="ml-2 text-sm font-normal text-[var(--color-muted)]">
-                      {PLAN_PRICING[sub.plan].price}/mo
+                      {PLAN_PRICING[sub.plan].price}
+                      {t("perMonth")}
                     </span>
                   )}
                 </div>
                 {sub.subscribed && sub.status && (
                   <div className="mt-1 text-xs text-[var(--color-muted)]">
-                    Status: {sub.status}
+                    {t("statusLine", { status: sub.status })}
                     {sub.currentPeriodEnd &&
-                      ` · renews ${new Date(
-                        sub.currentPeriodEnd,
-                      ).toLocaleDateString()}`}
+                      ` · ${t("renews", {
+                        date: new Date(
+                          sub.currentPeriodEnd,
+                        ).toLocaleDateString(),
+                      })}`}
                   </div>
                 )}
                 {!sub.subscribed && (
                   <div className="mt-1 text-xs text-[var(--color-muted)]">
-                    Pick a plan below to start sending messages.
+                    {t("pickPlanHint")}
                   </div>
                 )}
               </div>
@@ -143,7 +131,9 @@ function BillingContent() {
                   disabled={busy !== null}
                   className="btn-ghost shrink-0 disabled:opacity-50"
                 >
-                  {busy === "/billing/portal" ? "Opening…" : "Manage billing"}
+                  {busy === "/billing/portal"
+                    ? t("opening")
+                    : t("manageBilling")}
                 </button>
               )}
             </div>
@@ -151,11 +141,11 @@ function BillingContent() {
             {sub.subscribed && (
               <div className="mt-5">
                 <div className="mb-1 flex justify-between text-xs text-[var(--color-muted)]">
-                  <span>Messages this month</span>
+                  <span>{t("messagesThisMonth")}</span>
                   <span>
                     {sub.usage.used.toLocaleString()} /{" "}
                     {unlimited
-                      ? "Unlimited"
+                      ? t("unlimited")
                       : sub.usage.limit!.toLocaleString()}
                   </span>
                 </div>
@@ -180,12 +170,11 @@ function BillingContent() {
           {/* Plans */}
           {sub.plan === "SPONSORED" ? (
             <p className="mt-6 text-sm text-[var(--color-muted)]">
-              You&apos;re on a sponsored plan with unlimited usage — no
-              subscription needed.
+              {t("sponsoredNote")}
             </p>
           ) : !isOwner ? (
             <p className="mt-6 text-sm text-[var(--color-muted)]">
-              Only the organization owner can change the plan.
+              {t("ownerOnly")}
             </p>
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -206,18 +195,18 @@ function BillingContent() {
                       </h3>
                       {current && (
                         <span className="rounded-full bg-[var(--color-brand)]/15 px-2 py-0.5 text-xs text-[var(--color-brand)]">
-                          Current
+                          {t("current")}
                         </span>
                       )}
                     </div>
                     <div className="mt-1 text-2xl font-bold">
                       {PLAN_PRICING[plan].price}
                       <span className="text-sm font-normal text-[var(--color-muted)]">
-                        /mo
+                        {t("perMonth")}
                       </span>
                     </div>
                     <ul className="mt-4 flex-1 space-y-2 text-sm text-[var(--color-muted)]">
-                      {PLAN_FEATURES[plan].map((f) => (
+                      {(t.raw(`features.${plan}`) as string[]).map((f) => (
                         <li key={f}>· {f}</li>
                       ))}
                     </ul>
@@ -229,10 +218,10 @@ function BillingContent() {
                       } disabled:opacity-50`}
                     >
                       {current
-                        ? "Current plan"
+                        ? t("currentPlanBtn")
                         : busy === "/billing/checkout"
-                          ? "Redirecting…"
-                          : "Choose plan"}
+                          ? t("redirecting")
+                          : t("choosePlan")}
                     </button>
                   </div>
                 );

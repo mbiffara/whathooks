@@ -3,12 +3,15 @@
 import { StatusBadge } from "@/components/status-badge";
 import { apiClient } from "@/lib/client-api";
 import type { Agent, WaSessionDetail } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function SessionDetailPage() {
+  const t = useTranslations("dash.sessionDetail");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const { data: auth } = useSession();
   const token = auth?.accessToken;
@@ -37,7 +40,7 @@ export default function SessionDetailPage() {
       method: "POST",
       body: JSON.stringify({ agentId: agentId || null }),
     }).catch((e) =>
-      setError(e instanceof Error ? e.message : "Failed to assign agent"),
+      setError(e instanceof Error ? e.message : t("failedToAssign")),
     );
   }
 
@@ -47,9 +50,9 @@ export default function SessionDetailPage() {
       const data = await apiClient<WaSessionDetail>(`/sessions/${id}`, token);
       setSession(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : tc("failedToLoad"));
     }
-  }, [id, token]);
+  }, [id, token, tc]);
 
   // Poll while not connected so the QR / status stays fresh.
   useEffect(() => {
@@ -75,7 +78,7 @@ export default function SessionDetailPage() {
       await apiClient(`/sessions/${id}${path}`, token, { method });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Action failed");
+      setError(e instanceof Error ? e.message : t("actionFailed"));
     } finally {
       setBusy(false);
     }
@@ -88,7 +91,7 @@ export default function SessionDetailPage() {
       await apiClient(`/sessions/${id}`, token, { method: "DELETE" });
       router.push("/dashboard/sessions");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      setError(e instanceof Error ? e.message : t("deleteFailed"));
       setBusy(false);
     }
   }
@@ -103,15 +106,15 @@ export default function SessionDetailPage() {
         method: "POST",
         body: JSON.stringify({ to, text }),
       });
-      setSendResult("Message sent ✓");
+      setSendResult(t("messageSent"));
       setText("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Send failed");
+      setError(e instanceof Error ? e.message : t("sendFailed"));
     }
   }
 
   if (!session) {
-    return <p className="text-sm text-[var(--color-muted)]">Loading…</p>;
+    return <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>;
   }
 
   const isQr = session.status === "QR" && session.qrDataUrl;
@@ -125,7 +128,7 @@ export default function SessionDetailPage() {
             onClick={() => router.push("/dashboard/sessions")}
             className="mb-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
           >
-            ← Sessions
+            {t("back")}
           </button>
           <h1 className="text-2xl font-bold">{session.label}</h1>
           <div className="mt-2 flex items-center gap-3">
@@ -141,17 +144,25 @@ export default function SessionDetailPage() {
           {(session.status === "DISCONNECTED" ||
             session.status === "LOGGED_OUT" ||
             session.status === "PENDING") && (
-            <button onClick={() => act("/connect")} className="btn-ghost" disabled={busy}>
-              Reconnect
+            <button
+              onClick={() => act("/connect")}
+              className="btn-ghost"
+              disabled={busy}
+            >
+              {t("reconnect")}
             </button>
           )}
           {isConnected && (
-            <button onClick={() => act("/logout")} className="btn-ghost" disabled={busy}>
-              Log out
+            <button
+              onClick={() => act("/logout")}
+              className="btn-ghost"
+              disabled={busy}
+            >
+              {t("logOut")}
             </button>
           )}
           <button onClick={remove} className="btn-danger" disabled={busy}>
-            Delete
+            {tc("delete")}
           </button>
         </div>
       </div>
@@ -159,86 +170,88 @@ export default function SessionDetailPage() {
       {error && <p className="text-sm text-red-400">{error}</p>}
 
       <div className="card">
-        <h2 className="mb-1 font-semibold">AI Agent</h2>
+        <h2 className="mb-1 font-semibold">{t("aiAgent")}</h2>
         <p className="mb-3 text-sm text-[var(--color-muted)]">
-          Assign an agent to auto-reply to incoming 1:1 messages on this number.
+          {t("aiAgentHint")}
         </p>
         <select
           className="input max-w-sm"
           value={session.agentId ?? ""}
           onChange={(e) => assignAgent(e.target.value)}
         >
-          <option value="">No agent (manual replies)</option>
+          <option value="">{t("noAgent")}</option>
           {agents.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
-              {a.enabled ? "" : " (disabled)"}
+              {a.enabled ? "" : t("disabledSuffix")}
             </option>
           ))}
         </select>
         {session.agentId &&
           agents.find((a) => a.id === session.agentId)?.enabled === false && (
             <p className="mt-2 text-xs text-amber-300">
-              This agent is disabled — enable it on the Agents page to auto-reply.
+              {t("agentDisabledWarning")}
             </p>
           )}
       </div>
 
       {isQr && (
         <div className="card flex flex-col items-center gap-4 text-center">
-          <h2 className="font-semibold">Scan to connect</h2>
+          <h2 className="font-semibold">{t("scanToConnect")}</h2>
           <p className="max-w-sm text-sm text-[var(--color-muted)]">
-            Open WhatsApp on your phone → <b>Settings → Linked Devices → Link a
-            device</b>, then scan this code.
+            {t.rich("scanInstructions", { b: (c) => <b>{c}</b> })}
           </p>
           <div className="rounded-xl bg-white p-3">
             <Image
               src={session.qrDataUrl!}
-              alt="WhatsApp QR code"
+              alt={t("qrAlt")}
               width={280}
               height={280}
               unoptimized
             />
           </div>
           <p className="text-xs text-[var(--color-muted)]">
-            The code refreshes automatically.
+            {t("qrRefreshes")}
           </p>
         </div>
       )}
 
-      {(session.status === "CONNECTING" || session.status === "PENDING") && !isQr && (
-        <div className="card text-center text-sm text-[var(--color-muted)]">
-          Establishing connection… a QR code will appear shortly.
-        </div>
-      )}
+      {(session.status === "CONNECTING" || session.status === "PENDING") &&
+        !isQr && (
+          <div className="card text-center text-sm text-[var(--color-muted)]">
+            {t("establishing")}
+          </div>
+        )}
 
       {isConnected && (
         <div className="card">
-          <h2 className="mb-1 font-semibold">Send a test message</h2>
+          <h2 className="mb-1 font-semibold">{t("sendTest")}</h2>
           <p className="mb-4 text-sm text-[var(--color-muted)]">
-            Phone number with country code, no “+”. e.g. 15551234567
+            {t("sendTestHint")}
           </p>
           <form onSubmit={sendTest} className="flex flex-col gap-3">
             <input
               className="input"
-              placeholder="Recipient number"
+              placeholder={t("recipientPlaceholder")}
               value={to}
               onChange={(e) => setTo(e.target.value)}
               required
             />
             <textarea
               className="input min-h-20"
-              placeholder="Your message"
+              placeholder={t("messagePlaceholder")}
               value={text}
               onChange={(e) => setText(e.target.value)}
               required
             />
             <div className="flex items-center gap-3">
               <button type="submit" className="btn-primary">
-                Send
+                {t("send")}
               </button>
               {sendResult && (
-                <span className="text-sm text-[var(--color-brand)]">{sendResult}</span>
+                <span className="text-sm text-[var(--color-brand)]">
+                  {sendResult}
+                </span>
               )}
             </div>
           </form>

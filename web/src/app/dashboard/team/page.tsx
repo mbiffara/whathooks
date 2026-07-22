@@ -7,6 +7,7 @@ import type {
   OrgRole,
   TeamMember,
 } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -17,6 +18,8 @@ const ROLE_BADGE: Record<OrgRole, string> = {
 };
 
 export default function TeamPage() {
+  const t = useTranslations("dash.team");
+  const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const myUserId = auth?.user?.id;
@@ -51,11 +54,11 @@ export default function TeamPage() {
       if (i) setInvites(i as Invitation[]);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {
       setLoading(false);
     }
-  }, [token, canManage]);
+  }, [token, canManage, tc]);
 
   useEffect(() => {
     load();
@@ -67,7 +70,7 @@ export default function TeamPage() {
       await action();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     }
   }
 
@@ -90,7 +93,7 @@ export default function TeamPage() {
       setEmail("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to invite");
+      setError(e instanceof Error ? e.message : t("failedToInvite"));
     }
   }
 
@@ -106,7 +109,7 @@ export default function TeamPage() {
       );
       setCreated(res);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to regenerate");
+      setError(e instanceof Error ? e.message : t("failedToRegenerate"));
     }
   }
 
@@ -117,7 +120,7 @@ export default function TeamPage() {
 
   async function leave() {
     if (!token || !myUserId) return;
-    if (!confirm("Leave this organization?")) return;
+    if (!confirm(t("confirmLeave"))) return;
     try {
       await apiClient(`/organizations/members/${myUserId}`, token, {
         method: "DELETE",
@@ -125,7 +128,7 @@ export default function TeamPage() {
       // Session state (active org, role) is stale now — re-login resolves it.
       signOut({ callbackUrl: "/signin" });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to leave");
+      setError(e instanceof Error ? e.message : t("failedToLeave"));
     }
   }
 
@@ -134,11 +137,8 @@ export default function TeamPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold">Team</h1>
-        <p className="text-sm text-[var(--color-muted)]">
-          People with access to this organization&apos;s WhatsApp sessions,
-          messages and agents.
-        </p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
@@ -149,28 +149,32 @@ export default function TeamPage() {
           className="card flex flex-col gap-3 sm:flex-row sm:items-end"
         >
           <div className="flex-1">
-            <label className="label">Invite by email</label>
+            <label className="label">{t("inviteByEmail")}</label>
             <input
               className="input"
               type="email"
-              placeholder="teammate@company.com"
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div>
-            <label className="label">Role</label>
+            <label className="label">{t("role")}</label>
             <select
               className="input"
               value={role}
               onChange={(e) => setRole(e.target.value as "ADMIN" | "MEMBER")}
             >
-              <option value="MEMBER">Member — operate & message</option>
-              <option value="ADMIN">Admin — manage everything</option>
+              <option value="MEMBER">{t("roleMemberOption")}</option>
+              <option value="ADMIN">{t("roleAdminOption")}</option>
             </select>
           </div>
-          <button type="submit" className="btn-primary" disabled={!email.trim()}>
-            Send invite
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={!email.trim()}
+          >
+            {t("sendInvite")}
           </button>
         </form>
       )}
@@ -178,10 +182,9 @@ export default function TeamPage() {
       {created && (
         <div className="card border-[var(--color-brand)]/40">
           <p className="text-sm font-medium">
-            Invitation for {created.invitation.email} —{" "}
             {created.emailSent
-              ? "email sent. You can also share this link directly:"
-              : "email is not configured, share this link (shown once):"}
+              ? t("inviteEmailSent", { email: created.invitation.email })
+              : t("inviteLinkOnly", { email: created.invitation.email })}
           </p>
           <div className="mt-2 flex items-center gap-2">
             <code className="block flex-1 break-all rounded-lg bg-[var(--color-surface-2)] p-3 font-mono text-sm text-[var(--color-accent)]">
@@ -192,16 +195,16 @@ export default function TeamPage() {
               className="btn-primary shrink-0"
               onClick={() => copyLink(created.inviteUrl)}
             >
-              {copied ? "Copied!" : "Copy"}
+              {copied ? t("copied") : t("copy")}
             </button>
           </div>
         </div>
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Members</h2>
+        <h2 className="text-lg font-semibold">{t("members")}</h2>
         {loading ? (
-          <p className="text-sm text-[var(--color-muted)]">Loading…</p>
+          <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
         ) : (
           members.map((m) => {
             const isSelf = m.userId === myUserId;
@@ -215,16 +218,18 @@ export default function TeamPage() {
                     {m.name ?? m.email}
                     {isSelf && (
                       <span className="ml-2 text-xs text-[var(--color-muted)]">
-                        (you)
+                        {t("you")}
                       </span>
                     )}
                     <span className={`ml-2 badge ${ROLE_BADGE[m.role]}`}>
-                      {m.role.toLowerCase()}
+                      {t(`roles.${m.role}`)}
                     </span>
                   </div>
                   <div className="mt-1 text-sm text-[var(--color-muted)]">
-                    {m.email} · joined{" "}
-                    {new Date(m.joinedAt).toLocaleDateString()}
+                    {m.email} ·{" "}
+                    {t("joined", {
+                      date: new Date(m.joinedAt).toLocaleDateString(),
+                    })}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -246,13 +251,13 @@ export default function TeamPage() {
                           )
                         }
                       >
-                        <option value="MEMBER">Member</option>
-                        <option value="ADMIN">Admin</option>
+                        <option value="MEMBER">{t("memberOpt")}</option>
+                        <option value="ADMIN">{t("adminOpt")}</option>
                       </select>
                       <button
                         className="btn-danger"
                         onClick={() => {
-                          if (confirm(`Remove ${m.email} from the team?`))
+                          if (confirm(t("confirmRemove", { email: m.email })))
                             run(() =>
                               apiClient(
                                 `/organizations/members/${m.userId}`,
@@ -262,16 +267,12 @@ export default function TeamPage() {
                             );
                         }}
                       >
-                        Remove
+                        {t("remove")}
                       </button>
                       <button
                         className="btn-ghost"
                         onClick={() => {
-                          if (
-                            confirm(
-                              `Transfer ownership to ${m.email}? You will become an admin.`,
-                            )
-                          )
+                          if (confirm(t("confirmTransfer", { email: m.email })))
                             run(() =>
                               apiClient(
                                 "/organizations/transfer-ownership",
@@ -284,13 +285,13 @@ export default function TeamPage() {
                             );
                         }}
                       >
-                        Make owner
+                        {t("makeOwner")}
                       </button>
                     </>
                   )}
                   {isSelf && m.role !== "OWNER" && (
                     <button className="btn-danger" onClick={leave}>
-                      Leave
+                      {t("leave")}
                     </button>
                   )}
                 </div>
@@ -302,7 +303,7 @@ export default function TeamPage() {
 
       {canManage && pending.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">Pending invitations</h2>
+          <h2 className="text-lg font-semibold">{t("pendingInvitations")}</h2>
           {pending.map((i) => (
             <div
               key={i.id}
@@ -312,19 +313,18 @@ export default function TeamPage() {
                 <div className="font-medium">
                   {i.email}
                   <span className={`ml-2 badge ${ROLE_BADGE[i.role]}`}>
-                    {i.role.toLowerCase()}
+                    {t(`roles.${i.role}`)}
                   </span>
                 </div>
                 <div className="mt-1 text-xs text-[var(--color-muted)]">
-                  Expires {new Date(i.expiresAt).toLocaleDateString()}
+                  {t("expires", {
+                    date: new Date(i.expiresAt).toLocaleDateString(),
+                  })}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  className="btn-ghost"
-                  onClick={() => regenerate(i.id)}
-                >
-                  New link
+                <button className="btn-ghost" onClick={() => regenerate(i.id)}>
+                  {t("newLink")}
                 </button>
                 <button
                   className="btn-danger"
@@ -336,7 +336,7 @@ export default function TeamPage() {
                     )
                   }
                 >
-                  Revoke
+                  {t("revoke")}
                 </button>
               </div>
             </div>

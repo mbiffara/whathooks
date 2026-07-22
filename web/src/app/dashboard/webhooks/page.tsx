@@ -2,6 +2,7 @@
 
 import { apiClient } from "@/lib/client-api";
 import type { MappingRule, WaSession, Webhook } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -75,6 +76,7 @@ function MappingEditor({
   rows: RuleRow[];
   onChange: (rows: RuleRow[]) => void;
 }) {
+  const t = useTranslations("dash.webhooks");
   function patch(i: number, changes: Partial<RuleRow>) {
     onChange(rows.map((row, j) => (j === i ? { ...row, ...changes } : row)));
   }
@@ -105,8 +107,8 @@ function MappingEditor({
               patch(i, { kind: e.target.value as RuleRow["kind"] })
             }
           >
-            <option value="field">field</option>
-            <option value="fixed">fixed value</option>
+            <option value="field">{t("kindField")}</option>
+            <option value="fixed">{t("kindFixed")}</option>
           </select>
           {row.kind === "field" ? (
             <>
@@ -119,8 +121,8 @@ function MappingEditor({
               />
               <input
                 className="input h-9 w-40 flex-none text-xs"
-                placeholder="date format (optional)"
-                title="iso, unix, unix_ms, or a pattern like yyyy-MM-dd HH:mm"
+                placeholder={t("dateFormatPlaceholder")}
+                title={t("dateFormatTitle")}
                 value={row.dateFormat}
                 onChange={(e) => patch(i, { dateFormat: e.target.value })}
               />
@@ -128,7 +130,7 @@ function MappingEditor({
           ) : (
             <input
               className="input h-9 min-w-36 flex-1 text-xs"
-              placeholder="the value to send"
+              placeholder={t("valuePlaceholder")}
               value={row.value}
               onChange={(e) => patch(i, { value: e.target.value })}
             />
@@ -137,7 +139,7 @@ function MappingEditor({
             type="button"
             onClick={() => onChange(rows.filter((_, j) => j !== i))}
             className="btn-ghost h-9 px-2 text-xs"
-            aria-label="Remove field"
+            aria-label={t("removeField")}
           >
             ✕
           </button>
@@ -149,13 +151,11 @@ function MappingEditor({
           onClick={() => onChange([...rows, emptyRow()])}
           className="btn-ghost self-start text-xs"
         >
-          + Add field
+          {t("addField")}
         </button>
         {rows.length > 0 && (
           <p className="text-xs text-[var(--color-muted)]">
-            With mapping, <code>data</code> contains only these fields. Date
-            formats: <code>iso</code>, <code>unix</code>, <code>unix_ms</code>,
-            or a pattern like <code>yyyy-MM-dd HH:mm</code> (UTC).
+            {t.rich("mappingHint", { code: (c) => <code>{c}</code> })}
           </p>
         )}
       </div>
@@ -164,6 +164,8 @@ function MappingEditor({
 }
 
 export default function WebhooksPage() {
+  const t = useTranslations("dash.webhooks");
+  const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const [hooks, setHooks] = useState<Webhook[]>([]);
@@ -191,11 +193,11 @@ export default function WebhooksPage() {
       setHooks(h);
       setSessions(s);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, tc]);
 
   useEffect(() => {
     load();
@@ -229,7 +231,7 @@ export default function WebhooksPage() {
       setShowMapping(false);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create");
+      setError(e instanceof Error ? e.message : tc("failedToCreate"));
     }
   }
 
@@ -267,7 +269,7 @@ export default function WebhooksPage() {
       setEditingId(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save mapping");
+      setError(e instanceof Error ? e.message : t("failedToSaveMapping"));
     } finally {
       setSavingEdit(false);
     }
@@ -276,15 +278,13 @@ export default function WebhooksPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold">Webhooks</h1>
-        <p className="text-sm text-[var(--color-muted)]">
-          We POST events to these URLs, signed with HMAC-SHA256.
-        </p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
       </div>
 
       <form onSubmit={create} className="card flex flex-col gap-4">
         <div>
-          <label className="label">Endpoint URL</label>
+          <label className="label">{t("endpointUrl")}</label>
           <input
             className="input"
             placeholder="https://yourapp.com/webhooks/whathooks"
@@ -294,7 +294,7 @@ export default function WebhooksPage() {
           />
         </div>
         <div>
-          <label className="label">Events</label>
+          <label className="label">{t("events")}</label>
           <div className="flex flex-wrap gap-2">
             {EVENTS.map((ev) => (
               <button
@@ -313,13 +313,13 @@ export default function WebhooksPage() {
           </div>
         </div>
         <div>
-          <label className="label">Scope (optional)</label>
+          <label className="label">{t("scopeOptional")}</label>
           <select
             className="input"
             value={sessionId}
             onChange={(e) => setSessionId(e.target.value)}
           >
-            <option value="">All sessions</option>
+            <option value="">{t("allSessions")}</option>
             {sessions.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.label}
@@ -338,7 +338,7 @@ export default function WebhooksPage() {
             }}
             className="text-sm text-[var(--color-brand)] hover:underline"
           >
-            {showMapping ? "▾" : "▸"} Customize payload (optional)
+            {showMapping ? "▾" : "▸"} {t("customizePayload")}
           </button>
           {showMapping && (
             <div className="mt-3">
@@ -351,16 +351,14 @@ export default function WebhooksPage() {
           className="btn-primary self-start"
           disabled={!events.length}
         >
-          Add webhook
+          {t("addWebhook")}
         </button>
       </form>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
       {newSecret && (
         <div className="card border-[var(--color-brand)]/40">
-          <p className="text-sm font-medium">
-            Signing secret — copy it now, it won’t be shown again:
-          </p>
+          <p className="text-sm font-medium">{t("secretNotice")}</p>
           <code className="mt-2 block break-all rounded-lg bg-[var(--color-surface-2)] p-3 font-mono text-sm text-[var(--color-accent)]">
             {newSecret}
           </code>
@@ -368,10 +366,10 @@ export default function WebhooksPage() {
       )}
 
       {loading ? (
-        <p className="text-sm text-[var(--color-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
       ) : hooks.length === 0 ? (
         <div className="card text-sm text-[var(--color-muted)]">
-          No webhooks yet.
+          {t("noWebhooks")}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -388,13 +386,14 @@ export default function WebhooksPage() {
                     ))}
                     {(h.payloadMapping?.length ?? 0) > 0 && (
                       <span className="pill border-[var(--color-brand)]/40 text-[var(--color-brand)]">
-                        custom payload · {h.payloadMapping!.length} field
-                        {h.payloadMapping!.length === 1 ? "" : "s"}
+                        {t("customPayload", {
+                          count: h.payloadMapping!.length,
+                        })}
                       </span>
                     )}
                   </div>
                   <div className="mt-1 text-xs text-[var(--color-muted)]">
-                    secret {h.secretHint}
+                    {t("secretHint", { hint: h.secretHint })}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -406,13 +405,13 @@ export default function WebhooksPage() {
                     }
                     className="btn-ghost"
                   >
-                    {editingId === h.id ? "Close" : "Mapping"}
+                    {editingId === h.id ? tc("close") : t("mapping")}
                   </button>
                   <button onClick={() => toggleActive(h)} className="btn-ghost">
-                    {h.active ? "Disable" : "Enable"}
+                    {h.active ? tc("disable") : tc("enable")}
                   </button>
                   <button onClick={() => remove(h.id)} className="btn-danger">
-                    Delete
+                    {tc("delete")}
                   </button>
                 </div>
               </div>
@@ -425,13 +424,13 @@ export default function WebhooksPage() {
                       disabled={savingEdit}
                       className="btn-primary text-xs"
                     >
-                      {savingEdit ? "Saving…" : "Save mapping"}
+                      {savingEdit ? tc("saving") : t("saveMapping")}
                     </button>
                     <button
                       onClick={() => setEditingId(null)}
                       className="btn-ghost text-xs"
                     >
-                      Cancel
+                      {tc("cancel")}
                     </button>
                   </div>
                 </div>

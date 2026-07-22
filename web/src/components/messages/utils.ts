@@ -1,11 +1,11 @@
-export function relativeTime(iso: string | null): string {
+export function relativeTime(iso: string | null, nowLabel = "now"): string {
   if (!iso) return "";
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return "";
   const now = Date.now();
   const diff = Math.max(0, now - then);
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "now";
+  if (min < 1) return nowLabel;
   if (min < 60) return `${min}m`;
   const hr = Math.floor(min / 60);
   if (hr < 24) return `${hr}h`;
@@ -50,28 +50,30 @@ export function typeEmoji(type: string | null): string {
 export function previewText(
   lastMessageText: string | null,
   lastMessageType: string | null,
+  labels?: Record<string, string>,
 ): string {
-  const emoji = lastMessageType && lastMessageType !== "TEXT" ? typeEmoji(lastMessageType) : "";
+  const emoji =
+    lastMessageType && lastMessageType !== "TEXT"
+      ? typeEmoji(lastMessageType)
+      : "";
   if (lastMessageText && lastMessageText.trim()) {
     return emoji ? `${emoji} ${lastMessageText}` : lastMessageText;
   }
   if (emoji) {
+    const fallback: Record<string, string> = {
+      IMAGE: "Photo",
+      VIDEO: "Video",
+      AUDIO: "Audio",
+      DOCUMENT: "Document",
+      STICKER: "Sticker",
+      LOCATION: "Location",
+      CONTACT: "Contact",
+    };
     const label =
-      lastMessageType === "IMAGE"
-        ? "Photo"
-        : lastMessageType === "VIDEO"
-          ? "Video"
-          : lastMessageType === "AUDIO"
-            ? "Audio"
-            : lastMessageType === "DOCUMENT"
-              ? "Document"
-              : lastMessageType === "STICKER"
-                ? "Sticker"
-                : lastMessageType === "LOCATION"
-                  ? "Location"
-                  : lastMessageType === "CONTACT"
-                    ? "Contact"
-                    : "Message";
+      labels?.[lastMessageType ?? ""] ??
+      fallback[lastMessageType ?? ""] ??
+      labels?.DEFAULT ??
+      "Message";
     return `${emoji} ${label}`;
   }
   return "";

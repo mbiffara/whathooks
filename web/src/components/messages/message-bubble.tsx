@@ -1,7 +1,9 @@
+import { useTranslations } from "next-intl";
 import type { ChatMessage } from "./types";
 import { clockTime, formatBytes } from "./utils";
 
 export function MessageBubble({ message }: { message: ChatMessage }) {
+  const t = useTranslations("dash.messages.bubble");
   const outbound = message.fromMe || message.direction === "OUTBOUND";
   const media = message.media;
 
@@ -17,7 +19,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
         {outbound && message.source && message.source !== "HUMAN" && (
           <div className="mb-0.5 text-[10px] font-semibold text-[var(--color-brand)]">
             {message.source === "AGENT"
-              ? `🤖 ${message.agentName ?? "Agent"}`
+              ? `🤖 ${message.agentName ?? t("agent")}`
               : "⚙ API"}
           </div>
         )}
@@ -30,13 +32,16 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   );
 
   function MessageBody({ message }: { message: ChatMessage }) {
-    if ((message.type === "IMAGE" || message.type === "STICKER") && media?.url) {
+    if (
+      (message.type === "IMAGE" || message.type === "STICKER") &&
+      media?.url
+    ) {
       return (
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={media.url}
-            alt={media.fileName ?? "image"}
+            alt={media.fileName ?? t("image")}
             className="max-w-xs rounded-lg"
           />
           {message.text ? (
@@ -77,7 +82,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           <span className="text-xl">📄</span>
           <span className="min-w-0">
             <span className="block truncate text-sm text-[var(--color-fg)]">
-              {media.fileName ?? "Document"}
+              {media.fileName ?? t("document")}
             </span>
             {media.size ? (
               <span className="block text-xs text-[var(--color-muted)]">
@@ -98,13 +103,13 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
     }
 
     const labelMap: Record<string, string> = {
-      LOCATION: "📍 Location",
-      CONTACT: "👤 Contact",
-      UNKNOWN: "Unsupported message",
+      LOCATION: t("location"),
+      CONTACT: t("contact"),
+      UNKNOWN: t("unsupported"),
     };
     return (
       <p className="text-sm italic text-[var(--color-muted)]">
-        {labelMap[message.type] ?? message.text ?? "Unsupported message"}
+        {labelMap[message.type] ?? message.text ?? t("unsupported")}
       </p>
     );
   }

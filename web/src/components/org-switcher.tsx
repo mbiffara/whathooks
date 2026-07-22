@@ -2,6 +2,7 @@
 
 import { apiClient } from "@/lib/client-api";
 import type { OrgMembership } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -15,6 +16,7 @@ interface SwitchOrgResponse {
 }
 
 export function OrgSwitcher() {
+  const t = useTranslations("dash.orgSwitcher");
   const { data: session, update } = useSession();
   const router = useRouter();
   const token = session?.accessToken;
@@ -60,7 +62,7 @@ export function OrgSwitcher() {
   return (
     <div className="px-2 pt-2">
       <label className="px-1 text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
-        Organization
+        {t("organization")}
       </label>
       <select
         className="input mt-1 w-full text-sm"

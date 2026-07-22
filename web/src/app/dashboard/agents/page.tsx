@@ -9,6 +9,7 @@ import {
   type AgentProvider,
   type Subscription,
 } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -54,6 +55,8 @@ const EMPTY: Draft = {
 const MCP_PLANS = ["PRO", "BUSINESS", "SPONSORED"];
 
 export default function AgentsPage() {
+  const t = useTranslations("dash.agents");
+  const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -68,7 +71,7 @@ export default function AgentsPage() {
     try {
       setAgents(await apiClient<Agent[]>("/agents", token));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {
       setLoading(false);
     }
@@ -76,7 +79,7 @@ export default function AgentsPage() {
     apiClient<Subscription>("/billing/subscription", token)
       .then((sub) => setMcpAllowed(MCP_PLANS.includes(sub.plan)))
       .catch(() => {});
-  }, [token]);
+  }, [token, tc]);
 
   useEffect(() => {
     load();
@@ -127,7 +130,7 @@ export default function AgentsPage() {
       setDraft(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
+      setError(e instanceof Error ? e.message : t("failedToSave"));
     } finally {
       setSaving(false);
     }
@@ -152,18 +155,15 @@ export default function AgentsPage() {
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Agents</h1>
-          <p className="text-sm text-[var(--color-muted)]">
-            AI auto-responders. Assign one to a WhatsApp session and it replies
-            to incoming 1:1 messages.
-          </p>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
         </div>
         {!draft && (
           <button
             onClick={() => setDraft({ ...EMPTY })}
             className="btn-primary"
           >
-            New agent
+            {t("newAgent")}
           </button>
         )}
       </div>
@@ -173,35 +173,39 @@ export default function AgentsPage() {
       {draft && (
         <form onSubmit={save} className="card flex flex-col gap-4">
           <h2 className="font-semibold">
-            {draft.id ? "Edit agent" : "New agent"}
+            {draft.id ? t("editAgent") : t("newAgent")}
           </h2>
           <div>
-            <label className="label">Name</label>
+            <label className="label">{t("name")}</label>
             <input
               className="input"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              placeholder="e.g. Support Bot"
+              placeholder={t("namePlaceholder")}
               required
             />
           </div>
           <div>
             <label className="label">
-              Soul{" "}
-              <span className="text-[var(--color-muted)]">— personality</span>
+              {t("soul")}{" "}
+              <span className="text-[var(--color-muted)]">
+                {t("soulSuffix")}
+              </span>
             </label>
             <textarea
               className="input min-h-24"
               value={draft.soul}
               onChange={(e) => setDraft({ ...draft, soul: e.target.value })}
-              placeholder="Who is this agent? Tone, character, voice. e.g. A warm, concise support rep for Acme who loves helping."
+              placeholder={t("soulPlaceholder")}
               required
             />
           </div>
           <div>
             <label className="label">
-              Instructions{" "}
-              <span className="text-[var(--color-muted)]">— behavior</span>
+              {t("instructions")}{" "}
+              <span className="text-[var(--color-muted)]">
+                {t("instructionsSuffix")}
+              </span>
             </label>
             <textarea
               className="input min-h-32"
@@ -209,13 +213,13 @@ export default function AgentsPage() {
               onChange={(e) =>
                 setDraft({ ...draft, instructions: e.target.value })
               }
-              placeholder="What should it do and not do? e.g. Answer product and pricing questions. Never quote a refund policy; offer to connect a human instead."
+              placeholder={t("instructionsPlaceholder")}
               required
             />
           </div>
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-40">
-              <label className="label">Provider</label>
+              <label className="label">{t("provider")}</label>
               <select
                 className="input"
                 value={draft.provider}
@@ -237,7 +241,7 @@ export default function AgentsPage() {
               </select>
             </div>
             <div className="flex-1 min-w-40">
-              <label className="label">Model</label>
+              <label className="label">{t("model")}</label>
               <select
                 className="input"
                 value={draft.model}
@@ -249,7 +253,9 @@ export default function AgentsPage() {
                   (m) => m.id === draft.model,
                 ) &&
                   draft.model && (
-                    <option value={draft.model}>{draft.model} (current)</option>
+                    <option value={draft.model}>
+                      {t("modelCurrent", { model: draft.model })}
+                    </option>
                   )}
                 {AGENT_MODELS[draft.provider].map((m) => (
                   <option key={m.id} value={m.id}>
@@ -261,7 +267,7 @@ export default function AgentsPage() {
           </div>
           <div>
             <label className="label">
-              API key{" "}
+              {t("apiKey")}{" "}
               <span className="text-[var(--color-muted)]">
                 {draft.provider === "OPENAI" ? "— OpenAI" : "— Anthropic"}
               </span>
@@ -274,7 +280,9 @@ export default function AgentsPage() {
               onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
               placeholder={
                 draft.id
-                  ? `Leave blank to keep current key (${draft.apiKeyHint ?? "•••"})`
+                  ? t("apiKeyKeepPlaceholder", {
+                      hint: draft.apiKeyHint ?? "•••",
+                    })
                   : draft.provider === "OPENAI"
                     ? "sk-…"
                     : "sk-ant-…"
@@ -282,14 +290,14 @@ export default function AgentsPage() {
               required={!draft.id}
             />
             <p className="mt-1 text-xs text-[var(--color-muted)]">
-              Stored encrypted. Used only to generate this agent’s replies.
+              {t("apiKeyStoredNote")}
             </p>
           </div>
           <div>
             <label className="label">
-              Reply delay{" "}
+              {t("replyDelay")}{" "}
               <span className="text-[var(--color-muted)]">
-                — seconds (0 = instant)
+                {t("replyDelaySuffix")}
               </span>
             </label>
             <div className="flex items-center gap-2">
@@ -308,9 +316,11 @@ export default function AgentsPage() {
                     ),
                   })
                 }
-                aria-label="Minimum delay seconds"
+                aria-label={t("minDelayAria")}
               />
-              <span className="text-sm text-[var(--color-muted)]">to</span>
+              <span className="text-sm text-[var(--color-muted)]">
+                {t("to")}
+              </span>
               <input
                 type="number"
                 min={0}
@@ -326,13 +336,11 @@ export default function AgentsPage() {
                     ),
                   })
                 }
-                aria-label="Maximum delay seconds"
+                aria-label={t("maxDelayAria")}
               />
             </div>
             <p className="mt-1 text-xs text-[var(--color-muted)]">
-              Waits a random time in this range before replying, showing a
-              “typing…” indicator meanwhile. Feels more human than an instant
-              answer.
+              {t("replyDelayNote")}
             </p>
           </div>
           <label className="flex items-start gap-2 text-sm">
@@ -345,47 +353,41 @@ export default function AgentsPage() {
               }
             />
             <span>
-              Allow auto-stop
+              {t("allowAutoStop")}
               <span className="block text-xs text-[var(--color-muted)]">
-                Give the agent a tool to pause itself on a conversation (hand
-                off to a human) when it doesn’t know how to answer. You resume
-                it from the conversation.
+                {t("allowAutoStopNote")}
               </span>
             </span>
           </label>
           <div>
             <label className="label">
-              MCP tools{" "}
+              {t("mcpTools")}{" "}
               <span className="text-[var(--color-muted)]">
-                — Anthropic agents only
+                {t("mcpSuffix")}
               </span>
             </label>
             {draft.provider === "OPENAI" ? (
               <p className="text-xs text-[var(--color-muted)]">
-                MCP tools aren’t available for OpenAI agents yet. Switch the
-                provider to Anthropic to connect MCP servers.
-                {draft.mcpServers.length > 0 &&
-                  " Saving will remove this agent’s configured MCP servers."}
+                {t("mcpOpenaiNote")}
+                {draft.mcpServers.length > 0 && t("mcpOpenaiClearWarning")}
               </p>
             ) : !mcpAllowed ? (
               <p className="text-xs text-[var(--color-muted)]">
-                Give your agent tools via MCP servers — available on the Pro
-                plan and higher.{" "}
-                <Link
-                  href="/dashboard/billing"
-                  className="text-[var(--color-brand)] hover:underline"
-                >
-                  Upgrade in Billing
-                </Link>
-                .
+                {t.rich("mcpUpgrade", {
+                  link: (c) => (
+                    <Link
+                      href="/dashboard/billing"
+                      className="text-[var(--color-brand)] hover:underline"
+                    >
+                      {c}
+                    </Link>
+                  ),
+                })}
               </p>
             ) : (
               <div className="flex flex-col gap-2">
                 <p className="text-xs text-[var(--color-muted)]">
-                  The agent can call tools on these MCP servers while replying
-                  (connections are made by Anthropic, billed to your API key).
-                  Only add servers you trust — tools act on whatever your
-                  contacts write.
+                  {t("mcpNote")}
                 </p>
                 {draft.mcpServers.map((s, i) => (
                   <div
@@ -394,7 +396,7 @@ export default function AgentsPage() {
                   >
                     <input
                       className="input h-9 w-36 flex-none text-xs"
-                      placeholder="name (e.g. linear)"
+                      placeholder={t("mcpNamePlaceholder")}
                       value={s.name}
                       onChange={(e) =>
                         setDraft({
@@ -424,8 +426,10 @@ export default function AgentsPage() {
                       autoComplete="off"
                       placeholder={
                         s.hasAuth
-                          ? `token unchanged (${s.authTokenHint ?? "•••"})`
-                          : "auth token (optional)"
+                          ? t("mcpTokenUnchanged", {
+                              hint: s.authTokenHint ?? "•••",
+                            })
+                          : t("mcpTokenOptional")
                       }
                       value={s.authToken}
                       onChange={(e) =>
@@ -450,7 +454,7 @@ export default function AgentsPage() {
                         })
                       }
                       className="btn-ghost h-9 px-2 text-xs"
-                      aria-label="Remove MCP server"
+                      aria-label={t("removeMcp")}
                     >
                       ✕
                     </button>
@@ -476,7 +480,7 @@ export default function AgentsPage() {
                     }
                     className="btn-ghost self-start text-xs"
                   >
-                    + Add MCP server
+                    {t("addMcp")}
                   </button>
                 )}
               </div>
@@ -490,28 +494,32 @@ export default function AgentsPage() {
                 setDraft({ ...draft, enabled: e.target.checked })
               }
             />
-            Enabled
+            {t("enabledLabel")}
           </label>
           <div className="flex gap-2">
             <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? "Saving…" : draft.id ? "Save changes" : "Create agent"}
+              {saving
+                ? tc("saving")
+                : draft.id
+                  ? t("saveChanges")
+                  : t("createAgent")}
             </button>
             <button
               type="button"
               className="btn-ghost"
               onClick={() => setDraft(null)}
             >
-              Cancel
+              {tc("cancel")}
             </button>
           </div>
         </form>
       )}
 
       {loading ? (
-        <p className="text-sm text-[var(--color-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
       ) : agents.length === 0 && !draft ? (
         <div className="card text-sm text-[var(--color-muted)]">
-          No agents yet. Create one, then assign it to a session.
+          {t("noAgents")}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -530,9 +538,7 @@ export default function AgentsPage() {
                         MCP · {a.mcpServers.length}
                       </span>
                     )}
-                    <span>
-                      {a.sessionCount} session{a.sessionCount === 1 ? "" : "s"}
-                    </span>
+                    <span>{t("sessionCount", { count: a.sessionCount })}</span>
                   </div>
                 </div>
                 <button
@@ -543,7 +549,7 @@ export default function AgentsPage() {
                       : "bg-white/10 text-[var(--color-muted)]"
                   }`}
                 >
-                  {a.enabled ? "Enabled" : "Disabled"}
+                  {a.enabled ? tc("enabled") : tc("disabled")}
                 </button>
               </div>
               <p className="line-clamp-2 text-sm text-[var(--color-muted)]">
@@ -576,10 +582,10 @@ export default function AgentsPage() {
                   }
                   className="btn-ghost"
                 >
-                  Edit
+                  {tc("edit")}
                 </button>
                 <button onClick={() => remove(a.id)} className="btn-danger">
-                  Delete
+                  {tc("delete")}
                 </button>
               </div>
             </div>

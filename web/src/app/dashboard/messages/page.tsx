@@ -10,14 +10,9 @@ import { previewText, relativeTime } from "@/components/messages/utils";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { WaSession } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const PAGE_LIMIT = 40;
@@ -34,12 +29,13 @@ function mergeMessages(
   const fresh = incoming.filter((m) => !seen.has(m.id));
   if (fresh.length === 0) return existing;
   return [...existing, ...fresh].sort(
-    (a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 }
 
 export default function MessagesPage() {
+  const t = useTranslations("dash.messages");
+  const tStatus = useTranslations("dash.status");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
 
@@ -73,7 +69,7 @@ export default function MessagesPage() {
   const selectedSession = useMemo(
     () =>
       selectedConv
-        ? sessions.find((s) => s.id === selectedConv.sessionId) ?? null
+        ? (sessions.find((s) => s.id === selectedConv.sessionId) ?? null)
         : null,
     [sessions, selectedConv],
   );
@@ -94,7 +90,10 @@ export default function MessagesPage() {
     if (!token) return;
     const qs = sessionFilter ? `?sessionId=${sessionFilter}` : "";
     try {
-      const data = await apiClient<Conversation[]>(`/conversations${qs}`, token);
+      const data = await apiClient<Conversation[]>(
+        `/conversations${qs}`,
+        token,
+      );
       setConversations(data);
     } catch {
       /* ignore poll errors */
@@ -241,7 +240,7 @@ export default function MessagesPage() {
           },
         );
         if (!res.ok) {
-          let message = `Send failed (${res.status})`;
+          let message = t("sendFailedStatus", { status: res.status });
           try {
             const body = await res.json();
             if (body.message) {
@@ -269,7 +268,7 @@ export default function MessagesPage() {
       if (isSubscriptionRequired(e)) {
         setShowUpgrade(true);
       } else {
-        setSendError(e instanceof Error ? e.message : "Failed to send");
+        setSendError(e instanceof Error ? e.message : t("failedToSend"));
       }
     } finally {
       setSending(false);
@@ -287,11 +286,10 @@ export default function MessagesPage() {
       ),
     );
     try {
-      await apiClient(
-        `/conversations/${selectedConv.id}/agent/pause`,
-        token,
-        { method: "POST", body: JSON.stringify({ paused: next }) },
-      );
+      await apiClient(`/conversations/${selectedConv.id}/agent/pause`, token, {
+        method: "POST",
+        body: JSON.stringify({ paused: next }),
+      });
     } catch {
       // Revert on failure.
       setConversations((prev) =>
@@ -317,13 +315,13 @@ export default function MessagesPage() {
       {/* Left pane */}
       <div className="flex w-[320px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:w-[360px]">
         <div className="border-b border-[var(--color-border)] p-3">
-          <h1 className="mb-2 text-lg font-semibold">Messages</h1>
+          <h1 className="mb-2 text-lg font-semibold">{t("title")}</h1>
           <select
             className="input"
             value={sessionFilter}
             onChange={(e) => setSessionFilter(e.target.value)}
           >
-            <option value="">All sessions</option>
+            <option value="">{t("allSessions")}</option>
             {sessions.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.label}
@@ -334,16 +332,20 @@ export default function MessagesPage() {
         <div className="flex-1 overflow-y-auto">
           {convLoading ? (
             <div className="p-4 text-sm text-[var(--color-muted)]">
-              Loading conversations…
+              {t("loadingConversations")}
             </div>
           ) : conversations.length === 0 ? (
             <div className="p-4 text-sm text-[var(--color-muted)]">
-              No conversations yet.
+              {t("noConversations")}
             </div>
           ) : (
             conversations.map((c) => {
               const display = c.name || `+${c.contact}`;
-              const preview = previewText(c.lastMessageText, c.lastMessageType);
+              const preview = previewText(
+                c.lastMessageText,
+                c.lastMessageType,
+                t.raw("preview") as Record<string, string>,
+              );
               const selected = c.id === selectedId;
               return (
                 <button
@@ -364,7 +366,7 @@ export default function MessagesPage() {
                         {display}
                       </span>
                       <span className="shrink-0 text-[10px] text-[var(--color-muted)]">
-                        {relativeTime(c.lastMessageAt)}
+                        {relativeTime(c.lastMessageAt, t("now"))}
                       </span>
                     </span>
                     <span className="flex items-center justify-between gap-2">
@@ -389,7 +391,7 @@ export default function MessagesPage() {
       <div className="flex min-w-0 flex-1 flex-col">
         {!selectedConv ? (
           <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-muted)]">
-            Select a conversation
+            {t("selectConversation")}
           </div>
         ) : (
           <>
@@ -400,7 +402,7 @@ export default function MessagesPage() {
                 </div>
                 <div className="text-xs text-[var(--color-muted)]">
                   {selectedSession
-                    ? `${selectedSession.label} · ${selectedSession.status.toLowerCase()}`
+                    ? `${selectedSession.label} · ${tStatus(selectedSession.status).toLowerCase()}`
                     : " "}
                 </div>
               </div>
@@ -409,7 +411,7 @@ export default function MessagesPage() {
                 <div className="flex shrink-0 items-center gap-2">
                   {!selectedConv.agent.enabled ? (
                     <span className="badge bg-white/10 text-[var(--color-muted)]">
-                      🤖 {selectedConv.agent.name} · disabled
+                      {t("agentDisabled", { name: selectedConv.agent.name })}
                     </span>
                   ) : selectedConv.agentPaused ? (
                     <>
@@ -418,30 +420,36 @@ export default function MessagesPage() {
                         title={selectedConv.agentPausedReason ?? undefined}
                       >
                         {selectedConv.agentPausedReason
-                          ? `⏸ Agent handed off: ${selectedConv.agentPausedReason}`
-                          : "⏸ Agent paused — replying manually"}
+                          ? t("agentHandedOff", {
+                              reason: selectedConv.agentPausedReason,
+                            })
+                          : t("agentPausedManual")}
                       </span>
                       <button
                         onClick={toggleAgentPause}
                         disabled={togglingAgent}
                         className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
                       >
-                        Resume {selectedConv.agent.name}
+                        {t("resumeAgent", { name: selectedConv.agent.name })}
                       </button>
                     </>
                   ) : (
                     <>
                       <span className="badge bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
                         {selectedConv.isGroup
-                          ? `🤖 ${selectedConv.agent.name} · replies when @mentioned`
-                          : `🤖 ${selectedConv.agent.name} is responding`}
+                          ? t("agentGroupReplies", {
+                              name: selectedConv.agent.name,
+                            })
+                          : t("agentResponding", {
+                              name: selectedConv.agent.name,
+                            })}
                       </span>
                       <button
                         onClick={toggleAgentPause}
                         disabled={togglingAgent}
                         className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
                       >
-                        Pause agent
+                        {t("pauseAgent")}
                       </button>
                     </>
                   )}
@@ -461,17 +469,17 @@ export default function MessagesPage() {
                     disabled={loadingOlder}
                     className="btn-ghost rounded-lg px-3 py-1 text-xs disabled:opacity-50"
                   >
-                    {loadingOlder ? "Loading…" : "Load older"}
+                    {loadingOlder ? t("loadingMessages") : t("loadOlder")}
                   </button>
                 </div>
               )}
               {threadLoading ? (
                 <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-muted)]">
-                  Loading messages…
+                  {t("loadingMessages")}
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-muted)]">
-                  No messages yet.
+                  {t("noMessages")}
                 </div>
               ) : (
                 messages.map((m) => <MessageBubble key={m.id} message={m} />)
@@ -482,7 +490,7 @@ export default function MessagesPage() {
             <div className="border-t border-[var(--color-border)] p-3">
               {!isConnected && (
                 <div className="mb-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-muted)]">
-                  This number is disconnected — messages can&apos;t be sent.
+                  {t("disconnectedNote")}
                 </div>
               )}
               {sendError && (
@@ -491,7 +499,7 @@ export default function MessagesPage() {
               <UpgradeModal
                 open={showUpgrade}
                 onClose={() => setShowUpgrade(false)}
-                action="Sending messages"
+                action={t("sendingAction")}
               />
               {file && (
                 <div className="mb-2 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-xs">
@@ -501,11 +509,10 @@ export default function MessagesPage() {
                   <button
                     onClick={() => {
                       setFile(null);
-                      if (fileInputRef.current)
-                        fileInputRef.current.value = "";
+                      if (fileInputRef.current) fileInputRef.current.value = "";
                     }}
                     className="ml-auto text-[var(--color-muted)] hover:text-[var(--color-fg)]"
-                    aria-label="Remove file"
+                    aria-label={t("removeFile")}
                   >
                     ✕
                   </button>
@@ -516,7 +523,7 @@ export default function MessagesPage() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={!isConnected || sending}
                   className="btn-ghost rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-                  aria-label="Attach file"
+                  aria-label={t("attachFile")}
                 >
                   📎
                 </button>
@@ -530,7 +537,7 @@ export default function MessagesPage() {
                   className="input flex-1 resize-none"
                   rows={1}
                   placeholder={
-                    isConnected ? "Type a message…" : "Number disconnected"
+                    isConnected ? t("typeMessage") : t("numberDisconnected")
                   }
                   value={text}
                   disabled={!isConnected}
@@ -539,14 +546,10 @@ export default function MessagesPage() {
                 />
                 <button
                   onClick={handleSend}
-                  disabled={
-                    !isConnected ||
-                    sending ||
-                    (!text.trim() && !file)
-                  }
+                  disabled={!isConnected || sending || (!text.trim() && !file)}
                   className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-50"
                 >
-                  {sending ? "Sending…" : "Send"}
+                  {sending ? t("sending") : t("send")}
                 </button>
               </div>
             </div>

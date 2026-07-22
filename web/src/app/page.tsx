@@ -1,5 +1,6 @@
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { AdClickTracker } from "@/components/ad-click-tracker";
+import { BrandStrip } from "@/components/brand-strip";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useTranslations } from "next-intl";
@@ -221,6 +222,8 @@ twq('config','re0yu');`}
             </div>
           </div>
         </section>
+
+        <BrandStrip />
 
         {/* Dashboard inbox + teams */}
         <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">

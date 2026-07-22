@@ -57,6 +57,13 @@ const BRANDS = [
     cls: "h-8 w-auto opacity-70 brightness-0 invert",
   },
   {
+    name: "creeadores",
+    src: "/brands/creeadores.svg",
+    w: 840,
+    h: 120,
+    cls: "h-5 w-auto opacity-70 brightness-0 invert",
+  },
+  {
     name: "141 Distribución y Transporte",
     src: "/brands/141.jpg",
     w: 500,

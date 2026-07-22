@@ -138,6 +138,12 @@ export class WhathooksApiStack extends cdk.Stack {
       'ResendApiKey',
       'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/resend-api-key-FVI7So',
     );
+    // X (Twitter) Conversion API pixel token — server-side ad attribution.
+    const xPixelTokenSecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'XPixelToken',
+      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/x-pixel-token-5JYldj',
+    );
 
     // ---------------------------------------------------------------------
     // Media bucket (private; browser loads objects via presigned URLs)
@@ -211,6 +217,11 @@ export class WhathooksApiStack extends cdk.Stack {
         // Sender for transactional email (Resend). notify.logicalminds.co is
         // the verified sending domain; without RESEND_API_KEY mail is skipped.
         MAIL_FROM: 'whathooks <no-reply@notify.logicalminds.co>',
+        // X (Twitter) Conversion API — event ids from X Events Manager for
+        // pixel re0yu. The pixel token rides in secrets: below.
+        X_PIXEL_ID: 're0yu',
+        X_EVENT_SIGNUP: 'tw-re0yu-re0yy',
+        X_EVENT_SUBSCRIBE: 'tw-re0yu-re0z0',
       },
       secrets: {
         // Whole secret value is the connection string → injected as DATABASE_URL.
@@ -222,6 +233,7 @@ export class WhathooksApiStack extends cdk.Stack {
         STRIPE_WEBHOOK_SECRET:
           ecs.Secret.fromSecretsManager(stripeWebhookSecret),
         RESEND_API_KEY: ecs.Secret.fromSecretsManager(resendApiKeySecret),
+        X_PIXEL_TOKEN: ecs.Secret.fromSecretsManager(xPixelTokenSecret),
       },
     });
 

@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsIn,
   IsOptional,
   IsString,
   MaxLength,
@@ -37,6 +38,11 @@ export class RegisterDto {
   @IsString()
   @MaxLength(120)
   twclid?: string;
+
+  // Visitor's UI language at signup ("en" | "es").
+  @IsOptional()
+  @IsIn(['en', 'es'])
+  locale?: string;
 }
 
 export class SwitchOrgDto {
@@ -75,4 +81,8 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(120)
   name?: string;
+
+  @IsOptional()
+  @IsIn(['en', 'es'])
+  locale?: string;
 }

@@ -19,6 +19,7 @@ import {
   LoginDto,
   RegisterDto,
   ResetPasswordDto,
+  UpdateProfileDto,
 } from './dto/auth.dto';
 import { JwtPayload } from './jwt.strategy';
 
@@ -56,6 +57,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.name,
+      locale: user.locale,
       role: user.role,
       organizationId: user.organizationId,
       orgRole: active?.role ?? null,
@@ -128,6 +130,7 @@ export class AuthService {
             email,
             passwordHash,
             name: dto.name,
+            locale: normalizeLocale(dto.locale),
             role: 'CLIENT',
             organizationId: invite.organizationId,
           },
@@ -160,6 +163,7 @@ export class AuthService {
           email,
           passwordHash,
           name: dto.name,
+          locale: normalizeLocale(dto.locale),
           role: 'CLIENT',
           organizationId: org.id,
         },
@@ -221,7 +225,7 @@ export class AuthService {
     await this.mail.sendPasswordReset({
       to: email,
       resetUrl: `${origin}/reset-password?token=${rawToken}`,
-      validFor: '1 hour',
+      locale: user.locale,
     });
     return { ok: true };
   }
@@ -253,6 +257,20 @@ export class AuthService {
       }),
     ]);
     return { ok: true };
+  }
+
+  /** Update profile fields (name, UI/email language). */
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.locale !== undefined
+          ? { locale: normalizeLocale(dto.locale) }
+          : {}),
+      },
+    });
+    return this.me(userId);
   }
 
   async switchOrg(userId: string, organizationId: string) {
@@ -287,4 +305,8 @@ export class AuthService {
         : null,
     };
   }
+}
+
+function normalizeLocale(value: string | undefined): string {
+  return value === 'es' ? 'es' : 'en';
 }

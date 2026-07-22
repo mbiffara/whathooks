@@ -7,7 +7,11 @@
  * far better with spam filters than HTML-only.
  */
 
+import { localeOf, MAIL_MESSAGES, MailLocale } from './messages';
+
 export interface EmailContent {
+  /** Language for the layout chrome (footer, link fallback). */
+  locale?: MailLocale;
   /** Hidden preview line inboxes show next to the subject. */
   preheader: string;
   heading: string;
@@ -26,6 +30,7 @@ const CARD = '#ffffff';
 const BORDER = '#e2e8e4';
 
 export function renderEmailHtml(c: EmailContent): string {
+  const L = MAIL_MESSAGES[localeOf(c.locale)].layout;
   const paragraphs = c.paragraphs
     .map(
       (p) =>
@@ -46,7 +51,7 @@ export function renderEmailHtml(c: EmailContent): string {
         </tr>
       </table>
       <p style="margin:0 0 16px;font-size:12px;line-height:18px;color:${MUTED};">
-        Or copy this link into your browser:<br/>
+        ${escapeHtml(L.copyLink)}<br/>
         <a href="${escapeAttr(c.cta.url)}" style="color:${BRAND};word-break:break-all;">${escapeHtml(c.cta.url)}</a>
       </p>`
     : '';
@@ -86,9 +91,9 @@ export function renderEmailHtml(c: EmailContent): string {
           </tr>
           <tr>
             <td style="padding:20px 8px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:${MUTED};">
-              whathooks — WhatsApp as a webhook · powered by
+              ${escapeHtml(L.footerTagline)}
               <a href="https://logicalminds.co" style="color:${MUTED};">logicalminds</a><br/>
-              You received this email because of activity on your whathooks account.
+              ${escapeHtml(L.footerReason)}
             </td>
           </tr>
         </table>
@@ -101,13 +106,11 @@ export function renderEmailHtml(c: EmailContent): string {
 
 /** Plain-text alternative with the same content. */
 export function renderEmailText(c: EmailContent): string {
+  const L = MAIL_MESSAGES[localeOf(c.locale)].layout;
   const lines = [c.heading, '', ...c.paragraphs.map((p) => p + '\n')];
   if (c.cta) lines.push(`${c.cta.label}: ${c.cta.url}`, '');
   if (c.footnote) lines.push(c.footnote, '');
-  lines.push(
-    '—',
-    'whathooks — WhatsApp as a webhook · powered by logicalminds (https://logicalminds.co)',
-  );
+  lines.push('—', `${L.footerTagline} logicalminds (https://logicalminds.co)`);
   return lines.join('\n');
 }
 

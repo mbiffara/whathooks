@@ -1,0 +1,82 @@
+/**
+ * Transactional email copy, per locale. Kept as plain string tables (two
+ * emails × two languages) — a full i18n library would be overkill here.
+ * `localeOf` normalizes whatever is stored on the user to a supported locale.
+ */
+
+export type MailLocale = 'en' | 'es';
+
+export function localeOf(value: string | null | undefined): MailLocale {
+  return value === 'es' ? 'es' : 'en';
+}
+
+export const MAIL_MESSAGES = {
+  en: {
+    layout: {
+      copyLink: 'Or copy this link into your browser:',
+      footerTagline: 'whathooks — WhatsApp as a webhook · powered by',
+      footerReason:
+        'You received this email because of activity on your whathooks account.',
+    },
+    passwordReset: {
+      subject: 'Reset your whathooks password',
+      preheader: (validFor: string) =>
+        `Your reset link is valid for ${validFor}.`,
+      heading: 'Reset your password',
+      body: 'Someone requested a password reset for your whathooks account. Click the button below to choose a new password.',
+      cta: 'Choose a new password',
+      footnote: (validFor: string) =>
+        `This link is valid for ${validFor} and can be used once. If you didn't request it, you can ignore this email — your password is unchanged.`,
+      validFor: '1 hour',
+    },
+    invitation: {
+      subject: (inviter: string, org: string) =>
+        `${inviter} invited you to join ${org} on whathooks`,
+      preheader: (org: string, expires: string) =>
+        `Accept your invitation to ${org} — expires ${expires}.`,
+      heading: (org: string) => `Join ${org} on whathooks`,
+      body1: (inviter: string, org: string, role: string) =>
+        `${inviter} invited you to join ${org} on whathooks as ${role}.`,
+      body2:
+        'whathooks connects WhatsApp numbers to webhooks, a REST API, and a shared team inbox.',
+      cta: 'Accept the invitation',
+      footnote: (expires: string) =>
+        `This invitation expires on ${expires}. If you weren't expecting it, you can ignore this email.`,
+      fallbackInviter: 'A teammate',
+    },
+  },
+  es: {
+    layout: {
+      copyLink: 'O copia este enlace en tu navegador:',
+      footerTagline: 'whathooks — WhatsApp como webhook · creado por',
+      footerReason:
+        'Recibiste este correo por actividad en tu cuenta de whathooks.',
+    },
+    passwordReset: {
+      subject: 'Restablece tu contraseña de whathooks',
+      preheader: (validFor: string) =>
+        `Tu enlace de restablecimiento es válido por ${validFor}.`,
+      heading: 'Restablece tu contraseña',
+      body: 'Alguien solicitó restablecer la contraseña de tu cuenta de whathooks. Haz clic en el botón para elegir una nueva contraseña.',
+      cta: 'Elegir una nueva contraseña',
+      footnote: (validFor: string) =>
+        `Este enlace es válido por ${validFor} y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo — tu contraseña no cambió.`,
+      validFor: '1 hora',
+    },
+    invitation: {
+      subject: (inviter: string, org: string) =>
+        `${inviter} te invitó a unirte a ${org} en whathooks`,
+      preheader: (org: string, expires: string) =>
+        `Acepta tu invitación a ${org} — expira el ${expires}.`,
+      heading: (org: string) => `Únete a ${org} en whathooks`,
+      body1: (inviter: string, org: string, role: string) =>
+        `${inviter} te invitó a unirte a ${org} en whathooks con el rol ${role}.`,
+      body2:
+        'whathooks conecta números de WhatsApp con webhooks, una API REST y una bandeja de entrada compartida para tu equipo.',
+      cta: 'Aceptar la invitación',
+      footnote: (expires: string) =>
+        `Esta invitación expira el ${expires}. Si no la esperabas, puedes ignorar este correo.`,
+      fallbackInviter: 'Alguien de tu equipo',
+    },
+  },
+} as const;

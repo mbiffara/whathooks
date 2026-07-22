@@ -233,6 +233,8 @@ export class InvitationsService {
       role: invite.role,
       inviteUrl: this.inviteUrl(rawToken),
       expiresAt: invite.expiresAt,
+      // Recipient's language is unknown — use the inviter's.
+      locale: inviter?.locale,
     });
   }
 }

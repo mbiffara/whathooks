@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailContent, renderEmailHtml, renderEmailText } from './email-layout';
+import { localeOf, MAIL_MESSAGES } from './messages';
 
 export interface PasswordResetEmail {
   to: string;
   resetUrl: string;
-  /** Link lifetime shown in the email, e.g. "1 hour". */
-  validFor: string;
+  /** Recipient's language ("en" | "es"); anything else falls back to en. */
+  locale?: string | null;
 }
 
 export interface InvitationEmail {
@@ -16,6 +17,8 @@ export interface InvitationEmail {
   role: string;
   inviteUrl: string;
   expiresAt: Date;
+  /** Inviter's language ("en" | "es") — the recipient's is unknown. */
+  locale?: string | null;
 }
 
 /**
@@ -31,31 +34,35 @@ export class MailService {
   constructor(private readonly config: ConfigService) {}
 
   async sendInvitation(email: InvitationEmail): Promise<boolean> {
-    const inviter = email.inviterName ?? 'A teammate';
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale].invitation;
+    const inviter = email.inviterName ?? M.fallbackInviter;
     const expires = email.expiresAt.toISOString().slice(0, 10);
     return this.send(email.to, {
-      subject: `${inviter} invited you to join ${email.orgName} on whathooks`,
-      preheader: `Accept your invitation to ${email.orgName} — expires ${expires}.`,
-      heading: `Join ${email.orgName} on whathooks`,
+      locale,
+      subject: M.subject(inviter, email.orgName),
+      preheader: M.preheader(email.orgName, expires),
+      heading: M.heading(email.orgName),
       paragraphs: [
-        `${inviter} invited you to join ${email.orgName} on whathooks as ${email.role.toLowerCase()}.`,
-        'whathooks connects WhatsApp numbers to webhooks, a REST API, and a shared team inbox.',
+        M.body1(inviter, email.orgName, email.role.toLowerCase()),
+        M.body2,
       ],
-      cta: { label: 'Accept the invitation', url: email.inviteUrl },
-      footnote: `This invitation expires on ${expires}. If you weren't expecting it, you can ignore this email.`,
+      cta: { label: M.cta, url: email.inviteUrl },
+      footnote: M.footnote(expires),
     });
   }
 
   async sendPasswordReset(email: PasswordResetEmail): Promise<boolean> {
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale].passwordReset;
     return this.send(email.to, {
-      subject: 'Reset your whathooks password',
-      preheader: `Your reset link is valid for ${email.validFor}.`,
-      heading: 'Reset your password',
-      paragraphs: [
-        'Someone requested a password reset for your whathooks account. Click the button below to choose a new password.',
-      ],
-      cta: { label: 'Choose a new password', url: email.resetUrl },
-      footnote: `This link is valid for ${email.validFor} and can be used once. If you didn't request it, you can ignore this email — your password is unchanged.`,
+      locale,
+      subject: M.subject,
+      preheader: M.preheader(M.validFor),
+      heading: M.heading,
+      paragraphs: [M.body],
+      cta: { label: M.cta, url: email.resetUrl },
+      footnote: M.footnote(M.validFor),
     });
   }
 

@@ -39,6 +39,19 @@ describe('renderEmailHtml', () => {
   });
 });
 
+describe('locale', () => {
+  it('renders Spanish layout chrome when locale is es', () => {
+    const html = renderEmailHtml({ ...content, locale: 'es' });
+    expect(html).toContain('O copia este enlace en tu navegador:');
+    expect(html).toContain('WhatsApp como webhook');
+  });
+
+  it('falls back to English for unknown locales', () => {
+    const html = renderEmailHtml(content);
+    expect(html).toContain('Or copy this link into your browser:');
+  });
+});
+
 describe('renderEmailText', () => {
   it('carries the same content including the raw URL', () => {
     const text = renderEmailText(content);

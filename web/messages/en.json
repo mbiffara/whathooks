@@ -606,5 +606,106 @@
     "err400": "The session is not <pill>CONNECTED</pill>, or the request body is invalid.",
     "errWebhooksLabel": "Webhooks",
     "errWebhooks": "Delivery requests time out after 10 seconds. For now we make a single delivery attempt per event — automatic retries are coming."
+  },
+  "teams": {
+    "meta": {
+      "title": "whathooks for teams — one WhatsApp inbox for everyone",
+      "description": "Put your whole team behind one WhatsApp number. A shared inbox with full history, roles, and real-time replies from the dashboard — no code required."
+    },
+    "eyebrow": "whathooks for teams",
+    "heroTitle": "One number. <brand>Whole team.</brand>",
+    "heroSubtitle": "Your business WhatsApp shouldn't live in someone's pocket. Connect your number once and let support, sales, and ops answer from a shared inbox — same number, full history, real time.",
+    "ctaPrimary": "Get your team in",
+    "ctaSecondary": "See how it works",
+    "heroNote": "Set up in minutes · No Business API approval · Cancel anytime",
+    "inboxHeader": "Inbox",
+    "allSessions": "All sessions",
+    "convo1Name": "Ana Pereira",
+    "convo1Preview": "Hi! Is my order shipped yet?",
+    "convo2Name": "Carlos Ruiz",
+    "convo2Preview": "📷 Photo",
+    "convo3Name": "Sofía Martín",
+    "convo3Preview": "Thanks! That solved it 🙌",
+    "threadIn1": "Hi! Is my order shipped yet?",
+    "threadOut1": "Checking right now, one sec 👀",
+    "threadOut1Author": "Luis · Support",
+    "threadOut2": "Yes! It shipped this morning — tracking link coming your way.",
+    "threadOut2Author": "Marta · Sales",
+    "typingLabel": "Reply as your team…",
+    "sendLabel": "Send",
+    "onlineNow": "3 teammates online",
+    "painsTitle": "Sound familiar?",
+    "painsSubtitle": "Every team running WhatsApp from one phone knows these.",
+    "pains": [
+      {
+        "title": "The phone is the bottleneck",
+        "desc": "Whoever holds the handset is customer service today. Everyone else forwards, waits, or interrupts."
+      },
+      {
+        "title": "Screenshots as a workflow",
+        "desc": "A customer writes in, someone screenshots it to the sales group, three people debate, nobody replies."
+      },
+      {
+        "title": "History walks out the door",
+        "desc": "When the WhatsApp lives on a personal phone, every conversation leaves with the employee who owned it."
+      }
+    ],
+    "afterTitle": "With whathooks, it's one inbox",
+    "afterSubtitle": "Everyone sees every conversation. Anyone can pick up any chat, right where it left off.",
+    "after": [
+      {
+        "title": "Shared, live inbox",
+        "desc": "Conversations update in real time with unread counts. Send text and media straight from the browser."
+      },
+      {
+        "title": "Full history for everyone",
+        "desc": "New teammate? They see the whole thread from day one. No handovers, no 'ask María what we told him'."
+      },
+      {
+        "title": "Roles that match your org",
+        "desc": "Owners handle billing, admins manage numbers and webhooks, members work the inbox. Invite by email."
+      },
+      {
+        "title": "AI agent as first responder",
+        "desc": "Optionally let an AI agent answer first and hand off to a human in the inbox when it's out of its depth."
+      },
+      {
+        "title": "More numbers as you grow",
+        "desc": "Run support, sales, and ops on separate numbers — one inbox, filterable by number."
+      },
+      {
+        "title": "An API when you need it",
+        "desc": "The same number is fully programmable: webhooks in, REST replies out. Your devs will thank you."
+      }
+    ],
+    "howTitle": "Live in three steps",
+    "how": [
+      {
+        "title": "Scan a QR",
+        "desc": "Connect your existing WhatsApp number from the dashboard — no Business API paperwork, no waiting."
+      },
+      {
+        "title": "Invite your team",
+        "desc": "Send email invites and set roles. Everyone gets their own login to the same shared inbox."
+      },
+      {
+        "title": "Reply together",
+        "desc": "The whole team answers from the browser. The phone stays in a drawer, connected and untouched."
+      }
+    ],
+    "pricingTitle": "Team features live on Pro",
+    "pricingSubtitle": "Everything above — shared inbox, members & roles, AI agents — from {price}/month.",
+    "pricingItems": [
+      "3 WhatsApp numbers",
+      "Unlimited team logins",
+      "10,000 messages / month",
+      "90-day history",
+      "AI agents (bring your own key)"
+    ],
+    "pricingCta": "Start with Pro",
+    "pricingNote": "Prefer to test the waters solo? Starter is {starterPrice}/mo and you can upgrade anytime.",
+    "ctaTitle": "Get the phone out of the workflow",
+    "ctaSubtitle": "Connect your number, invite the team, and answer WhatsApp like the rest of your tools — together, from the browser.",
+    "ctaButton": "Create your team inbox"
   }
 }

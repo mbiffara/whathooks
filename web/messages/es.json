@@ -606,5 +606,106 @@
     "err400": "La sesión no está <pill>CONNECTED</pill> o el cuerpo de la petición es inválido.",
     "errWebhooksLabel": "Webhooks",
     "errWebhooks": "Las entregas expiran a los 10 segundos. Por ahora hacemos un solo intento de entrega por evento — los reintentos automáticos vienen en camino."
+  },
+  "teams": {
+    "meta": {
+      "title": "whathooks para equipos — una bandeja de WhatsApp para todos",
+      "description": "Pon a todo tu equipo detrás de un número de WhatsApp. Una bandeja compartida con historial completo, roles y respuestas en tiempo real desde el dashboard — sin código."
+    },
+    "eyebrow": "whathooks para equipos",
+    "heroTitle": "Un número. <brand>Todo tu equipo.</brand>",
+    "heroSubtitle": "El WhatsApp de tu negocio no debería vivir en el bolsillo de alguien. Conecta tu número una vez y deja que soporte, ventas y operaciones respondan desde una bandeja compartida — mismo número, historial completo, en tiempo real.",
+    "ctaPrimary": "Suma a tu equipo",
+    "ctaSecondary": "Mira cómo funciona",
+    "heroNote": "Listo en minutos · Sin aprobación de la Business API · Cancela cuando quieras",
+    "inboxHeader": "Bandeja de entrada",
+    "allSessions": "Todas las sesiones",
+    "convo1Name": "Ana Pereira",
+    "convo1Preview": "¡Hola! ¿Ya salió mi pedido?",
+    "convo2Name": "Carlos Ruiz",
+    "convo2Preview": "📷 Foto",
+    "convo3Name": "Sofía Martín",
+    "convo3Preview": "¡Gracias! Eso lo resolvió 🙌",
+    "threadIn1": "¡Hola! ¿Ya salió mi pedido?",
+    "threadOut1": "Déjame revisar, un segundo 👀",
+    "threadOut1Author": "Luis · Soporte",
+    "threadOut2": "¡Sí! Salió esta mañana — te mando el enlace de seguimiento.",
+    "threadOut2Author": "Marta · Ventas",
+    "typingLabel": "Responde como tu equipo…",
+    "sendLabel": "Enviar",
+    "onlineNow": "3 compañeros en línea",
+    "painsTitle": "¿Te suena?",
+    "painsSubtitle": "Todo equipo que atiende WhatsApp desde un solo teléfono conoce estas tres.",
+    "pains": [
+      {
+        "title": "El teléfono es el cuello de botella",
+        "desc": "Quien tiene el aparato es atención al cliente hoy. Los demás reenvían, esperan o interrumpen."
+      },
+      {
+        "title": "Capturas como flujo de trabajo",
+        "desc": "Un cliente escribe, alguien manda la captura al grupo de ventas, tres personas debaten, nadie responde."
+      },
+      {
+        "title": "El historial se va por la puerta",
+        "desc": "Cuando el WhatsApp vive en un celular personal, cada conversación se va con la persona que lo tenía."
+      }
+    ],
+    "afterTitle": "Con whathooks, es una sola bandeja",
+    "afterSubtitle": "Todos ven todas las conversaciones. Cualquiera retoma cualquier chat, justo donde quedó.",
+    "after": [
+      {
+        "title": "Bandeja compartida y en vivo",
+        "desc": "Las conversaciones se actualizan en tiempo real con contadores de no leídos. Envía texto y multimedia desde el navegador."
+      },
+      {
+        "title": "Historial completo para todos",
+        "desc": "¿Alguien nuevo en el equipo? Ve todo el hilo desde el día uno. Sin traspasos, sin 'pregúntale a María qué le dijimos'."
+      },
+      {
+        "title": "Roles que calzan con tu organización",
+        "desc": "Los propietarios manejan la facturación, los admins administran números y webhooks, los miembros atienden la bandeja. Invita por correo."
+      },
+      {
+        "title": "Un agente IA como primera línea",
+        "desc": "Si quieres, deja que un agente IA responda primero y derive a un humano en la bandeja cuando el tema lo supere."
+      },
+      {
+        "title": "Más números a medida que creces",
+        "desc": "Atiende soporte, ventas y operaciones en números separados — una sola bandeja, filtrable por número."
+      },
+      {
+        "title": "Una API cuando la necesites",
+        "desc": "El mismo número es totalmente programable: webhooks de entrada, respuestas REST de salida. Tus devs lo van a agradecer."
+      }
+    ],
+    "howTitle": "En línea en tres pasos",
+    "how": [
+      {
+        "title": "Escanea un QR",
+        "desc": "Conecta tu número actual de WhatsApp desde el dashboard — sin trámites de la Business API, sin esperas."
+      },
+      {
+        "title": "Invita a tu equipo",
+        "desc": "Envía invitaciones por correo y asigna roles. Cada persona entra con su propia cuenta a la misma bandeja compartida."
+      },
+      {
+        "title": "Respondan juntos",
+        "desc": "Todo el equipo contesta desde el navegador. El teléfono se queda en un cajón, conectado y sin tocar."
+      }
+    ],
+    "pricingTitle": "Las funciones de equipo viven en Pro",
+    "pricingSubtitle": "Todo lo de arriba — bandeja compartida, miembros y roles, agentes IA — desde {price} al mes.",
+    "pricingItems": [
+      "3 números de WhatsApp",
+      "Cuentas de equipo ilimitadas",
+      "10.000 mensajes / mes",
+      "Historial de 90 días",
+      "Agentes IA (con tu propia clave)"
+    ],
+    "pricingCta": "Empezar con Pro",
+    "pricingNote": "¿Prefieres probar por tu cuenta primero? Starter cuesta {starterPrice}/mes y puedes mejorar el plan cuando quieras.",
+    "ctaTitle": "Saca el teléfono del flujo de trabajo",
+    "ctaSubtitle": "Conecta tu número, invita al equipo y atiende WhatsApp como el resto de tus herramientas — juntos, desde el navegador.",
+    "ctaButton": "Crea tu bandeja de equipo"
   }
 }

@@ -693,19 +693,40 @@
         "desc": "The whole team answers from the browser. The phone stays in a drawer, connected and untouched."
       }
     ],
-    "pricingTitle": "Team features live on Pro",
-    "pricingSubtitle": "Everything above — shared inbox, members & roles, AI agents — from {price}/month.",
-    "pricingItems": [
-      "3 WhatsApp numbers",
-      "Unlimited team logins",
-      "10,000 messages / month",
-      "90-day history",
-      "AI agents (bring your own key)"
-    ],
-    "pricingCta": "Start with Pro",
-    "pricingNote": "Prefer to test the waters solo? Starter is {starterPrice}/mo and you can upgrade anytime.",
+    "pricingTitle": "Pick your starting point",
     "ctaTitle": "Get the phone out of the workflow",
     "ctaSubtitle": "Connect your number, invite the team, and answer WhatsApp like the rest of your tools — together, from the browser.",
-    "ctaButton": "Create your team inbox"
+    "ctaButton": "Create your team inbox",
+    "pricingSubtitle": "The dashboard inbox is included on every plan — Pro is where your team joins in.",
+    "pricingStarter": {
+      "name": "Starter",
+      "price": "$9.99",
+      "tagline": "The same inbox, solo",
+      "items": [
+        "Full dashboard inbox",
+        "1 WhatsApp number",
+        "5,000 messages / month",
+        "Webhooks & API included",
+        "30-day history"
+      ],
+      "cta": "Start solo"
+    },
+    "pricingPro": {
+      "name": "Pro",
+      "price": "$29.99",
+      "tagline": "Everything in Starter, plus your team",
+      "items": [
+        "Team members & roles",
+        "Unlimited team logins",
+        "3 WhatsApp numbers",
+        "10,000 messages / month",
+        "AI agents (bring your own key)",
+        "90-day history"
+      ],
+      "cta": "Start with Pro",
+      "badge": "For teams"
+    },
+    "perMonth": "per month",
+    "pricingFootnote": "Start on Starter and upgrade to Pro whenever the team is ready — nothing to migrate."
   }
 }

@@ -19,7 +19,19 @@ export default function TeamsPage() {
   const pains = t.raw("pains") as { title: string; desc: string }[];
   const after = t.raw("after") as { title: string; desc: string }[];
   const how = t.raw("how") as { title: string; desc: string }[];
-  const pricingItems = t.raw("pricingItems") as string[];
+
+  interface TeamsPlan {
+    name: string;
+    price: string;
+    tagline: string;
+    items: string[];
+    cta: string;
+    badge?: string;
+  }
+  const plans: (TeamsPlan & { highlighted: boolean })[] = [
+    { ...(t.raw("pricingStarter") as TeamsPlan), highlighted: false },
+    { ...(t.raw("pricingPro") as TeamsPlan), highlighted: true },
+  ];
 
   const conversations = [
     {
@@ -244,33 +256,79 @@ twq('config','re0yu');`}
           </div>
         </section>
 
-        {/* Pricing pointer */}
+        {/* Pricing */}
         <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
-          <div className="card flex flex-col gap-8 border-[var(--color-brand)]/30 p-8 md:flex-row md:items-center md:justify-between md:p-10">
-            <div className="max-w-xl">
-              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                {t("pricingTitle")}
-              </h2>
-              <p className="mt-3 text-[var(--color-muted)]">
-                {t("pricingSubtitle", { price: "$29.99" })}
-              </p>
-              <ul className="mt-5 flex flex-wrap gap-2">
-                {pricingItems.map((item) => (
-                  <li key={item} className="pill">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-4 text-xs text-[var(--color-muted)]">
-                {t("pricingNote", { starterPrice: "$9.99" })}
-              </p>
-            </div>
-            <div className="shrink-0">
-              <Link href="/signup" className="btn-primary">
-                {t("pricingCta")}
-              </Link>
-            </div>
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              {t("pricingTitle")}
+            </h2>
+            <p className="mt-3 text-[var(--color-muted)]">
+              {t("pricingSubtitle")}
+            </p>
           </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:mx-auto lg:max-w-4xl">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`card flex flex-col ${
+                  plan.highlighted
+                    ? "border-[var(--color-brand)]/60 shadow-[0_0_40px_-12px_var(--color-brand)]"
+                    : ""
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold">{plan.name}</h3>
+                  {plan.badge && (
+                    <span className="badge bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
+                      {plan.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4 flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">{plan.price}</span>
+                  <span className="text-sm text-[var(--color-muted)]">
+                    {t("perMonth")}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-[var(--color-muted)]">
+                  {plan.tagline}
+                </p>
+                <ul className="mt-6 flex flex-1 flex-col gap-2.5 text-sm">
+                  {plan.items.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="mt-0.5 shrink-0 text-[var(--color-brand)]"
+                      >
+                        <path
+                          d="M5 13l4 4L19 7"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span className="text-[var(--color-muted)]">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/signup"
+                  className={`mt-8 w-full ${
+                    plan.highlighted ? "btn-primary" : "btn-ghost"
+                  }`}
+                >
+                  {plan.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-xs text-[var(--color-muted)]">
+            {t("pricingFootnote")}
+          </p>
         </section>
 
         {/* Final CTA */}

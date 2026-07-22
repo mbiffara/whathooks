@@ -693,19 +693,40 @@
         "desc": "Todo el equipo contesta desde el navegador. El teléfono se queda en un cajón, conectado y sin tocar."
       }
     ],
-    "pricingTitle": "Las funciones de equipo viven en Pro",
-    "pricingSubtitle": "Todo lo de arriba — bandeja compartida, miembros y roles, agentes IA — desde {price} al mes.",
-    "pricingItems": [
-      "3 números de WhatsApp",
-      "Cuentas de equipo ilimitadas",
-      "10.000 mensajes / mes",
-      "Historial de 90 días",
-      "Agentes IA (con tu propia clave)"
-    ],
-    "pricingCta": "Empezar con Pro",
-    "pricingNote": "¿Prefieres probar por tu cuenta primero? Starter cuesta {starterPrice}/mes y puedes mejorar el plan cuando quieras.",
+    "pricingTitle": "Elige tu punto de partida",
     "ctaTitle": "Saca el teléfono del flujo de trabajo",
     "ctaSubtitle": "Conecta tu número, invita al equipo y atiende WhatsApp como el resto de tus herramientas — juntos, desde el navegador.",
-    "ctaButton": "Crea tu bandeja de equipo"
+    "ctaButton": "Crea tu bandeja de equipo",
+    "pricingSubtitle": "La bandeja del dashboard viene incluida en todos los planes — en Pro se suma tu equipo.",
+    "pricingStarter": {
+      "name": "Starter",
+      "price": "$9.99",
+      "tagline": "La misma bandeja, en solitario",
+      "items": [
+        "Bandeja completa en el dashboard",
+        "1 número de WhatsApp",
+        "5.000 mensajes / mes",
+        "Webhooks y API incluidos",
+        "Historial de 30 días"
+      ],
+      "cta": "Empieza solo"
+    },
+    "pricingPro": {
+      "name": "Pro",
+      "price": "$29.99",
+      "tagline": "Todo lo de Starter, más tu equipo",
+      "items": [
+        "Miembros de equipo y roles",
+        "Cuentas de equipo ilimitadas",
+        "3 números de WhatsApp",
+        "10.000 mensajes / mes",
+        "Agentes IA (con tu propia clave)",
+        "Historial de 90 días"
+      ],
+      "cta": "Empezar con Pro",
+      "badge": "Para equipos"
+    },
+    "perMonth": "al mes",
+    "pricingFootnote": "Empieza en Starter y mejora a Pro cuando el equipo esté listo — no hay nada que migrar."
   }
 }

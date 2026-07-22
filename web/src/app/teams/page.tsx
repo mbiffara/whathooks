@@ -14,7 +14,13 @@ export async function generateMetadata() {
 
 const AVATARS = ["AP", "CR", "SM"];
 
-const BRANDS = ["Ree Creativos", "Logical Minds", "Tecabot", "SomosFin"];
+const BRANDS = [
+  "Ree Creativos",
+  "Logical Minds",
+  "Tecabot",
+  "SomosFin",
+  "Timeless Private Club",
+];
 
 export default function TeamsPage() {
   const t = useTranslations("teams");

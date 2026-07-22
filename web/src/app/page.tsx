@@ -387,6 +387,9 @@ twq('config','re0yu');`}
                     {t("perMonth")}
                   </span>
                 </div>
+                <p className="mt-1.5 text-xs font-medium text-[var(--color-brand)]">
+                  {t("trialNote")}
+                </p>
                 <p className="mt-2 text-sm text-[var(--color-muted)]">
                   {plan.desc}
                 </p>

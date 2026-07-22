@@ -481,7 +481,7 @@
     "plans": {
       "starter": {
         "desc": "Empieza con tu propio número.",
-        "cta": "Empezar con Starter",
+        "cta": "Prueba Starter gratis",
         "items": [
           "1 número de WhatsApp",
           "5.000 mensajes / mes",
@@ -492,7 +492,7 @@
       },
       "pro": {
         "desc": "Para productos con volumen real de conversaciones.",
-        "cta": "Empezar con Pro",
+        "cta": "Prueba Pro gratis",
         "items": [
           "3 números de WhatsApp",
           "10.000 mensajes / mes",
@@ -505,7 +505,7 @@
       },
       "business": {
         "desc": "Escala en números, equipos y flujos de trabajo.",
-        "cta": "Empezar con Business",
+        "cta": "Prueba Business gratis",
         "items": [
           "10 números de WhatsApp",
           "100.000 mensajes / mes",
@@ -518,7 +518,8 @@
     },
     "pricingFootnote": "Los límites de mensajes cuentan tanto los entrantes como los salientes. ¿Necesitas más? <link>Escríbenos</link>.",
     "ctaTitle": "Convierte tu número de WhatsApp en un webhook hoy",
-    "ctaDesc": "Escanea un QR, apúntanos a tu endpoint y empieza a manejar conversaciones desde tu código. Sin aprobación de la Business API."
+    "ctaDesc": "Escanea un QR, apúntanos a tu endpoint y empieza a manejar conversaciones desde tu código. Sin aprobación de la Business API.",
+    "trialNote": "Prueba gratis de 7 días"
   },
   "docs": {
     "nav": {
@@ -709,7 +710,7 @@
         "Webhooks y API incluidos",
         "Historial de 30 días"
       ],
-      "cta": "Empieza solo"
+      "cta": "Prueba Starter gratis"
     },
     "pricingPro": {
       "name": "Pro",
@@ -723,10 +724,11 @@
         "Agentes IA (con tu propia clave)",
         "Historial de 90 días"
       ],
-      "cta": "Empezar con Pro",
+      "cta": "Prueba Pro gratis",
       "badge": "Para equipos"
     },
     "perMonth": "al mes",
-    "pricingFootnote": "Empieza en Starter y mejora a Pro cuando el equipo esté listo — no hay nada que migrar."
+    "pricingFootnote": "Empieza en Starter y mejora a Pro cuando el equipo esté listo — no hay nada que migrar.",
+    "trialNote": "Prueba gratis de 7 días"
   }
 }

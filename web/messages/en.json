@@ -481,7 +481,7 @@
     "plans": {
       "starter": {
         "desc": "Get started with your own number.",
-        "cta": "Start with Starter",
+        "cta": "Try Starter free",
         "items": [
           "1 WhatsApp number",
           "5,000 messages / month",
@@ -492,7 +492,7 @@
       },
       "pro": {
         "desc": "For products with real conversation volume.",
-        "cta": "Start with Pro",
+        "cta": "Try Pro free",
         "items": [
           "3 WhatsApp numbers",
           "10,000 messages / month",
@@ -505,7 +505,7 @@
       },
       "business": {
         "desc": "Scale across numbers, teams, and workflows.",
-        "cta": "Start with Business",
+        "cta": "Try Business free",
         "items": [
           "10 WhatsApp numbers",
           "100,000 messages / month",
@@ -518,7 +518,8 @@
     },
     "pricingFootnote": "Message limits count both inbound and outbound messages. Need more? <link>Talk to us</link>.",
     "ctaTitle": "Turn your WhatsApp number into a webhook today",
-    "ctaDesc": "Scan a QR, point us at your endpoint, and start handling conversations in code. No Business API approval required."
+    "ctaDesc": "Scan a QR, point us at your endpoint, and start handling conversations in code. No Business API approval required.",
+    "trialNote": "7-day free trial"
   },
   "docs": {
     "nav": {
@@ -709,7 +710,7 @@
         "Webhooks & API included",
         "30-day history"
       ],
-      "cta": "Start solo"
+      "cta": "Try Starter free"
     },
     "pricingPro": {
       "name": "Pro",
@@ -723,10 +724,11 @@
         "AI agents (bring your own key)",
         "90-day history"
       ],
-      "cta": "Start with Pro",
+      "cta": "Try Pro free",
       "badge": "For teams"
     },
     "perMonth": "per month",
-    "pricingFootnote": "Start on Starter and upgrade to Pro whenever the team is ready — nothing to migrate."
+    "pricingFootnote": "Start on Starter and upgrade to Pro whenever the team is ready — nothing to migrate.",
+    "trialNote": "7-day free trial"
   }
 }

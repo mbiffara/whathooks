@@ -21,6 +21,15 @@ export interface InvitationEmail {
   locale?: string | null;
 }
 
+export interface TrialEndingEmail {
+  to: string;
+  planLabel: string;
+  trialEndsAt: Date;
+  billingUrl: string;
+  /** Recipient's language ("en" | "es"); anything else falls back to en. */
+  locale?: string | null;
+}
+
 /**
  * Thin mail sender backed by the Resend REST API (plain fetch, no SDK).
  * Without RESEND_API_KEY it logs and no-ops — invite links shown in the UI
@@ -63,6 +72,22 @@ export class MailService {
       paragraphs: [M.body],
       cta: { label: M.cta, url: email.resetUrl },
       footnote: M.footnote(M.validFor),
+    });
+  }
+
+  /** Heads-up ~3 days before a free trial converts into the first charge. */
+  async sendTrialEnding(email: TrialEndingEmail): Promise<boolean> {
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale].trialEnding;
+    const date = email.trialEndsAt.toISOString().slice(0, 10);
+    return this.send(email.to, {
+      locale,
+      subject: M.subject,
+      preheader: M.preheader(date),
+      heading: M.heading,
+      paragraphs: [M.body1(email.planLabel, date), M.body2],
+      cta: { label: M.cta, url: email.billingUrl },
+      footnote: M.footnote,
     });
   }
 

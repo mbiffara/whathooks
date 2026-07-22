@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   ACTIVE_SUBSCRIPTION_STATUSES,
   PLANS,
+  TRIAL_LIMITS,
   currentMonthStart,
   planRequiresSubscription,
 } from './plans';
@@ -22,6 +23,11 @@ import {
  * a lapsed org keeps its dashboard and history so it can resubscribe and pick
  * up where it left off.
  */
+/** null-aware min: null means unlimited, so any number wins. */
+function min(a: number | null, b: number): number {
+  return a == null ? b : Math.min(a, b);
+}
+
 @Injectable()
 export class QuotaService {
   constructor(private readonly prisma: PrismaService) {}
@@ -32,7 +38,21 @@ export class QuotaService {
       select: { plan: true, subscriptionStatus: true },
     });
     if (!org) throw new NotFoundException('Organization not found');
-    return { ...org, limits: PLANS[org.plan] };
+    const trialing = org.subscriptionStatus === 'trialing';
+    const plan = PLANS[org.plan];
+    // Trialing orgs get trial caps regardless of tier; history follows the
+    // plan so nothing disappears when the trial converts.
+    const limits = trialing
+      ? {
+          ...plan,
+          messagesPerMonth: min(
+            plan.messagesPerMonth,
+            TRIAL_LIMITS.messagesPerMonth,
+          ),
+          waNumbers: min(plan.waNumbers, TRIAL_LIMITS.waNumbers),
+        }
+      : plan;
+    return { ...org, trialing, limits };
   }
 
   /** Throw unless the org is comped or has a live subscription. */
@@ -73,7 +93,9 @@ export class QuotaService {
     const { used, limit } = await this.messageUsage(organizationId);
     if (limit != null && used >= limit) {
       throw new ForbiddenException(
-        `Monthly message limit reached (${limit}). Upgrade your plan to send more.`,
+        org.trialing
+          ? `Trial message limit reached (${limit}). Full plan limits unlock when your trial converts.`
+          : `Monthly message limit reached (${limit}). Upgrade your plan to send more.`,
       );
     }
   }
@@ -89,7 +111,9 @@ export class QuotaService {
     });
     if (count >= limit) {
       throw new ForbiddenException(
-        `Your plan allows ${limit} WhatsApp number(s). Upgrade to add more.`,
+        org.trialing
+          ? `Trials include ${limit} WhatsApp number. Full plan limits unlock when your trial converts.`
+          : `Your plan allows ${limit} WhatsApp number(s). Upgrade to add more.`,
       );
     }
   }

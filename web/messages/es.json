@@ -158,7 +158,7 @@
     },
     "upgrade": {
       "title": "Se requiere un plan de pago",
-      "body": "{action} requiere una suscripción activa. Elige un plan para continuar — puedes cancelar cuando quieras.",
+      "body": "{action} requiere una suscripción activa. Elige un plan para continuar — las suscripciones nuevas comienzan con una prueba gratuita de 7 días y puedes cancelar cuando quieras.",
       "defaultAction": "Esta acción",
       "notNow": "Ahora no",
       "viewPlans": "Ver planes"
@@ -212,7 +212,7 @@
       "perMonth": "/mes",
       "statusLine": "Estado: {status}",
       "renews": "se renueva el {date}",
-      "pickPlanHint": "Elige un plan abajo para comenzar a enviar mensajes.",
+      "pickPlanHint": "Elige un plan abajo — las primeras suscripciones comienzan con una prueba gratuita de 7 días.",
       "manageBilling": "Administrar facturación",
       "opening": "Abriendo…",
       "messagesThisMonth": "Mensajes este mes",
@@ -241,7 +241,8 @@
           "Historial completo",
           "Soporte prioritario"
         ]
-      }
+      },
+      "trialEnds": "la prueba gratuita termina el {date}"
     },
     "webhooks": {
       "title": "Webhooks",
@@ -403,7 +404,7 @@
     "heroSubtitle": "Conecta tu propio número de WhatsApp escaneando un QR. Cada mensaje que recibes se envía por POST a tu endpoint, y respondes con una sola llamada REST. Sin Business API, sin esperas.",
     "connectCta": "Conecta tu WhatsApp",
     "readDocs": "Leer la documentación",
-    "setupNote": "Listo en minutos · Cancela cuando quieras",
+    "setupNote": "Prueba gratis de 7 días · Listo en minutos · Cancela cuando quieras",
     "theFlow": "El flujo",
     "scanQr": "Escanea el QR",
     "scanQrDesc": "Vincula tu número con WhatsApp",
@@ -474,7 +475,7 @@
     "yourEndpoint": "POST · tu endpoint",
     "sendReply": "Enviar una respuesta",
     "pricingTitle": "Precios simples",
-    "pricingDesc": "Empieza y mejora tu plan cuando crezca tu volumen. Cancela cuando quieras.",
+    "pricingDesc": "Todos los planes comienzan con una prueba gratuita de 7 días. Cancela antes de que termine y no pagas nada.",
     "mostPopular": "Más popular",
     "perMonth": "al mes",
     "plans": {
@@ -616,7 +617,7 @@
     "heroSubtitle": "El WhatsApp de tu negocio no debería vivir en el bolsillo de alguien. Conecta tu número una vez y deja que soporte, ventas y operaciones respondan desde una bandeja compartida — mismo número, historial completo, en tiempo real.",
     "ctaPrimary": "Suma a tu equipo",
     "ctaSecondary": "Mira cómo funciona",
-    "heroNote": "Listo en minutos · Sin aprobación de la Business API · Cancela cuando quieras",
+    "heroNote": "Prueba gratis de 7 días · Sin aprobación de la Business API · Cancela cuando quieras",
     "inboxHeader": "Bandeja de entrada",
     "allSessions": "Todas las sesiones",
     "convo1Name": "Ana Pereira",
@@ -696,7 +697,7 @@
     "ctaTitle": "Saca el teléfono del flujo de trabajo",
     "ctaSubtitle": "Conecta tu número, invita al equipo y atiende WhatsApp como el resto de tus herramientas — juntos, desde el navegador.",
     "ctaButton": "Crea tu bandeja de equipo",
-    "pricingSubtitle": "La bandeja del dashboard viene incluida en todos los planes — en Pro se suma tu equipo.",
+    "pricingSubtitle": "La bandeja del dashboard viene incluida en todos los planes — en Pro se suma tu equipo. Ambos comienzan con una prueba gratuita de 7 días.",
     "pricingStarter": {
       "name": "Starter",
       "price": "$9.99",

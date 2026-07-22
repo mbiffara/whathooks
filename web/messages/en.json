@@ -158,7 +158,7 @@
     },
     "upgrade": {
       "title": "Paid plan required",
-      "body": "{action} requires an active subscription. Pick a plan to continue — you can cancel anytime.",
+      "body": "{action} requires an active subscription. Pick a plan to continue — new subscriptions start with a 7-day free trial, and you can cancel anytime.",
       "defaultAction": "This action",
       "notNow": "Not now",
       "viewPlans": "View plans"
@@ -212,7 +212,7 @@
       "perMonth": "/mo",
       "statusLine": "Status: {status}",
       "renews": "renews {date}",
-      "pickPlanHint": "Pick a plan below to start sending messages.",
+      "pickPlanHint": "Pick a plan below — first-time subscriptions start with a 7-day free trial.",
       "manageBilling": "Manage billing",
       "opening": "Opening…",
       "messagesThisMonth": "Messages this month",
@@ -241,7 +241,8 @@
           "Full history",
           "Priority support"
         ]
-      }
+      },
+      "trialEnds": "free trial ends {date}"
     },
     "webhooks": {
       "title": "Webhooks",
@@ -403,7 +404,7 @@
     "heroSubtitle": "Connect your own WhatsApp number with a QR scan. Every message you receive is POSTed to your endpoint, and you reply with a single REST call. No Business API, no waiting.",
     "connectCta": "Connect your WhatsApp",
     "readDocs": "Read the docs",
-    "setupNote": "Set up in minutes · Cancel anytime",
+    "setupNote": "7-day free trial · Set up in minutes · Cancel anytime",
     "theFlow": "The flow",
     "scanQr": "Scan the QR",
     "scanQrDesc": "Link your number with WhatsApp",
@@ -474,7 +475,7 @@
     "yourEndpoint": "POST · your endpoint",
     "sendReply": "Send a reply",
     "pricingTitle": "Simple pricing",
-    "pricingDesc": "Start free, upgrade when your volume grows. Cancel anytime.",
+    "pricingDesc": "Every plan starts with a 7-day free trial. Cancel before it ends and pay nothing.",
     "mostPopular": "Most popular",
     "perMonth": "per month",
     "plans": {
@@ -616,7 +617,7 @@
     "heroSubtitle": "Your business WhatsApp shouldn't live in someone's pocket. Connect your number once and let support, sales, and ops answer from a shared inbox — same number, full history, real time.",
     "ctaPrimary": "Get your team in",
     "ctaSecondary": "See how it works",
-    "heroNote": "Set up in minutes · No Business API approval · Cancel anytime",
+    "heroNote": "7-day free trial · No Business API approval · Cancel anytime",
     "inboxHeader": "Inbox",
     "allSessions": "All sessions",
     "convo1Name": "Ana Pereira",
@@ -696,7 +697,7 @@
     "ctaTitle": "Get the phone out of the workflow",
     "ctaSubtitle": "Connect your number, invite the team, and answer WhatsApp like the rest of your tools — together, from the browser.",
     "ctaButton": "Create your team inbox",
-    "pricingSubtitle": "The dashboard inbox is included on every plan — Pro is where your team joins in.",
+    "pricingSubtitle": "The dashboard inbox is included on every plan — Pro is where your team joins in. Both start with a 7-day free trial.",
     "pricingStarter": {
       "name": "Starter",
       "price": "$9.99",

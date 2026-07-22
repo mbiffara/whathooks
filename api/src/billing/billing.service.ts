@@ -7,11 +7,13 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Plan } from '@prisma/client';
 import Stripe from 'stripe';
+import { MailService } from '../mail/mail.service';
 import { XConversionsService } from '../marketing/x-conversions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ACTIVE_SUBSCRIPTION_STATUSES,
   PLANS,
+  TRIAL_DAYS,
   planForPriceId,
   planRequiresSubscription,
 } from './plans';
@@ -28,6 +30,7 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly quota: QuotaService,
     private readonly xConversions: XConversionsService,
+    private readonly mail: MailService,
   ) {
     const key = this.config.get<string>('STRIPE_SECRET_KEY');
     this.stripe = key ? new Stripe(key) : null;
@@ -124,6 +127,14 @@ export class BillingService {
   ): Promise<{ url: string }> {
     const customerId = await this.ensureCustomer(organizationId);
     const base = this.webBase();
+    // Card-gated free trial, but only on the org's FIRST subscription — a
+    // returning org (any prior status, incl. canceled) pays from day one, so
+    // cancel/resubscribe can't chain trials.
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { subscriptionStatus: true },
+    });
+    const trialEligible = org?.subscriptionStatus == null;
     const session = await this.client().checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
@@ -131,7 +142,18 @@ export class BillingService {
       success_url: `${base}/dashboard/billing?checkout=success`,
       cancel_url: `${base}/dashboard/billing?checkout=cancel`,
       client_reference_id: organizationId,
-      subscription_data: { metadata: { organizationId } },
+      payment_method_collection: 'always',
+      subscription_data: {
+        metadata: { organizationId },
+        ...(trialEligible
+          ? {
+              trial_period_days: TRIAL_DAYS,
+              trial_settings: {
+                end_behavior: { missing_payment_method: 'cancel' },
+              },
+            }
+          : {}),
+      },
       allow_promotion_codes: true,
     });
     if (!session.url) throw new BadRequestException('Could not start checkout');
@@ -185,6 +207,11 @@ export class BillingService {
         }
         break;
       }
+      case 'customer.subscription.trial_will_end': {
+        // Fires ~3 days before the trial converts into a paid subscription.
+        await this.sendTrialEndingReminder(event.data.object);
+        break;
+      }
       default:
         this.log.debug(`Unhandled Stripe event ${event.type}`);
     }
@@ -220,13 +247,14 @@ export class BillingService {
     const canceled = sub.status === 'canceled';
     const periodEnd = sub.items.data[0]?.current_period_end;
 
-    // First activation of a paid subscription → X ads conversion (dedup-safe
-    // via conversion_id = subscription id; renewals don't re-fire because the
-    // org's previous status is already active).
-    if (
-      sub.status === 'active' &&
-      !ACTIVE_SUBSCRIPTION_STATUSES.includes(org.subscriptionStatus ?? '')
-    ) {
+    // First PAID activation → X ads conversion. `trialing` doesn't count as
+    // "was paying", so trial→active (the first real charge) fires it, while
+    // past_due→active dunning recoveries and renewals don't. Dedup-safe via
+    // conversion_id = subscription id.
+    const wasPaying =
+      org.subscriptionStatus === 'active' ||
+      org.subscriptionStatus === 'past_due';
+    if (sub.status === 'active' && !wasPaying) {
       this.xConversions.trackSubscription(org.adClickId, sub.id);
     }
 
@@ -241,5 +269,35 @@ export class BillingService {
       },
     });
     this.log.log(`Org ${org.id} -> plan=${plan} status=${sub.status}`);
+  }
+
+  /** Email the org owner ahead of the first charge ("we'll remind you"). */
+  private async sendTrialEndingReminder(
+    sub: Stripe.Subscription,
+  ): Promise<void> {
+    const customerId =
+      typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
+    const org = await this.prisma.organization.findFirst({
+      where: {
+        OR: [
+          { stripeCustomerId: customerId },
+          { id: sub.metadata?.organizationId ?? '__none__' },
+        ],
+      },
+    });
+    if (!org) return;
+    const owner = await this.prisma.membership.findFirst({
+      where: { organizationId: org.id, role: 'OWNER' },
+      include: { user: true },
+    });
+    if (!owner) return;
+    const plan = planForPriceId(sub.items.data[0]?.price.id, process.env);
+    await this.mail.sendTrialEnding({
+      to: owner.user.email,
+      locale: owner.user.locale,
+      planLabel: plan ? PLANS[plan].label : org.plan,
+      trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : new Date(),
+      billingUrl: `${this.webBase()}/dashboard/billing`,
+    });
   }
 }

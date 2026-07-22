@@ -112,11 +112,14 @@ function BillingContent() {
                   <div className="mt-1 text-xs text-[var(--color-muted)]">
                     {t("statusLine", { status: sub.status })}
                     {sub.currentPeriodEnd &&
-                      ` · ${t("renews", {
-                        date: new Date(
-                          sub.currentPeriodEnd,
-                        ).toLocaleDateString(),
-                      })}`}
+                      ` · ${t(
+                        sub.status === "trialing" ? "trialEnds" : "renews",
+                        {
+                          date: new Date(
+                            sub.currentPeriodEnd,
+                          ).toLocaleDateString(),
+                        },
+                      )}`}
                   </div>
                 )}
                 {!sub.subscribed && (

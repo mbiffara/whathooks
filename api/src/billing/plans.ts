@@ -58,6 +58,19 @@ export const PLANS: Record<Plan, PlanLimits> = {
  * is included so Stripe's dunning/retry cycle can run before access is cut. */
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'];
 
+/** Card-gated free trial on first subscription, any tier. */
+export const TRIAL_DAYS = 7;
+
+/**
+ * Caps applied while a subscription is `trialing`, regardless of tier — enough
+ * to feel the product, not enough to free-ride the infra. Plan limits take
+ * over the moment the first invoice is paid.
+ */
+export const TRIAL_LIMITS = {
+  messagesPerMonth: 300,
+  waNumbers: 1,
+} as const;
+
 /** Whether this plan requires an active Stripe subscription to use the API. */
 export function planRequiresSubscription(plan: Plan): boolean {
   return PLANS[plan].priceEnv !== undefined;

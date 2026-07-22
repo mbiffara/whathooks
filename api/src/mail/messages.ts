@@ -29,6 +29,19 @@ export const MAIL_MESSAGES = {
         `This link is valid for ${validFor} and can be used once. If you didn't request it, you can ignore this email — your password is unchanged.`,
       validFor: '1 hour',
     },
+    trialEnding: {
+      subject: 'Your whathooks trial ends soon',
+      preheader: (date: string) =>
+        `Your free trial ends on ${date} — cancel anytime before then.`,
+      heading: 'Your free trial ends soon',
+      body1: (plan: string, date: string) =>
+        `Your 7-day free trial of the ${plan} plan ends on ${date}. If you're enjoying whathooks, you don't need to do anything — your subscription starts automatically.`,
+      body2:
+        "Not the right fit? Cancel before the trial ends and you won't be charged at all.",
+      cta: 'Manage your subscription',
+      footnote:
+        'We send this reminder so the first charge is never a surprise.',
+    },
     invitation: {
       subject: (inviter: string, org: string) =>
         `${inviter} invited you to join ${org} on whathooks`,
@@ -62,6 +75,19 @@ export const MAIL_MESSAGES = {
       footnote: (validFor: string) =>
         `Este enlace es válido por ${validFor} y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo — tu contraseña no cambió.`,
       validFor: '1 hora',
+    },
+    trialEnding: {
+      subject: 'Tu prueba gratuita de whathooks termina pronto',
+      preheader: (date: string) =>
+        `Tu prueba gratuita termina el ${date} — puedes cancelar antes cuando quieras.`,
+      heading: 'Tu prueba gratuita termina pronto',
+      body1: (plan: string, date: string) =>
+        `Tu prueba gratuita de 7 días del plan ${plan} termina el ${date}. Si whathooks te está gustando, no necesitas hacer nada — tu suscripción comienza automáticamente.`,
+      body2:
+        '¿No te convenció? Cancela antes de que termine la prueba y no se te cobrará nada.',
+      cta: 'Administrar tu suscripción',
+      footnote:
+        'Te enviamos este recordatorio para que el primer cobro nunca sea una sorpresa.',
     },
     invitation: {
       subject: (inviter: string, org: string) =>

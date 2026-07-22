@@ -1,13 +1,13 @@
 "use client";
 
-import { GoogleAnalytics } from "@/components/google-analytics";
+import { GoogleAnalytics, gaEvent } from "@/components/google-analytics";
 import { readAdClickId } from "@/components/ad-click-tracker";
 import { useLocale, useTranslations } from "next-intl";
 import { Logo } from "@/components/logo";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
@@ -24,6 +24,15 @@ function SignUpForm() {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Manual GA event: fires on direct loads AND client-side navigations,
+  // independent of the property's Enhanced Measurement setting.
+  useEffect(() => {
+    gaEvent("signup_page_visited", {
+      invited: Boolean(inviteToken),
+      locale,
+    });
+  }, [inviteToken, locale]);
 
   function set(key: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>

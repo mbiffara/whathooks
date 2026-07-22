@@ -1,13 +1,13 @@
 "use client";
 
+import { readAdClickId } from "@/components/ad-click-tracker";
 import { Logo } from "@/components/logo";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
 function SignUpForm() {
   const router = useRouter();
@@ -32,14 +32,18 @@ function SignUpForm() {
     setError(null);
     setLoading(true);
     try {
+      // X ads attribution: pass along the click id captured on the landing
+      // page, if any (see AdClickTracker).
+      const twclid = readAdClickId() || undefined;
       const body = inviteToken
         ? {
             name: form.name,
             email: form.email,
             password: form.password,
             inviteToken,
+            twclid,
           }
-        : form;
+        : { ...form, twclid };
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,7 +54,7 @@ function SignUpForm() {
         throw new Error(
           Array.isArray(resBody.message)
             ? resBody.message.join(", ")
-            : resBody.message ?? "Registration failed",
+            : (resBody.message ?? "Registration failed"),
         );
       }
       // Auto sign-in after registration.

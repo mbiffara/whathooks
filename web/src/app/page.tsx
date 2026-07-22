@@ -1,3 +1,4 @@
+import { AdClickTracker } from "@/components/ad-click-tracker";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
@@ -136,6 +137,7 @@ export default function Home() {
 a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');
 twq('config','re0yu');`}
       </Script>
+      <AdClickTracker />
       <SiteHeader />
       <main className="flex-1">
         {/* Hero */}

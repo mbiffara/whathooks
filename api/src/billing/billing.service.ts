@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Plan } from '@prisma/client';
 import Stripe from 'stripe';
+import { XConversionsService } from '../marketing/x-conversions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ACTIVE_SUBSCRIPTION_STATUSES,
@@ -26,6 +27,7 @@ export class BillingService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly quota: QuotaService,
+    private readonly xConversions: XConversionsService,
   ) {
     const key = this.config.get<string>('STRIPE_SECRET_KEY');
     this.stripe = key ? new Stripe(key) : null;
@@ -217,6 +219,16 @@ export class BillingService {
       org.plan;
     const canceled = sub.status === 'canceled';
     const periodEnd = sub.items.data[0]?.current_period_end;
+
+    // First activation of a paid subscription → X ads conversion (dedup-safe
+    // via conversion_id = subscription id; renewals don't re-fire because the
+    // org's previous status is already active).
+    if (
+      sub.status === 'active' &&
+      !ACTIVE_SUBSCRIPTION_STATUSES.includes(org.subscriptionStatus ?? '')
+    ) {
+      this.xConversions.trackSubscription(org.adClickId, sub.id);
+    }
 
     await this.prisma.organization.update({
       where: { id: org.id },

@@ -31,6 +31,12 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   inviteToken?: string;
+
+  // X ads click id (twclid) captured on the landing page — ad attribution only.
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  twclid?: string;
 }
 
 export class SwitchOrgDto {

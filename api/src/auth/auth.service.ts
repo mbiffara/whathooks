@@ -12,6 +12,7 @@ import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import { hashToken } from '../api-keys/api-keys.service';
 import { MailService } from '../mail/mail.service';
+import { XConversionsService } from '../marketing/x-conversions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ForgotPasswordDto,
@@ -34,6 +35,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly xConversions: XConversionsService,
   ) {}
 
   signFor(user: User): string {
@@ -144,9 +146,14 @@ export class AuthService {
         return created;
       }
 
-      // First user of a new organization becomes its owner.
+      // First user of a new organization becomes its owner. The twclid (X ad
+      // click id) is kept on the org so the later paid-subscription
+      // conversion can be attributed from the Stripe webhook.
       const org = await tx.organization.create({
-        data: { name: dto.organizationName! },
+        data: {
+          name: dto.organizationName!,
+          adClickId: dto.twclid?.trim() || null,
+        },
       });
       const created = await tx.user.create({
         data: {
@@ -163,6 +170,7 @@ export class AuthService {
       return created;
     });
 
+    this.xConversions.trackSignup(dto.twclid, user.id);
     return this.buildAuthResponse(user.id);
   }
 

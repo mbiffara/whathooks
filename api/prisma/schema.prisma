@@ -45,6 +45,9 @@ model Organization {
   // Billing (Stripe). plan is the entitlement tier; subscriptionStatus mirrors
   // the Stripe subscription state (active | trialing | past_due | canceled | …).
   plan                 Plan      @default(STARTER)
+  // X ads click id captured at signup (twclid) — used to attribute the later
+  // paid-subscription conversion via X's Conversion API. Never shown in UI.
+  adClickId            String?
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?   @unique
   stripePriceId        String?

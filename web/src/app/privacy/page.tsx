@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="text-3xl font-bold tracking-tight">Privacy Policy</h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Last updated: July 8, 2026
+          Last updated: July 21, 2026
         </p>
 
         <div className="mt-10 flex flex-col gap-8 text-sm leading-relaxed text-[var(--color-muted)] [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-[var(--color-fg)]">
@@ -78,15 +78,29 @@ export default function PrivacyPage() {
             <h2>4. Sharing</h2>
             <p className="mt-2">
               We share data only with processors needed to run the service:
-              cloud hosting for infrastructure and storage, and an email
-              delivery provider for transactional email (such as invitation
-              emails). Each receives only what it needs. We disclose data to
-              authorities only when legally required.
+              cloud hosting for infrastructure and storage, an email delivery
+              provider for transactional email (such as invitation emails), and
+              Stripe for subscription billing (Stripe receives your billing
+              details; we never store your card). Each receives only what it
+              needs. We disclose data to authorities only when legally
+              required.
             </p>
           </section>
 
           <section>
-            <h2>5. Retention and deletion</h2>
+            <h2>5. Advertising and cookies</h2>
+            <p className="mt-2">
+              Our public marketing pages (such as the landing page) include a
+              conversion-measurement tag from X (Twitter) that uses cookies to
+              measure the effectiveness of our ads. It is not present in the
+              logged-in dashboard, and it never receives your conversations or
+              account data. You can opt out of interest-based advertising via
+              your X settings or your browser&apos;s cookie controls.
+            </p>
+          </section>
+
+          <section>
+            <h2>6. Retention and deletion</h2>
             <p className="mt-2">
               Data is retained while your organization is active. Deleting a
               WhatsApp session deletes its credentials; deleting your
@@ -97,7 +111,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2>6. Security</h2>
+            <h2>7. Security</h2>
             <p className="mt-2">
               Passwords are hashed with argon2; API keys and invitation tokens
               are stored only as SHA-256 hashes; agent provider keys are
@@ -108,7 +122,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2>7. Your rights</h2>
+            <h2>8. Your rights</h2>
             <p className="mt-2">
               You can access and update your account data in the dashboard, and
               export or delete your data by deleting resources or your
@@ -119,7 +133,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2>8. Messages belong to conversations you control</h2>
+            <h2>9. Messages belong to conversations you control</h2>
             <p className="mt-2">
               You are the controller of conversations flowing through the
               numbers you connect. Ensure you have a lawful basis to process
@@ -129,7 +143,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2>9. Changes and contact</h2>
+            <h2>10. Changes and contact</h2>
             <p className="mt-2">
               We will announce material changes to this policy by email or in
               the dashboard. Questions:{" "}

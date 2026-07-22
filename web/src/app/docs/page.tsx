@@ -187,6 +187,19 @@ export default function DocsPage() {
                 {t("title")}
               </h1>
               <p className="mt-3 text-[var(--color-muted)]">{t("subtitle")}</p>
+              <p className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-muted)]">
+                🤖{" "}
+                {t.rich("agentsCallout", {
+                  link: (c) => (
+                    <a
+                      href="/llms.txt"
+                      className="font-medium text-[var(--color-brand)] hover:underline"
+                    >
+                      {c}
+                    </a>
+                  ),
+                })}
+              </p>
             </div>
 
             {/* Introduction */}

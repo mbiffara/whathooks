@@ -606,7 +606,8 @@
     "err401": "Credenciales faltantes o inválidas (JWT o clave API).",
     "err400": "La sesión no está <pill>CONNECTED</pill> o el cuerpo de la petición es inválido.",
     "errWebhooksLabel": "Webhooks",
-    "errWebhooks": "Las entregas expiran a los 10 segundos. Por ahora hacemos un solo intento de entrega por evento — los reintentos automáticos vienen en camino."
+    "errWebhooks": "Las entregas expiran a los 10 segundos. Por ahora hacemos un solo intento de entrega por evento — los reintentos automáticos vienen en camino.",
+    "agentsCallout": "¿Programas con un agente de IA? Dale toda la API en un solo archivo markdown: <link>whathooks.app/llms.txt</link>"
   },
   "teams": {
     "meta": {

@@ -1,0 +1,199 @@
+# whathooks — WhatsApp as a webhook
+
+> whathooks connects a WhatsApp number to your stack: scan a QR to link the
+> number, receive every inbound message as a signed JSON webhook, and send
+> replies through a REST API. No WhatsApp Business API approval process.
+> This file is the complete integration reference, written for AI coding
+> agents and humans alike.
+
+Base URL (production): `https://api.whathooks.app/v1`
+Web dashboard: `https://www.whathooks.app`
+
+## Authentication
+
+Two credential types:
+
+- **API key** — for programmatic access. Send as `X-API-Key: wh_live_...`
+  (an `Authorization: Bearer wh_live_...` header also works). Create keys in
+  the dashboard under API Keys. API keys are scoped to one organization.
+- **JWT** — used by the dashboard (`POST /v1/auth/login`). Programmatic
+  integrations should prefer API keys.
+
+## Core flow
+
+1. Create a session (one session = one WhatsApp number).
+2. Poll the session until `status` is `QR`, render `qrDataUrl` for the user
+   to scan with WhatsApp (Settings → Linked Devices → Link a Device).
+3. When `status` becomes `CONNECTED`, the number is live.
+4. Register a webhook URL to receive events.
+5. Send messages with `POST /v1/messages`.
+
+## Sessions
+
+Session statuses: `PENDING` (created, not initialized) → `QR` (code ready to
+scan) → `CONNECTING` (pairing accepted) → `CONNECTED` (online). Also
+`DISCONNECTED` (dropped; auto-reconnects) and `LOGGED_OUT` (device unlinked;
+new QR scan required).
+
+### Create a session
+
+```bash
+curl -X POST https://api.whathooks.app/v1/sessions \
+  -H "X-API-Key: wh_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{ "label": "customer-42" }'
+# → { "id": "sess_8f2k19a7", "status": "PENDING", ... }
+```
+
+### Poll a session / embed the QR
+
+```bash
+curl https://api.whathooks.app/v1/sessions/sess_8f2k19a7 \
+  -H "X-API-Key: wh_live_..."
+# → { "status": "QR", "qrDataUrl": "data:image/png;base64,...", ... }
+```
+
+`qrDataUrl` is a ready-to-embed PNG data URI (`<img src={qrDataUrl} />`).
+QR codes rotate — keep polling while status is `QR` (or subscribe to
+`session.qr` webhooks) and swap in the fresh code. Dismiss the QR when the
+status becomes `CONNECTED`. This lets you onboard end users entirely inside
+your own product.
+
+## Webhooks
+
+Register an HTTPS endpoint (dashboard → Webhooks, or `POST /v1/webhooks`).
+Events:
+
+- `message.received` — an inbound WhatsApp message arrived.
+- `session.status` — a session changed status.
+- `session.qr` — a new QR code was generated.
+
+Webhooks can be scoped to one session or receive events from all sessions.
+
+### Delivery headers
+
+- `X-Whathooks-Event` — event type, e.g. `message.received`
+- `X-Whathooks-Signature` — HMAC-SHA256 of the raw body, `sha256=<hex>`
+- `X-Whathooks-Delivery` — unique ID for the delivery attempt
+
+### Payload envelope
+
+Every delivery shares `{ event, sessionId, data, timestamp }`:
+
+```json
+{
+  "event": "message.received",
+  "sessionId": "sess_8f2a...",
+  "data": {
+    "id": "msg_3c91...",
+    "sessionId": "sess_8f2a...",
+    "from": "15551234567",
+    "pushName": "Jane Doe",
+    "type": "text",
+    "text": "Hi there!",
+    "waMessageId": "3EB0A1B2C3D4E5F6",
+    "timestamp": "2026-06-29T14:21:07.000Z"
+  },
+  "timestamp": "2026-06-29T14:21:07.412Z"
+}
+```
+
+### Signature verification (Node.js)
+
+Compute HMAC-SHA256 of the RAW request body with your webhook secret and
+compare it to `X-Whathooks-Signature` using a constant-time comparison:
+
+```js
+import crypto from "crypto";
+
+// Mount with the raw body, e.g. express.raw({ type: "application/json" })
+function verifySignature(rawBody, header, secret) {
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  const received = (header || "").replace(/^sha256=/, "");
+  const a = Buffer.from(received, "hex");
+  const b = Buffer.from(expected, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
+The webhook secret is shown once when the webhook is created.
+
+### Payload mapping (optional)
+
+A webhook can carry `payloadMapping` rules that reshape `data` before
+delivery: rename fields (`source` dot paths like `data.from`, also reaching
+`event`, `sessionId`, `timestamp`), format dates (`dateFormat`: `iso`,
+`unix`, `unix_ms`, or a UTC pattern like `yyyy-MM-dd HH:mm`), and inject
+fixed values (`value`). With rules set, `data` contains ONLY mapped fields;
+the envelope stays the same.
+
+```json
+[
+  { "target": "phone",      "source": "data.from" },
+  { "target": "message",    "source": "data.text" },
+  { "target": "receivedAt", "source": "data.timestamp", "dateFormat": "yyyy-MM-dd HH:mm" },
+  { "target": "origin",     "value": "whathooks" }
+]
+```
+
+## Sending messages
+
+```bash
+curl -X POST https://api.whathooks.app/v1/messages \
+  -H "X-API-Key: wh_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "sess_8f2a...",
+    "to": "15551234567",
+    "text": "Hello"
+  }'
+# → { "id": "msg_5d72...", "waMessageId": "...", "status": "sent" }
+```
+
+- `to` accepts a bare phone number (digits only, with country code, no `+`)
+  or a full WhatsApp JID.
+- The target session must be `CONNECTED`, otherwise the request returns 400.
+
+## Endpoint reference
+
+| Method | Path                      | Auth          |
+|--------|---------------------------|---------------|
+| POST   | /v1/auth/register         | Public        |
+| POST   | /v1/auth/login            | Public        |
+| GET    | /v1/sessions              | JWT / API key |
+| POST   | /v1/sessions              | JWT / API key |
+| GET    | /v1/sessions/:id          | JWT / API key |
+| POST   | /v1/sessions/:id/logout   | JWT / API key |
+| GET    | /v1/webhooks              | JWT / API key |
+| POST   | /v1/webhooks              | JWT / API key |
+| POST   | /v1/messages              | API key       |
+| GET    | /v1/messages              | JWT / API key |
+
+## Errors & limits
+
+- `401` — missing or invalid credentials (JWT or API key).
+- `400` — session not `CONNECTED`, or invalid request body.
+- `403` — no active subscription, or a plan/trial quota was reached
+  (message cap or connected-number cap). The response message says which.
+- Webhook deliveries time out after 10 seconds; currently one delivery
+  attempt per event.
+
+## Plans
+
+Paid plans with a 7-day free trial (card required): Starter $9.99/mo
+(1 number, 5,000 messages/mo), Pro $29.99/mo (3 numbers, 10,000 messages/mo,
+team members & roles, AI agents), Business $99/mo (10 numbers, 100,000
+messages/mo). Message caps count inbound + outbound. During a trial: 1
+number and 300 messages regardless of tier.
+
+## Product extras (dashboard)
+
+- Shared team inbox: multiple team members answer the same number from the
+  web dashboard, with roles (owner/admin/member) and full history.
+- AI agents: bring-your-own-key (Anthropic or OpenAI) auto-responders per
+  session, with human handoff. MCP tool support on Anthropic agents (Pro+).
+
+Human-readable docs: https://www.whathooks.app/docs

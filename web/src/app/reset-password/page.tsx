@@ -1,6 +1,7 @@
 "use client";
 
 import { GoogleAnalytics } from "@/components/google-analytics";
+import { useTranslations } from "next-intl";
 import { Logo } from "@/components/logo";
 import { apiClient } from "@/lib/client-api";
 import Link from "next/link";
@@ -8,6 +9,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 function ResetPasswordForm() {
+  const t = useTranslations("auth");
   const params = useSearchParams();
   const token = params.get("token");
   const [password, setPassword] = useState("");
@@ -20,9 +22,9 @@ function ResetPasswordForm() {
     return (
       <div className="card text-center text-sm text-[var(--color-muted)]">
         <GoogleAnalytics />
-        This reset link is missing its token.{" "}
+        {t("resetLinkMissing")}{" "}
         <Link href="/forgot-password" className="text-[var(--color-brand)]">
-          Request a new one
+          {t("requestNewOne")}
         </Link>
         .
       </div>
@@ -32,11 +34,11 @@ function ResetPasswordForm() {
   if (done) {
     return (
       <div className="card text-center text-sm text-[var(--color-muted)]">
-        Your password has been updated.{" "}
+        {t("passwordUpdated")}{" "}
         <Link href="/signin" className="text-[var(--color-brand)]">
-          Sign in
+          {t("signIn")}
         </Link>{" "}
-        with your new password.
+        {t("signInWithNew")}
       </div>
     );
   }
@@ -45,7 +47,7 @@ function ResetPasswordForm() {
     e.preventDefault();
     setError(null);
     if (password !== confirm) {
-      setError("Passwords don't match");
+      setError(t("passwordsDontMatch"));
       return;
     }
     setLoading(true);
@@ -56,7 +58,7 @@ function ResetPasswordForm() {
       });
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : t("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -65,7 +67,7 @@ function ResetPasswordForm() {
   return (
     <form onSubmit={onSubmit} className="card flex flex-col gap-4">
       <div>
-        <label className="label">New password</label>
+        <label className="label">{t("newPassword")}</label>
         <input
           type="password"
           required
@@ -73,11 +75,11 @@ function ResetPasswordForm() {
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 8 characters"
+          placeholder={t("passwordPlaceholder")}
         />
       </div>
       <div>
-        <label className="label">Confirm new password</label>
+        <label className="label">{t("confirmNewPassword")}</label>
         <input
           type="password"
           required
@@ -93,19 +95,20 @@ function ResetPasswordForm() {
           {error}{" "}
           {/expired|invalid/i.test(error) && (
             <Link href="/forgot-password" className="text-[var(--color-brand)]">
-              Request a new link
+              {t("requestNewLink")}
             </Link>
           )}
         </p>
       )}
       <button type="submit" className="btn-primary" disabled={loading}>
-        {loading ? "Updating…" : "Update password"}
+        {loading ? t("updating") : t("updatePassword")}
       </button>
     </form>
   );
 }
 
 export default function ResetPasswordPage() {
+  const t = useTranslations("auth");
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
@@ -113,7 +116,7 @@ export default function ResetPasswordPage() {
           <Logo />
         </div>
         <h1 className="mb-6 text-center text-2xl font-bold">
-          Choose a new password
+          {t("chooseNewPassword")}
         </h1>
         <Suspense>
           <ResetPasswordForm />

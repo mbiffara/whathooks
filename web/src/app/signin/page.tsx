@@ -1,6 +1,7 @@
 "use client";
 
 import { GoogleAnalytics } from "@/components/google-analytics";
+import { useTranslations } from "next-intl";
 import { Logo } from "@/components/logo";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
@@ -8,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 function SignInForm() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? "/dashboard";
@@ -27,7 +29,7 @@ function SignInForm() {
     });
     setLoading(false);
     if (res?.error) {
-      setError("Invalid email or password");
+      setError(t("invalidCredentials"));
       return;
     }
     router.push(callbackUrl);
@@ -38,7 +40,7 @@ function SignInForm() {
     <form onSubmit={onSubmit} className="card flex flex-col gap-4">
       <GoogleAnalytics />
       <div>
-        <label className="label">Email</label>
+        <label className="label">{t("email")}</label>
         <input
           type="email"
           required
@@ -50,12 +52,12 @@ function SignInForm() {
       </div>
       <div>
         <div className="flex items-center justify-between">
-          <label className="label">Password</label>
+          <label className="label">{t("password")}</label>
           <Link
             href="/forgot-password"
             className="text-xs text-[var(--color-muted)] hover:text-[var(--color-brand)]"
           >
-            Forgot password?
+            {t("forgotPassword")}
           </Link>
         </div>
         <input
@@ -69,12 +71,12 @@ function SignInForm() {
       </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <button type="submit" className="btn-primary" disabled={loading}>
-        {loading ? "Signing in…" : "Sign in"}
+        {loading ? t("signingIn") : t("signIn")}
       </button>
       <p className="text-center text-sm text-[var(--color-muted)]">
-        No account?{" "}
+        {t("noAccount")}{" "}
         <Link href="/signup" className="text-[var(--color-brand)]">
-          Create one
+          {t("createOne")}
         </Link>
       </p>
     </form>
@@ -82,13 +84,16 @@ function SignInForm() {
 }
 
 export default function SignInPage() {
+  const t = useTranslations("auth");
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />
         </div>
-        <h1 className="mb-6 text-center text-2xl font-bold">Welcome back</h1>
+        <h1 className="mb-6 text-center text-2xl font-bold">
+          {t("welcomeBack")}
+        </h1>
         <Suspense>
           <SignInForm />
         </Suspense>

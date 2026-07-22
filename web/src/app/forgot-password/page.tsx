@@ -1,12 +1,14 @@
 "use client";
 
 import { GoogleAnalytics } from "@/components/google-analytics";
+import { useTranslations } from "next-intl";
 import { Logo } from "@/components/logo";
 import { apiClient } from "@/lib/client-api";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export default function ForgotPasswordPage() {
       });
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : t("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -37,21 +39,22 @@ export default function ForgotPasswordPage() {
           <Logo />
         </div>
         <h1 className="mb-6 text-center text-2xl font-bold">
-          Reset your password
+          {t("resetYourPassword")}
         </h1>
         {sent ? (
           <div className="card text-center text-sm text-[var(--color-muted)]">
-            If an account exists for <strong>{email}</strong>, we sent a reset
-            link. Check your inbox — the link is valid for 1 hour.
+            {t.rich("resetSent", {
+              email,
+              b: (chunks) => <strong>{chunks}</strong>,
+            })}
           </div>
         ) : (
           <form onSubmit={onSubmit} className="card flex flex-col gap-4">
             <p className="text-sm text-[var(--color-muted)]">
-              Enter your account email and we&apos;ll send you a link to choose
-              a new password.
+              {t("resetIntro")}
             </p>
             <div>
-              <label className="label">Email</label>
+              <label className="label">{t("email")}</label>
               <input
                 type="email"
                 required
@@ -63,13 +66,13 @@ export default function ForgotPasswordPage() {
             </div>
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? "Sending…" : "Send reset link"}
+              {loading ? t("sending") : t("sendResetLink")}
             </button>
           </form>
         )}
         <p className="mt-4 text-center text-sm text-[var(--color-muted)]">
           <Link href="/signin" className="text-[var(--color-brand)]">
-            Back to sign in
+            {t("backToSignIn")}
           </Link>
         </p>
       </div>

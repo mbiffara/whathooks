@@ -2,6 +2,7 @@
 
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { readAdClickId } from "@/components/ad-click-tracker";
+import { useTranslations } from "next-intl";
 import { Logo } from "@/components/logo";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import { Suspense, useState } from "react";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
 function SignUpForm() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const params = useSearchParams();
   const inviteToken = params.get("invite");
@@ -55,7 +57,7 @@ function SignUpForm() {
         throw new Error(
           Array.isArray(resBody.message)
             ? resBody.message.join(", ")
-            : (resBody.message ?? "Registration failed"),
+            : (resBody.message ?? t("registrationFailed")),
         );
       }
       // Auto sign-in after registration.
@@ -64,11 +66,11 @@ function SignUpForm() {
         password: form.password,
         redirect: false,
       });
-      if (signin?.error) throw new Error("Could not sign in");
+      if (signin?.error) throw new Error(t("couldNotSignIn"));
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : t("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -82,16 +84,16 @@ function SignUpForm() {
           <Logo />
         </div>
         <h1 className="mb-6 text-center text-2xl font-bold">
-          {inviteToken ? "Join your team" : "Create your account"}
+          {inviteToken ? t("joinYourTeam") : t("createYourAccount")}
         </h1>
         {inviteToken && (
           <p className="mb-4 text-center text-sm text-[var(--color-muted)]">
-            Create an account to accept your invitation.
+            {t("acceptInvitationHint")}
           </p>
         )}
         <form onSubmit={onSubmit} className="card flex flex-col gap-4">
           <div>
-            <label className="label">Your name</label>
+            <label className="label">{t("yourName")}</label>
             <input
               required
               className="input"
@@ -102,7 +104,7 @@ function SignUpForm() {
           </div>
           {!inviteToken && (
             <div>
-              <label className="label">Organization</label>
+              <label className="label">{t("organization")}</label>
               <input
                 required
                 className="input"
@@ -113,7 +115,7 @@ function SignUpForm() {
             </div>
           )}
           <div>
-            <label className="label">Email</label>
+            <label className="label">{t("email")}</label>
             <input
               type="email"
               required
@@ -124,7 +126,7 @@ function SignUpForm() {
             />
           </div>
           <div>
-            <label className="label">Password</label>
+            <label className="label">{t("password")}</label>
             <input
               type="password"
               required
@@ -132,27 +134,27 @@ function SignUpForm() {
               className="input"
               value={form.password}
               onChange={set("password")}
-              placeholder="At least 8 characters"
+              placeholder={t("passwordPlaceholder")}
             />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? "Creating…" : "Create account"}
+            {loading ? t("creating") : t("createAccount")}
           </button>
           <p className="text-center text-sm text-[var(--color-muted)]">
-            Already have an account?{" "}
+            {t("alreadyHaveAccount")}{" "}
             <Link href="/signin" className="text-[var(--color-brand)]">
-              Sign in
+              {t("signIn")}
             </Link>
           </p>
           <p className="text-center text-xs text-[var(--color-muted)]">
-            By creating an account you agree to the{" "}
+            {t("agreeTo")}{" "}
             <Link href="/terms" className="hover:underline">
-              Terms of Service
+              {t("termsOfService")}
             </Link>{" "}
-            and{" "}
+            {t("and")}{" "}
             <Link href="/privacy" className="hover:underline">
-              Privacy Policy
+              {t("privacyPolicy")}
             </Link>
             .
           </p>

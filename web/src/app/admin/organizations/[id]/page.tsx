@@ -157,13 +157,20 @@ export default async function AdminOrgPage({
               <td className="cell">
                 <span
                   className={`badge ${
-                    u.role === "ADMIN"
-                      ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                      : "bg-[var(--color-chip)] text-[var(--color-muted)]"
+                    u.orgRole === "OWNER"
+                      ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
+                      : u.orgRole === "ADMIN"
+                        ? "bg-[var(--color-info-bg)] text-[var(--color-info)]"
+                        : "bg-[var(--color-chip)] text-[var(--color-muted)]"
                   }`}
                 >
-                  {u.role}
+                  {u.orgRole.toLowerCase()}
                 </span>
+                {u.role === "ADMIN" && (
+                  <span className="badge ml-1.5 bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
+                    platform admin
+                  </span>
+                )}
               </td>
               <td className="cell text-xs text-[var(--color-muted)]">
                 {new Date(u.createdAt).toLocaleDateString()}

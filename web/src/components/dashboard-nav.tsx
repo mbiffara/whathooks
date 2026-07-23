@@ -147,16 +147,10 @@ export function DashboardNav() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const [collapsed, setCollapsed] = useState(false);
-  const [isSmall, setIsSmall] = useState(false);
 
   // localStorage isn't available during SSR — restore the preference on mount.
   useEffect(() => {
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
-    const mq = window.matchMedia("(max-width: 767px)");
-    const apply = () => setIsSmall(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
   }, []);
 
   function toggleCollapsed() {
@@ -170,82 +164,79 @@ export function DashboardNav() {
     return exact ? pathname === href : pathname.startsWith(href);
   }
 
-  // Phones always get the icon rail — a 240px sidebar doesn't fit.
-  if (collapsed || isSmall) {
-    return (
-      <aside className="flex w-14 shrink-0 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-surface)] py-4">
-        <Link
-          href="/dashboard"
-          className="grid h-8 w-8 place-items-center"
-          aria-label={t("overview")}
-        >
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--color-brand)] text-sm font-bold text-[var(--color-on-brand)]">
-            w
-          </span>
-        </Link>
-        {!isSmall && (
-          <button
-            onClick={toggleCollapsed}
-            aria-label={t("expand")}
-            title={t("expand")}
-            className="mt-2 grid h-8 w-8 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+  // Phones always get the icon rail (pure CSS via the wrapper below — no JS,
+  // so it can't be lost to a hydration or matchMedia quirk).
+  const rail = (
+    <aside className="flex w-14 shrink-0 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-surface)] py-4">
+      <Link
+        href="/dashboard"
+        className="grid h-8 w-8 place-items-center"
+        aria-label={t("overview")}
+      >
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--color-brand)] text-sm font-bold text-[var(--color-on-brand)]">
+          w
+        </span>
+      </Link>
+      <button
+        onClick={toggleCollapsed}
+        aria-label={t("expand")}
+        title={t("expand")}
+        className="mt-2 hidden h-8 w-8 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)] md:grid"
+      >
+        »
+      </button>
+      <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
+        {GROUPS.map((group, gi) => (
+          <div
+            key={group.key ?? "main"}
+            className={`flex flex-col items-center gap-1 ${
+              gi > 0 ? "mt-1 border-t border-[var(--color-border)] pt-2" : ""
+            }`}
           >
-            »
-          </button>
+            {group.links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                title={t(l.key)}
+                aria-label={t(l.key)}
+                className={`grid h-9 w-9 place-items-center rounded-lg transition-colors ${
+                  isActive(l.href, l.exact)
+                    ? "bg-[var(--color-surface-2)] text-[var(--color-fg)]"
+                    : "text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+                }`}
+              >
+                <NavIcon name={l.key} />
+              </Link>
+            ))}
+          </div>
+        ))}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            title={t("admin")}
+            aria-label={t("admin")}
+            className={`mt-1 grid h-9 w-9 place-items-center rounded-lg border-t border-[var(--color-border)] pt-1 transition-colors ${
+              pathname.startsWith("/admin")
+                ? "text-[var(--color-brand)]"
+                : "text-[var(--color-brand)]/70 hover:text-[var(--color-brand)]"
+            }`}
+          >
+            <NavIcon name="admin" />
+          </Link>
         )}
-        <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
-          {GROUPS.map((group, gi) => (
-            <div
-              key={group.key ?? "main"}
-              className={`flex flex-col items-center gap-1 ${
-                gi > 0 ? "mt-1 border-t border-[var(--color-border)] pt-2" : ""
-              }`}
-            >
-              {group.links.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  title={t(l.key)}
-                  aria-label={t(l.key)}
-                  className={`grid h-9 w-9 place-items-center rounded-lg transition-colors ${
-                    isActive(l.href, l.exact)
-                      ? "bg-[var(--color-surface-2)] text-[var(--color-fg)]"
-                      : "text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
-                  }`}
-                >
-                  <NavIcon name={l.key} />
-                </Link>
-              ))}
-            </div>
-          ))}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              title={t("admin")}
-              aria-label={t("admin")}
-              className={`mt-1 grid h-9 w-9 place-items-center rounded-lg border-t border-[var(--color-border)] pt-1 transition-colors ${
-                pathname.startsWith("/admin")
-                  ? "text-[var(--color-brand)]"
-                  : "text-[var(--color-brand)]/70 hover:text-[var(--color-brand)]"
-              }`}
-            >
-              <NavIcon name="admin" />
-            </Link>
-          )}
-        </nav>
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          title={t("signOut")}
-          aria-label={t("signOut")}
-          className="mt-2 grid h-9 w-9 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
-        >
-          <NavIcon name="signOut" />
-        </button>
-      </aside>
-    );
-  }
+      </nav>
+      <button
+        onClick={() => signOut({ callbackUrl: "/" })}
+        title={t("signOut")}
+        aria-label={t("signOut")}
+        className="mt-2 grid h-9 w-9 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+      >
+        <NavIcon name="signOut" />
+      </button>
+    </aside>
+  );
 
-  return (
+  const expanded = (
     <aside className="flex w-60 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] p-4">
       <div className="flex items-center justify-between px-2 py-2">
         <Logo href="/dashboard" />
@@ -310,5 +301,13 @@ export function DashboardNav() {
         </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Phones: always the rail. md+: whichever the user chose. */}
+      <div className="contents md:hidden">{rail}</div>
+      <div className="hidden md:contents">{collapsed ? rail : expanded}</div>
+    </>
   );
 }

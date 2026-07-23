@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { LocaleSwitcher } from "./locale-switcher";
+import { MobileMenu } from "./mobile-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./logo";
 
@@ -48,6 +49,7 @@ export async function SiteHeader() {
             <LocaleSwitcher />
             <ThemeToggle />
           </span>
+          <MobileMenu />
         </nav>
       </div>
     </header>

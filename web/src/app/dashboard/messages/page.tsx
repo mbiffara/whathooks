@@ -369,6 +369,7 @@ export default function MessagesPage() {
       );
       setNewTagName("");
       await toggleTag(created.id);
+      setTagPickerOpen(false);
     } catch (e) {
       setTagError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     }
@@ -693,57 +694,66 @@ export default function MessagesPage() {
                   {t("addTag")}
                 </button>
                 {tagPickerOpen && (
-                  <div className="absolute left-0 top-6 z-30 w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-lg">
-                    <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
-                      {tags.map((tg) => {
-                        const active = selectedConv.tags.some(
-                          (x) => x.id === tg.id,
-                        );
-                        return (
-                          <button
-                            key={tg.id}
-                            onClick={() => toggleTag(tg.id)}
-                            className={`flex items-center gap-2 rounded-md px-2 py-1 text-left text-xs hover:bg-[var(--color-surface-2)] ${
-                              active ? "font-semibold" : ""
-                            }`}
-                          >
-                            <span
-                              className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: tg.color }}
-                            />
-                            <span className="flex-1 truncate">{tg.name}</span>
-                            {active && <span>✓</span>}
-                          </button>
-                        );
-                      })}
+                  <>
+                    <div
+                      className="fixed inset-0 z-20"
+                      onClick={() => setTagPickerOpen(false)}
+                    />
+                    <div className="absolute left-0 top-6 z-30 w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-lg">
+                      <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+                        {tags.map((tg) => {
+                          const active = selectedConv.tags.some(
+                            (x) => x.id === tg.id,
+                          );
+                          return (
+                            <button
+                              key={tg.id}
+                              onClick={async () => {
+                                await toggleTag(tg.id);
+                                setTagPickerOpen(false);
+                              }}
+                              className={`flex items-center gap-2 rounded-md px-2 py-1 text-left text-xs hover:bg-[var(--color-surface-2)] ${
+                                active ? "font-semibold" : ""
+                              }`}
+                            >
+                              <span
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: tg.color }}
+                              />
+                              <span className="flex-1 truncate">{tg.name}</span>
+                              {active && <span>✓</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {tagError && (
+                        <p className="mt-1 px-1 text-[10px] text-[var(--color-danger)]">
+                          {tagError}
+                        </p>
+                      )}
+                      <div className="mt-2 flex gap-1 border-t border-[var(--color-border)] pt-2">
+                        <input
+                          className="input h-7 flex-1 px-2 py-0 text-xs"
+                          placeholder={t("newTagPlaceholder")}
+                          value={newTagName}
+                          onChange={(e) => setNewTagName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void createTag();
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => void createTag()}
+                          disabled={!newTagName.trim()}
+                          className="btn-primary h-7 px-2 py-0 text-xs"
+                        >
+                          {t("createTag")}
+                        </button>
+                      </div>
                     </div>
-                    {tagError && (
-                      <p className="mt-1 px-1 text-[10px] text-[var(--color-danger)]">
-                        {tagError}
-                      </p>
-                    )}
-                    <div className="mt-2 flex gap-1 border-t border-[var(--color-border)] pt-2">
-                      <input
-                        className="input h-7 flex-1 px-2 py-0 text-xs"
-                        placeholder={t("newTagPlaceholder")}
-                        value={newTagName}
-                        onChange={(e) => setNewTagName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            void createTag();
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => void createTag()}
-                        disabled={!newTagName.trim()}
-                        className="btn-primary h-7 px-2 py-0 text-xs"
-                      >
-                        {t("createTag")}
-                      </button>
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { UpgradeModal } from "@/components/upgrade-modal";
+import { WebhookDeliveries } from "@/components/webhook-deliveries";
 import { apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { MappingRule, WaSession, Webhook } from "@/lib/types";
 import { useTranslations } from "next-intl";
@@ -184,6 +185,8 @@ export default function WebhooksPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRows, setEditRows] = useState<RuleRow[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
+  // Which hook's delivery log is expanded.
+  const [deliveriesId, setDeliveriesId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -410,6 +413,14 @@ export default function WebhooksPage() {
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     onClick={() =>
+                      setDeliveriesId((v) => (v === h.id ? null : h.id))
+                    }
+                    className="btn-ghost"
+                  >
+                    {deliveriesId === h.id ? tc("close") : t("deliveries")}
+                  </button>
+                  <button
+                    onClick={() =>
                       editingId === h.id
                         ? setEditingId(null)
                         : startEditMapping(h)
@@ -426,6 +437,11 @@ export default function WebhooksPage() {
                   </button>
                 </div>
               </div>
+              {deliveriesId === h.id && (
+                <div className="border-t border-[var(--color-border)] pt-3">
+                  <WebhookDeliveries webhookId={h.id} />
+                </div>
+              )}
               {editingId === h.id && (
                 <div className="border-t border-[var(--color-border)] pt-3">
                   <MappingEditor rows={editRows} onChange={setEditRows} />

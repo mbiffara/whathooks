@@ -285,7 +285,18 @@
       "removeField": "Quitar campo",
       "addField": "+ Agregar campo",
       "mappingHint": "Con mapeo, <code>data</code> contiene solo estos campos. Formatos de fecha: <code>iso</code>, <code>unix</code>, <code>unix_ms</code> o un patrón como <code>yyyy-MM-dd HH:mm</code> (UTC).",
-      "upgradeAction": "Agregar un webhook"
+      "upgradeAction": "Agregar un webhook",
+      "deliveries": "Entregas",
+      "noDeliveries": "Todavía no hay entregas. Si esperabas una, verifica que el webhook esté habilitado, suscrito a los eventos correctos y que no esté limitado a otra sesión.",
+      "deliveriesHint": "Últimos 50 intentos de entrega, primero los más recientes.",
+      "refresh": "Actualizar",
+      "deliveryTime": "Hora",
+      "deliveryEvent": "Evento",
+      "deliveryStatus": "Estado",
+      "deliveryError": "Error",
+      "deliveryPayload": "Payload",
+      "deliveryFailed": "falló",
+      "deliveryPending": "pendiente"
     },
     "team": {
       "title": "Equipo",
@@ -395,7 +406,15 @@
       "alwaysOn": "Siempre activo",
       "scheduled": "Programado",
       "scheduleDaysLabel": "Días",
-      "dayNames": ["D", "L", "M", "M", "J", "V", "S"],
+      "dayNames": [
+        "D",
+        "L",
+        "M",
+        "M",
+        "J",
+        "V",
+        "S"
+      ],
       "fromTime": "Desde",
       "toTime": "Hasta",
       "timezone": "Zona horaria",

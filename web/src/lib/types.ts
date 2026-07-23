@@ -94,6 +94,17 @@ export interface Webhook {
   createdAt: string;
 }
 
+export interface WebhookDelivery {
+  id: string;
+  event: string;
+  payload: Record<string, unknown>;
+  responseStatus: number | null;
+  attempts: number;
+  deliveredAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+}
+
 export interface ApiKey {
   id: string;
   name: string;

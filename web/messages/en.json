@@ -285,7 +285,18 @@
       "removeField": "Remove field",
       "addField": "+ Add field",
       "mappingHint": "With mapping, <code>data</code> contains only these fields. Date formats: <code>iso</code>, <code>unix</code>, <code>unix_ms</code>, or a pattern like <code>yyyy-MM-dd HH:mm</code> (UTC).",
-      "upgradeAction": "Adding a webhook"
+      "upgradeAction": "Adding a webhook",
+      "deliveries": "Deliveries",
+      "noDeliveries": "No deliveries yet. If you expected one, check the webhook is enabled, subscribes to the right events, and isn't scoped to a different session.",
+      "deliveriesHint": "Last 50 delivery attempts, newest first.",
+      "refresh": "Refresh",
+      "deliveryTime": "Time",
+      "deliveryEvent": "Event",
+      "deliveryStatus": "Status",
+      "deliveryError": "Error",
+      "deliveryPayload": "Payload",
+      "deliveryFailed": "failed",
+      "deliveryPending": "pending"
     },
     "team": {
       "title": "Team",
@@ -395,7 +406,15 @@
       "alwaysOn": "Always on",
       "scheduled": "Scheduled",
       "scheduleDaysLabel": "Days",
-      "dayNames": ["S", "M", "T", "W", "T", "F", "S"],
+      "dayNames": [
+        "S",
+        "M",
+        "T",
+        "W",
+        "T",
+        "F",
+        "S"
+      ],
       "fromTime": "From",
       "toTime": "To",
       "timezone": "Timezone",

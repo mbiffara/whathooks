@@ -96,7 +96,9 @@
       "billing": "Billing",
       "settings": "Settings",
       "admin": "Admin console",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "collapse": "Collapse menu",
+      "expand": "Expand menu"
     },
     "settings": {
       "title": "Settings",

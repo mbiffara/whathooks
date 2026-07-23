@@ -96,7 +96,9 @@
       "billing": "Facturación",
       "settings": "Configuración",
       "admin": "Consola admin",
-      "signOut": "Cerrar sesión"
+      "signOut": "Cerrar sesión",
+      "collapse": "Contraer menú",
+      "expand": "Expandir menú"
     },
     "settings": {
       "title": "Configuración",

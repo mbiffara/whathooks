@@ -27,6 +27,7 @@ export interface ChatMessage {
   fromMe: boolean;
   source?: MessageSource;
   agentName?: string | null;
+  sentByName?: string | null;
   type: ChatMessageType;
   text: string | null;
   status: string;
@@ -54,6 +55,8 @@ export interface Conversation {
   agent: ConversationAgent | null;
   agentPaused: boolean;
   agentPausedReason: string | null;
+  status: "OPEN" | "RESOLVED";
+  assignedTo: { id: string; name: string } | null;
 }
 
 export interface ConversationAgent {

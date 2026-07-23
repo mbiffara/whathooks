@@ -404,7 +404,19 @@
         "location": "📍 Location",
         "contact": "👤 Contact",
         "unsupported": "Unsupported message"
-      }
+      },
+      "searchPlaceholder": "Search name, number, or text…",
+      "filterOpen": "Open",
+      "filterResolved": "Resolved",
+      "filterAllStatus": "All",
+      "filterAllAssigned": "Everyone",
+      "filterMine": "Mine",
+      "filterUnassigned": "Unassigned",
+      "assignee": "Assignee",
+      "noAssignee": "Unassigned",
+      "resolve": "Resolve",
+      "reopen": "Reopen",
+      "resolved": "Resolved"
     }
   },
   "landing": {

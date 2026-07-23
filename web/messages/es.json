@@ -404,7 +404,19 @@
         "location": "📍 Ubicación",
         "contact": "👤 Contacto",
         "unsupported": "Mensaje no compatible"
-      }
+      },
+      "searchPlaceholder": "Busca nombre, número o texto…",
+      "filterOpen": "Abiertas",
+      "filterResolved": "Resueltas",
+      "filterAllStatus": "Todas",
+      "filterAllAssigned": "Todos",
+      "filterMine": "Mías",
+      "filterUnassigned": "Sin asignar",
+      "assignee": "Responsable",
+      "noAssignee": "Sin asignar",
+      "resolve": "Resolver",
+      "reopen": "Reabrir",
+      "resolved": "Resuelta"
     }
   },
   "landing": {

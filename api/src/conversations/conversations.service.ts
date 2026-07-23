@@ -7,11 +7,13 @@ import { Conversation, MediaAsset, Message } from '@prisma/client';
 type MessageWithRelations = Message & {
   media: MediaAsset | null;
   agent: { name: string } | null;
+  sentBy?: { name: string | null; email: string } | null;
 };
 type ConversationWithAgent = Conversation & {
   session?: {
     agent: { id: string; name: string; enabled: boolean } | null;
   } | null;
+  assignedTo?: { id: string; name: string | null; email: string } | null;
 };
 const AGENT_INCLUDE = {
   session: {
@@ -19,6 +21,7 @@ const AGENT_INCLUDE = {
       agent: { select: { id: true, name: true, enabled: true } },
     },
   },
+  assignedTo: { select: { id: true, name: true, email: true } },
 } as const;
 import { QuotaService } from '../billing/quota.service';
 import { MediaService } from '../media/media.service';
@@ -36,19 +39,87 @@ export class ConversationsService {
 
   async list(
     organizationId: string,
-    opts: { sessionId?: string; limit?: number },
+    opts: {
+      sessionId?: string;
+      limit?: number;
+      /** Free-text search: contact name, number, or message text. */
+      q?: string;
+      status?: 'OPEN' | 'RESOLVED' | 'ALL';
+      assigned?: 'me' | 'unassigned' | 'all';
+      userId?: string;
+    },
   ) {
+    const q = opts.q?.trim();
     const rows = await this.prisma.conversation.findMany({
       where: {
         organizationId,
         sessionId: opts.sessionId,
         lastMessageAt: { not: null },
+        ...(opts.status && opts.status !== 'ALL'
+          ? { status: opts.status }
+          : {}),
+        ...(opts.assigned === 'me' && opts.userId
+          ? { assignedToUserId: opts.userId }
+          : opts.assigned === 'unassigned'
+            ? { assignedToUserId: null }
+            : {}),
+        ...(q
+          ? {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { remoteJid: { contains: q } },
+                {
+                  messages: {
+                    some: { text: { contains: q, mode: 'insensitive' } },
+                  },
+                },
+              ],
+            }
+          : {}),
       },
       orderBy: { lastMessageAt: 'desc' },
       take: Math.min(opts.limit ?? 100, 200),
       include: AGENT_INCLUDE,
     });
     return rows.map((c) => this.toConversationDto(c));
+  }
+
+  /** Assign to a teammate (null unassigns) and/or set open/resolved. */
+  async update(
+    organizationId: string,
+    id: string,
+    patch: {
+      assignedToUserId?: string | null;
+      status?: 'OPEN' | 'RESOLVED';
+    },
+  ) {
+    await this.requireConversation(organizationId, id);
+    if (patch.assignedToUserId) {
+      const member = await this.prisma.membership.findUnique({
+        where: {
+          userId_organizationId: {
+            userId: patch.assignedToUserId,
+            organizationId,
+          },
+        },
+      });
+      if (!member) {
+        throw new BadRequestException(
+          'Assignee is not a member of this organization',
+        );
+      }
+    }
+    const updated = await this.prisma.conversation.update({
+      where: { id },
+      data: {
+        ...(patch.assignedToUserId !== undefined
+          ? { assignedToUserId: patch.assignedToUserId }
+          : {}),
+        ...(patch.status ? { status: patch.status } : {}),
+      },
+      include: AGENT_INCLUDE,
+    });
+    return this.toConversationDto(updated);
   }
 
   async get(organizationId: string, id: string) {
@@ -85,7 +156,11 @@ export class ConversationsService {
       },
       orderBy: { timestamp: 'desc' },
       take: limit,
-      include: { media: true, agent: { select: { name: true } } },
+      include: {
+        media: true,
+        agent: { select: { name: true } },
+        sentBy: { select: { name: true, email: true } },
+      },
     });
     const items = await Promise.all(
       rows.reverse().map((m) => this.toMessageDto(m)),
@@ -106,10 +181,17 @@ export class ConversationsService {
     return { ok: true };
   }
 
-  async sendText(organizationId: string, id: string, text: string) {
+  async sendText(
+    organizationId: string,
+    id: string,
+    text: string,
+    sentByUserId?: string,
+  ) {
     await this.quota.assertCanSend(organizationId);
     const c = await this.assertSendable(organizationId, id);
-    const r = await this.manager.sendText(c.sessionId, c.remoteJid, text);
+    const r = await this.manager.sendText(c.sessionId, c.remoteJid, text, {
+      sentByUserId,
+    });
     return { id: r.messageId, waMessageId: r.waMessageId };
   }
 
@@ -118,6 +200,7 @@ export class ConversationsService {
     id: string,
     file: { buffer: Buffer; mimeType: string; fileName?: string | null },
     caption?: string,
+    sentByUserId?: string,
   ) {
     await this.quota.assertCanSend(organizationId);
     const c = await this.assertSendable(organizationId, id);
@@ -126,6 +209,7 @@ export class ConversationsService {
       c.remoteJid,
       file,
       caption,
+      { sentByUserId },
     );
     return {
       id: r.messageId,
@@ -180,6 +264,13 @@ export class ConversationsService {
       agent,
       agentPaused: c.agentPaused,
       agentPausedReason: c.agentPausedReason,
+      status: c.status,
+      assignedTo: c.assignedTo
+        ? {
+            id: c.assignedTo.id,
+            name: c.assignedTo.name ?? c.assignedTo.email,
+          }
+        : null,
     };
   }
 
@@ -206,6 +297,7 @@ export class ConversationsService {
       fromMe: m.fromMe,
       source: m.source,
       agentName: m.agent?.name ?? null,
+      sentByName: m.sentBy ? (m.sentBy.name ?? m.sentBy.email) : null,
       type: m.type,
       text: m.text,
       status: m.status,

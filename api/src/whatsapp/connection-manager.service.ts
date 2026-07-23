@@ -499,6 +499,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     opts: {
       source?: MessageSource;
       agentId?: string;
+      sentByUserId?: string;
       mentions?: string[];
     } = {},
   ): Promise<{ waMessageId: string | null; messageId: string }> {
@@ -519,6 +520,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       direction: MessageDirection.OUTBOUND,
       fromMe: true,
       source: opts.source ?? MessageSource.HUMAN,
+      sentByUserId: opts.sentByUserId,
       agentId: opts.agentId,
       type: MessageType.TEXT,
       text,
@@ -536,7 +538,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     to: string,
     file: { buffer: Buffer; mimeType: string; fileName?: string | null },
     caption?: string | null,
-    opts: { source?: MessageSource; agentId?: string } = {},
+    opts: {
+      sentByUserId?: string;
+      source?: MessageSource;
+      agentId?: string;
+    } = {},
   ): Promise<{
     waMessageId: string | null;
     messageId: string;
@@ -558,6 +564,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       direction: MessageDirection.OUTBOUND,
       fromMe: true,
       source: opts.source ?? MessageSource.HUMAN,
+      sentByUserId: opts.sentByUserId,
       agentId: opts.agentId,
       type: kindToType(kind),
       text: caption ?? null,
@@ -589,6 +596,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     fromMe: boolean;
     source: MessageSource;
     agentId?: string;
+    sentByUserId?: string;
     type: MessageType;
     text?: string | null;
     waMessageId?: string | null;
@@ -643,6 +651,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         source: p.source,
         senderName: p.senderName ?? null,
         agentId: p.agentId ?? null,
+        sentByUserId: p.sentByUserId ?? null,
         type: p.type,
         text: p.text ?? null,
         status: p.status,

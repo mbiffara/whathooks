@@ -9,7 +9,7 @@ import type {
 import { previewText, relativeTime } from "@/components/messages/utils";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
-import type { WaSession } from "@/lib/types";
+import type { TeamMember, WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -41,6 +41,16 @@ export default function MessagesPage() {
 
   const [sessions, setSessions] = useState<WaSession[]>([]);
   const [sessionFilter, setSessionFilter] = useState<string>("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"OPEN" | "RESOLVED" | "ALL">(
+    "OPEN",
+  );
+  const [assignedFilter, setAssignedFilter] = useState<
+    "all" | "me" | "unassigned"
+  >("all");
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [updatingConv, setUpdatingConv] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [convLoading, setConvLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -85,13 +95,30 @@ export default function MessagesPage() {
       .catch(() => setSessions([]));
   }, [token]);
 
+  // Team members for the assignee picker (best-effort).
+  useEffect(() => {
+    if (!token) return;
+    apiClient<TeamMember[]>("/organizations/members", token)
+      .then(setMembers)
+      .catch(() => setMembers([]));
+  }, [token]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
   // Load + poll conversations
   const loadConversations = useCallback(async () => {
     if (!token) return;
-    const qs = sessionFilter ? `?sessionId=${sessionFilter}` : "";
+    const params = new URLSearchParams();
+    if (sessionFilter) params.set("sessionId", sessionFilter);
+    if (debouncedSearch) params.set("q", debouncedSearch);
+    params.set("status", statusFilter);
+    if (assignedFilter !== "all") params.set("assigned", assignedFilter);
     try {
       const data = await apiClient<Conversation[]>(
-        `/conversations${qs}`,
+        `/conversations?${params.toString()}`,
         token,
       );
       setConversations(data);
@@ -100,7 +127,7 @@ export default function MessagesPage() {
     } finally {
       setConvLoading(false);
     }
-  }, [token, sessionFilter]);
+  }, [token, sessionFilter, debouncedSearch, statusFilter, assignedFilter]);
 
   useEffect(() => {
     setConvLoading(true);
@@ -275,6 +302,28 @@ export default function MessagesPage() {
     }
   }
 
+  async function updateConversation(patch: {
+    assignedToUserId?: string | null;
+    status?: "OPEN" | "RESOLVED";
+  }) {
+    if (!token || !selectedConv || updatingConv) return;
+    setUpdatingConv(true);
+    try {
+      const updated = await apiClient<Conversation>(
+        `/conversations/${selectedConv.id}`,
+        token,
+        { method: "PATCH", body: JSON.stringify(patch) },
+      );
+      setConversations((prev) =>
+        prev.map((c) => (c.id === updated.id ? updated : c)),
+      );
+    } catch {
+      /* surface via next poll */
+    } finally {
+      setUpdatingConv(false);
+    }
+  }
+
   async function toggleAgentPause() {
     if (!token || !selectedConv || togglingAgent) return;
     const next = !selectedConv.agentPaused;
@@ -328,6 +377,36 @@ export default function MessagesPage() {
               </option>
             ))}
           </select>
+          <input
+            className="input mt-2"
+            placeholder={t("searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="mt-2 flex gap-2">
+            <select
+              className="input h-8 flex-1 px-2 py-0 text-xs"
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as typeof statusFilter)
+              }
+            >
+              <option value="OPEN">{t("filterOpen")}</option>
+              <option value="RESOLVED">{t("filterResolved")}</option>
+              <option value="ALL">{t("filterAllStatus")}</option>
+            </select>
+            <select
+              className="input h-8 flex-1 px-2 py-0 text-xs"
+              value={assignedFilter}
+              onChange={(e) =>
+                setAssignedFilter(e.target.value as typeof assignedFilter)
+              }
+            >
+              <option value="all">{t("filterAllAssigned")}</option>
+              <option value="me">{t("filterMine")}</option>
+              <option value="unassigned">{t("filterUnassigned")}</option>
+            </select>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {convLoading ? (
@@ -365,7 +444,18 @@ export default function MessagesPage() {
                       <span className="truncate text-sm font-medium text-[var(--color-fg)]">
                         {display}
                       </span>
-                      <span className="shrink-0 text-[10px] text-[var(--color-muted)]">
+                      <span className="flex shrink-0 items-center gap-1 text-[10px] text-[var(--color-muted)]">
+                        {c.status === "RESOLVED" && (
+                          <span title={t("resolved")}>✓</span>
+                        )}
+                        {c.assignedTo && (
+                          <span
+                            title={c.assignedTo.name}
+                            className="grid h-4 w-4 place-items-center rounded-full bg-[var(--color-brand)]/20 text-[8px] font-bold uppercase text-[var(--color-brand)]"
+                          >
+                            {c.assignedTo.name.charAt(0)}
+                          </span>
+                        )}
                         {relativeTime(c.lastMessageAt, t("now"))}
                       </span>
                     </span>
@@ -405,6 +495,43 @@ export default function MessagesPage() {
                     ? `${selectedSession.label} · ${tStatus(selectedSession.status).toLowerCase()}`
                     : " "}
                 </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <select
+                  className="input h-8 w-36 px-2 py-0 text-xs"
+                  value={selectedConv.assignedTo?.id ?? ""}
+                  disabled={updatingConv}
+                  onChange={(e) =>
+                    updateConversation({
+                      assignedToUserId: e.target.value || null,
+                    })
+                  }
+                  aria-label={t("assignee")}
+                >
+                  <option value="">{t("noAssignee")}</option>
+                  {members.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.name ?? m.email}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() =>
+                    updateConversation({
+                      status:
+                        selectedConv.status === "RESOLVED"
+                          ? "OPEN"
+                          : "RESOLVED",
+                    })
+                  }
+                  disabled={updatingConv}
+                  className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
+                >
+                  {selectedConv.status === "RESOLVED"
+                    ? t("reopen")
+                    : t("resolve")}
+                </button>
               </div>
 
               {selectedConv.agent && (
@@ -494,7 +621,9 @@ export default function MessagesPage() {
                 </div>
               )}
               {sendError && (
-                <div className="mb-2 text-xs text-[var(--color-danger)]">{sendError}</div>
+                <div className="mb-2 text-xs text-[var(--color-danger)]">
+                  {sendError}
+                </div>
               )}
               <UpgradeModal
                 open={showUpgrade}

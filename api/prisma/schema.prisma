@@ -87,6 +87,8 @@ model User {
   passwordResets  PasswordResetToken[]
 
   @@index([organizationId])
+  sentMessages          Message[]      @relation("SentMessages")
+  assignedConversations Conversation[] @relation("AssignedConversations")
 }
 
 // Single-use, short-lived tokens for the forgot-password flow. Only the
@@ -166,6 +168,7 @@ model WaSession {
 
   agentId String?
   agent   Agent?  @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
 
   creds         WaCredential?
   signalKeys    WaSignalKey[]
@@ -314,6 +317,11 @@ enum MessageSource {
 }
 
 // A chat thread between a session and a remote contact (or group).
+enum ConversationStatus {
+  OPEN
+  RESOLVED
+}
+
 model Conversation {
   id              String       @id @default(cuid())
   organizationId  String
@@ -330,6 +338,9 @@ model Conversation {
   archived        Boolean      @default(false)
   agentPaused     Boolean      @default(false) // operator took over → agent won't auto-reply
   agentPausedReason String?    // why the agent handed off (null when paused manually)
+  status          ConversationStatus @default(OPEN)
+  assignedToUserId String?
+  assignedTo      User?        @relation("AssignedConversations", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -363,6 +374,10 @@ model Message {
 
   agentId String?
   agent   Agent?  @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  // Which team member sent this (HUMAN outbound from the dashboard).
+  sentByUserId String?
+  sentBy       User?   @relation("SentMessages", fields: [sentByUserId], references: [id], onDelete: SetNull)
 
   media      MediaAsset?
   deliveries WebhookDelivery[]

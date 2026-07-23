@@ -2,6 +2,23 @@ import { useTranslations } from "next-intl";
 import type { ChatMessage } from "./types";
 import { clockTime, formatBytes } from "./utils";
 
+function senderLabel(
+  message: ChatMessage,
+  t: (key: string) => string,
+): string | null {
+  switch (message.source) {
+    case "AGENT":
+      return `🤖 ${message.agentName ?? t("agent")}`;
+    case "API":
+      return "⚙ API";
+    case "HUMAN":
+      // Attribution: which teammate replied (older rows predate tracking).
+      return message.sentByName ? `🧑 ${message.sentByName}` : null;
+    default:
+      return null;
+  }
+}
+
 export function MessageBubble({ message }: { message: ChatMessage }) {
   const t = useTranslations("dash.messages.bubble");
   const outbound = message.fromMe || message.direction === "OUTBOUND";
@@ -16,11 +33,9 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
             : "border border-[var(--color-border)] bg-[var(--color-surface-2)]"
         }`}
       >
-        {outbound && message.source && message.source !== "HUMAN" && (
+        {outbound && senderLabel(message, t) && (
           <div className="mb-0.5 text-[10px] font-semibold text-[var(--color-brand)]">
-            {message.source === "AGENT"
-              ? `🤖 ${message.agentName ?? t("agent")}`
-              : "⚙ API"}
+            {senderLabel(message, t)}
           </div>
         )}
         <MessageBody message={message} />

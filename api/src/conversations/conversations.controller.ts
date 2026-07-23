@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -11,7 +12,14 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -30,6 +38,18 @@ class AgentPauseDto {
   paused!: boolean;
 }
 
+class UpdateConversationDto {
+  // null explicitly unassigns; absent leaves it unchanged.
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  assignedToUserId?: string | null;
+
+  @IsOptional()
+  @IsIn(['OPEN', 'RESOLVED'])
+  status?: 'OPEN' | 'RESOLVED';
+}
+
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
 @Controller('conversations')
 export class ConversationsController {
@@ -46,11 +66,33 @@ export class ConversationsController {
     @CurrentUser() user: AuthUser,
     @Query('sessionId') sessionId?: string,
     @Query('limit') limit?: string,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('assigned') assigned?: string,
   ) {
     return this.conversations.list(this.orgOf(user), {
       sessionId,
       limit: limit ? Number(limit) : undefined,
+      q,
+      status:
+        status === 'OPEN' || status === 'RESOLVED' || status === 'ALL'
+          ? status
+          : undefined,
+      assigned:
+        assigned === 'me' || assigned === 'unassigned' || assigned === 'all'
+          ? assigned
+          : undefined,
+      userId: user.userId,
     });
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: UpdateConversationDto,
+  ) {
+    return this.conversations.update(this.orgOf(user), id, body);
   }
 
   @Get(':id')
@@ -104,9 +146,10 @@ export class ConversationsController {
           fileName: file.originalname,
         },
         body.text,
+        user.userId,
       );
     }
     if (!body.text) throw new BadRequestException('Provide text or a file');
-    return this.conversations.sendText(org, id, body.text);
+    return this.conversations.sendText(org, id, body.text, user.userId);
   }
 }

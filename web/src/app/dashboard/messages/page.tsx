@@ -87,6 +87,13 @@ function MessagesInbox() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [togglingAgent, setTogglingAgent] = useState(false);
 
+  // "New conversation" dialog.
+  const [newConvOpen, setNewConvOpen] = useState(false);
+  const [newConvSession, setNewConvSession] = useState("");
+  const [newConvNumber, setNewConvNumber] = useState("");
+  const [newConvBusy, setNewConvBusy] = useState(false);
+  const [newConvError, setNewConvError] = useState<string | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -434,6 +441,46 @@ function MessagesInbox() {
     }
   }
 
+  function openNewConversation() {
+    const connected = sessions.filter((s) => s.status === "CONNECTED");
+    setNewConvSession(
+      sessionFilter && connected.some((s) => s.id === sessionFilter)
+        ? sessionFilter
+        : (connected[0]?.id ?? ""),
+    );
+    setNewConvNumber("");
+    setNewConvError(null);
+    setNewConvOpen(true);
+  }
+
+  async function startConversation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || newConvBusy) return;
+    setNewConvBusy(true);
+    setNewConvError(null);
+    try {
+      const conv = await apiClient<Conversation>("/conversations", token, {
+        method: "POST",
+        body: JSON.stringify({
+          sessionId: newConvSession,
+          to: newConvNumber.trim(),
+        }),
+      });
+      setNewConvOpen(false);
+      setConversations((prev) =>
+        prev.some((c) => c.id === conv.id) ? prev : [conv, ...prev],
+      );
+      setSelectedId(conv.id);
+      loadConversations();
+    } catch (e) {
+      setNewConvError(
+        e instanceof Error ? e.message : tc("somethingWentWrong"),
+      );
+    } finally {
+      setNewConvBusy(false);
+    }
+  }
+
   function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -444,6 +491,97 @@ function MessagesInbox() {
 
   return (
     <div className="flex h-full overflow-hidden">
+      {newConvOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setNewConvOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-conv-title"
+        >
+          <form
+            className="card w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={startConversation}
+          >
+            <h2 id="new-conv-title" className="text-lg font-semibold">
+              {t("newConversation")}
+            </h2>
+            {sessions.some((s) => s.status === "CONNECTED") ? (
+              <>
+                <div className="mt-4">
+                  <label className="label">{t("newConvSession")}</label>
+                  <select
+                    className="input"
+                    value={newConvSession}
+                    onChange={(e) => setNewConvSession(e.target.value)}
+                  >
+                    {sessions
+                      .filter((s) => s.status === "CONNECTED")
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                          {s.phoneNumber ? ` — ${s.phoneNumber}` : ""}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="mt-3">
+                  <label className="label">{t("newConvNumber")}</label>
+                  <input
+                    className="input"
+                    placeholder="5491155551234"
+                    inputMode="tel"
+                    autoFocus
+                    value={newConvNumber}
+                    onChange={(e) => setNewConvNumber(e.target.value)}
+                    required
+                  />
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    {t("newConvNumberHint")}
+                  </p>
+                </div>
+                {newConvError && (
+                  <p className="mt-3 text-sm text-[var(--color-danger)]">
+                    {newConvError}
+                  </p>
+                )}
+                <div className="mt-5 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setNewConvOpen(false)}
+                    className="btn-ghost"
+                  >
+                    {tc("cancel")}
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={newConvBusy || !newConvSession}
+                  >
+                    {newConvBusy ? tc("loading") : t("newConvStart")}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-sm text-[var(--color-muted)]">
+                  {t("newConvNoSessions")}
+                </p>
+                <div className="mt-5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setNewConvOpen(false)}
+                    className="btn-ghost"
+                  >
+                    {tc("close")}
+                  </button>
+                </div>
+              </>
+            )}
+          </form>
+        </div>
+      )}
       {/* Left pane — on phones it swaps with the thread (master-detail) */}
       <div
         className={`${
@@ -451,7 +589,16 @@ function MessagesInbox() {
         } w-full shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] md:w-[320px] lg:w-[360px]`}
       >
         <div className="border-b border-[var(--color-border)] p-3">
-          <h1 className="mb-2 text-lg font-semibold">{t("title")}</h1>
+          <div className="mb-2 flex items-center justify-between">
+            <h1 className="text-lg font-semibold">{t("title")}</h1>
+            <button
+              onClick={openNewConversation}
+              className="btn-ghost px-2 py-1 text-xs"
+              title={t("newConversation")}
+            >
+              + {t("newConversation")}
+            </button>
+          </div>
           <select
             className="input"
             value={sessionFilter}

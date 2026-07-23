@@ -30,7 +30,11 @@ import { AgentRunnerService } from '../agents/agent-runner.service';
 import { MediaService } from '../media/media.service';
 import { QuotaService } from '../billing/quota.service';
 import { ConfigService } from '@nestjs/config';
-import { Inject, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type Redis from 'ioredis';
 import { randomUUID } from 'crypto';
 import { REDIS_PUB } from '../common/redis/redis.module';
@@ -498,6 +502,28 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         });
       }
     }
+  }
+
+  /**
+   * Validate a recipient on WhatsApp via the live socket and return its
+   * canonical JID (WhatsApp may normalize the number, e.g. AR mobile 549…).
+   * Group JIDs pass through untouched — they can't be probed.
+   */
+  async resolveJid(sessionId: string, to: string): Promise<string> {
+    const live = this.sessions.get(sessionId);
+    if (!live) {
+      throw new ServiceUnavailableException('Session is not connected');
+    }
+    const jid = toJid(to);
+    if (jid.endsWith('@g.us')) return jid;
+    const hit = await live.sock
+      .onWhatsApp(jid)
+      .then((r) => r?.[0])
+      .catch(() => undefined);
+    if (!hit?.exists) {
+      throw new BadRequestException('This number is not on WhatsApp');
+    }
+    return hit.jid;
   }
 
   /** The connected number's own msisdn (no domain), or null if not live. */

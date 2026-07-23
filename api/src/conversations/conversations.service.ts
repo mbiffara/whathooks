@@ -94,6 +94,45 @@ export class ConversationsService {
     return rows.map((c) => this.toConversationDto(c));
   }
 
+  /**
+   * Start (or reopen) a conversation with a number from a session. The number
+   * is validated on WhatsApp via the live socket, so the thread uses the
+   * canonical JID. Existing threads are returned as-is.
+   */
+  async start(
+    organizationId: string,
+    dto: { sessionId: string; to: string },
+    allowed?: string[] | null,
+  ) {
+    // 404 (not 403) so restricted members can't probe session existence.
+    if (allowed && !allowed.includes(dto.sessionId)) {
+      throw new NotFoundException('Session not found');
+    }
+    const session = await this.prisma.waSession.findFirst({
+      where: { id: dto.sessionId, organizationId },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+
+    const jid = await this.manager.resolveJid(dto.sessionId, dto.to);
+    const conversation = await this.prisma.conversation.upsert({
+      where: {
+        sessionId_remoteJid: { sessionId: dto.sessionId, remoteJid: jid },
+      },
+      create: {
+        organizationId,
+        sessionId: dto.sessionId,
+        remoteJid: jid,
+        isGroup: jid.endsWith('@g.us'),
+        // The inbox lists only conversations with lastMessageAt set; stamp it
+        // so the empty thread is visible until the first message replaces it.
+        lastMessageAt: new Date(),
+      },
+      update: {},
+      include: AGENT_INCLUDE,
+    });
+    return this.toConversationDto(conversation);
+  }
+
   /** Assign to a teammate (null unassigns) and/or set open/resolved. */
   async update(
     organizationId: string,

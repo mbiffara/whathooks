@@ -68,6 +68,17 @@ class NoteDto {
   text!: string;
 }
 
+class StartConversationDto {
+  @IsString()
+  sessionId!: string;
+
+  // Phone number (digits, with country code) or a full WhatsApp JID.
+  @IsString()
+  @MinLength(5)
+  @MaxLength(64)
+  to!: string;
+}
+
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
 @Controller('conversations')
 export class ConversationsController {
@@ -113,6 +124,13 @@ export class ConversationsController {
         tagId: tag,
         allowed,
       }),
+    );
+  }
+
+  @Post()
+  start(@CurrentUser() user: AuthUser, @Body() body: StartConversationDto) {
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.start(this.orgOf(user), body, allowed),
     );
   }
 

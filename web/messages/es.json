@@ -490,7 +490,13 @@
       "modeReply": "Responder",
       "modeNote": "Nota",
       "notePlaceholder": "Nota interna — el contacto no la verá…",
-      "addNote": "Agregar nota"
+      "addNote": "Agregar nota",
+      "newConversation": "Nueva conversación",
+      "newConvSession": "Desde la sesión",
+      "newConvNumber": "Número de WhatsApp",
+      "newConvNumberHint": "Solo dígitos con código de país (sin +), ej. 5491155551234 — verificamos que esté en WhatsApp.",
+      "newConvStart": "Iniciar conversación",
+      "newConvNoSessions": "Necesitas un número de WhatsApp conectado para iniciar una conversación. Conecta uno en Sesiones primero."
     }
   },
   "landing": {

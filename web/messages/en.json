@@ -490,7 +490,13 @@
       "modeReply": "Reply",
       "modeNote": "Note",
       "notePlaceholder": "Internal note — the contact won't see this…",
-      "addNote": "Add note"
+      "addNote": "Add note",
+      "newConversation": "New conversation",
+      "newConvSession": "From session",
+      "newConvNumber": "WhatsApp number",
+      "newConvNumberHint": "Digits with country code (no +), e.g. 5491155551234 — we'll verify it's on WhatsApp.",
+      "newConvStart": "Start conversation",
+      "newConvNoSessions": "You need a connected WhatsApp number to start a conversation. Connect one in Sessions first."
     }
   },
   "landing": {

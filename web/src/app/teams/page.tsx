@@ -165,6 +165,9 @@ twq('config','re0yu');`}
                     </span>
                     {t("threadOut1")}
                   </div>
+                  <div className="max-w-[90%] self-center rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning-bg)] px-3 py-1.5 text-[10px] text-[var(--color-warning)]">
+                    🗒 {t("threadNote")}
+                  </div>
                   <div className="max-w-[85%] self-end rounded-lg rounded-br-none border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/15 px-3 py-2 text-xs">
                     <span className="mb-0.5 block text-[9px] font-semibold text-[var(--color-brand)]">
                       {t("threadOut2Author")}

@@ -705,7 +705,15 @@
     "after": [
       {
         "title": "Shared, live inbox",
-        "desc": "Conversations update in real time with unread counts. Send text and media straight from the browser."
+        "desc": "Conversations update in real time with unread counts, profile photos, and search across names, numbers, and message text. Every reply shows which teammate sent it."
+      },
+      {
+        "title": "Assign & resolve",
+        "desc": "Every conversation gets an owner and a status. Filter by Mine, Unassigned, or Resolved — nothing slips through."
+      },
+      {
+        "title": "Tags & internal notes",
+        "desc": "Label conversations your way ('vip', 'pedido', 'urgente') and leave private team notes the customer never sees."
       },
       {
         "title": "Full history for everyone",
@@ -726,6 +734,10 @@
       {
         "title": "An API when you need it",
         "desc": "The same number is fully programmable: webhooks in, REST replies out. Your devs will thank you."
+      },
+      {
+        "title": "Per-member access",
+        "desc": "Scope each teammate to specific numbers — support sees the support line, sales sees sales. Owners see everything."
       }
     ],
     "howTitle": "Live in three steps",
@@ -778,7 +790,8 @@
     },
     "perMonth": "per month",
     "pricingFootnote": "Start on Starter and upgrade to Pro whenever the team is ready — nothing to migrate.",
-    "trialNote": "7-day free trial"
+    "trialNote": "7-day free trial",
+    "threadNote": "Note · Luis: VIP client, has priority 🔒 Only your team sees this"
   },
   "brands": {
     "trustedBy": "Teams already answering on whathooks"

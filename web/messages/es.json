@@ -705,7 +705,15 @@
     "after": [
       {
         "title": "Bandeja compartida y en vivo",
-        "desc": "Las conversaciones se actualizan en tiempo real con contadores de no leídos. Envía texto y multimedia desde el navegador."
+        "desc": "Las conversaciones se actualizan en tiempo real con contadores de no leídos, fotos de perfil y búsqueda por nombre, número o texto del mensaje. Cada respuesta muestra qué compañero la envió."
+      },
+      {
+        "title": "Asigna y resuelve",
+        "desc": "Cada conversación tiene un responsable y un estado. Filtra por Mías, Sin asignar o Resueltas — nada se pierde."
+      },
+      {
+        "title": "Etiquetas y notas internas",
+        "desc": "Etiqueta las conversaciones a tu manera ('vip', 'pedido', 'urgente') y deja notas privadas del equipo que el cliente nunca ve."
       },
       {
         "title": "Historial completo para todos",
@@ -726,6 +734,10 @@
       {
         "title": "Una API cuando la necesites",
         "desc": "El mismo número es totalmente programable: webhooks de entrada, respuestas REST de salida. Tus devs lo van a agradecer."
+      },
+      {
+        "title": "Acceso por miembro",
+        "desc": "Limita a cada persona a números específicos — soporte ve la línea de soporte, ventas ve ventas. Los propietarios ven todo."
       }
     ],
     "howTitle": "En línea en tres pasos",
@@ -778,7 +790,8 @@
     },
     "perMonth": "al mes",
     "pricingFootnote": "Empieza en Starter y mejora a Pro cuando el equipo esté listo — no hay nada que migrar.",
-    "trialNote": "Prueba gratis de 7 días"
+    "trialNote": "Prueba gratis de 7 días",
+    "threadNote": "Nota · Luis: cliente VIP, tiene prioridad 🔒 Solo tu equipo ve esto"
   },
   "brands": {
     "trustedBy": "Equipos que ya responden en whathooks"

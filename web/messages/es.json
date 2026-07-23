@@ -519,7 +519,8 @@
           "1 endpoint de webhook",
           "Historial de mensajes de 30 días",
           "Soporte de la comunidad"
-        ]
+        ],
+        "price": "$8.99"
       },
       "pro": {
         "desc": "Para productos con volumen real de conversaciones.",
@@ -532,7 +533,8 @@
           "Agentes IA (con tu propia clave)",
           "Historial de mensajes de 90 días",
           "Soporte por correo"
-        ]
+        ],
+        "price": "$24.99"
       },
       "business": {
         "desc": "Escala en números, equipos y flujos de trabajo.",
@@ -544,7 +546,8 @@
           "Miembros de equipo ilimitados",
           "Historial completo de mensajes",
           "Soporte prioritario"
-        ]
+        ],
+        "price": "$79.99"
       }
     },
     "pricingFootnote": "Los límites de mensajes cuentan tanto los entrantes como los salientes. ¿Necesitas más? <link>Escríbenos</link>.",
@@ -733,7 +736,7 @@
     "pricingSubtitle": "Todos los planes incluyen la bandeja compartida — el plan define cuántas personas pueden atenderla. Ambos comienzan con una prueba gratuita de 7 días.",
     "pricingStarter": {
       "name": "Starter",
-      "price": "$9.99",
+      "price": "$8.99",
       "tagline": "La misma bandeja — 2 cuentas",
       "items": [
         "Bandeja completa en el dashboard",
@@ -747,7 +750,7 @@
     },
     "pricingPro": {
       "name": "Pro",
-      "price": "$29.99",
+      "price": "$24.99",
       "tagline": "Todo lo de Starter, más tu equipo",
       "items": [
         "10 miembros de equipo y roles",

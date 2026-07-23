@@ -264,8 +264,8 @@ export interface Subscription {
 }
 
 export const PLAN_PRICING: Record<Plan, { label: string; price: string }> = {
-  STARTER: { label: "Starter", price: "$9.99" },
-  PRO: { label: "Pro", price: "$29.99" },
-  BUSINESS: { label: "Business", price: "$99" },
+  STARTER: { label: "Starter", price: "$8.99" },
+  PRO: { label: "Pro", price: "$24.99" },
+  BUSINESS: { label: "Business", price: "$79.99" },
   SPONSORED: { label: "Sponsored", price: "—" },
 };

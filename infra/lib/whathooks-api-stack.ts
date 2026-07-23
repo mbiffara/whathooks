@@ -209,9 +209,9 @@ export class WhathooksApiStack extends cdk.Stack {
         METRICS_NAMESPACE: 'whathooks',
         // Stripe recurring Price ids (live). Not sensitive — the secret key and
         // webhook signing secret live in `secrets:` below.
-        STRIPE_PRICE_STARTER: 'price_1TtAuDHVX3hp29uYq7BxWqgP',
-        STRIPE_PRICE_PRO: 'price_1TtAuJHVX3hp29uYkKt35bY1',
-        STRIPE_PRICE_BUSINESS: 'price_1TtAuLHVX3hp29uYzqo7cFof',
+        STRIPE_PRICE_STARTER: 'price_1TwMjhHVX3hp29uYiSlPH9jn',
+        STRIPE_PRICE_PRO: 'price_1TwMjiHVX3hp29uYoJQOBCbJ',
+        STRIPE_PRICE_BUSINESS: 'price_1TwMjjHVX3hp29uYWw5myxJR',
         // API-created portal configuration (not the Dashboard default).
         STRIPE_PORTAL_CONFIG: 'bpc_1TtBhkHVX3hp29uYjDbNpayS',
         // Sender for transactional email (Resend). notify.logicalminds.co is

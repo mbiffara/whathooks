@@ -519,7 +519,8 @@
           "1 webhook endpoint",
           "30-day message history",
           "Community support"
-        ]
+        ],
+        "price": "$8.99"
       },
       "pro": {
         "desc": "For products with real conversation volume.",
@@ -532,7 +533,8 @@
           "AI agents (bring your own key)",
           "90-day message history",
           "Email support"
-        ]
+        ],
+        "price": "$24.99"
       },
       "business": {
         "desc": "Scale across numbers, teams, and workflows.",
@@ -544,7 +546,8 @@
           "Unlimited team members",
           "Full message history",
           "Priority support"
-        ]
+        ],
+        "price": "$79.99"
       }
     },
     "pricingFootnote": "Message limits count both inbound and outbound messages. Need more? <link>Talk to us</link>.",
@@ -733,7 +736,7 @@
     "pricingSubtitle": "Every plan includes the shared inbox — the tier sets how many of you can work it. Both start with a 7-day free trial.",
     "pricingStarter": {
       "name": "Starter",
-      "price": "$9.99",
+      "price": "$8.99",
       "tagline": "The same inbox — 2 seats",
       "items": [
         "Full dashboard inbox",
@@ -747,7 +750,7 @@
     },
     "pricingPro": {
       "name": "Pro",
-      "price": "$29.99",
+      "price": "$24.99",
       "tagline": "Everything in Starter, plus your team",
       "items": [
         "10 team members & roles",

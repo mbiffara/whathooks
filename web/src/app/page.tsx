@@ -35,9 +35,9 @@ const FEATURE_ICONS = ["📷", "🔐", "✉️", "📱", "🔁", "⚡"];
 
 /** Plan names and prices are shared across locales; copy lives in messages. */
 const PLAN_META = [
-  { key: "starter", name: "Starter", price: "$9.99", highlighted: false },
-  { key: "pro", name: "Pro", price: "$29.99", highlighted: true },
-  { key: "business", name: "Business", price: "$99", highlighted: false },
+  { key: "starter", name: "Starter", price: "$8.99", highlighted: false },
+  { key: "pro", name: "Pro", price: "$24.99", highlighted: true },
+  { key: "business", name: "Business", price: "$79.99", highlighted: false },
 ];
 
 export default function Home() {
@@ -80,8 +80,8 @@ twq('config','re0yu');`}
               "Connect your WhatsApp number via QR, receive messages on your webhook, and reply through a simple API. Shared team inbox and AI agents included.",
             offers: {
               "@type": "AggregateOffer",
-              lowPrice: "9.99",
-              highPrice: "99",
+              lowPrice: "8.99",
+              highPrice: "79.99",
               priceCurrency: "USD",
             },
             publisher: {

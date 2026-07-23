@@ -80,7 +80,8 @@ export const TRIAL_DAYS = 7;
  */
 export const TRIAL_LIMITS = {
   messagesPerMonth: 300,
-  waNumbers: 1,
+  /** null = trials get their plan's number allowance (a Pro trial gets 3). */
+  waNumbers: null as number | null,
 } as const;
 
 /** Whether this plan requires an active Stripe subscription to use the API. */

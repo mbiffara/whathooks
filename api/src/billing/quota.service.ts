@@ -49,7 +49,10 @@ export class QuotaService {
             plan.messagesPerMonth,
             TRIAL_LIMITS.messagesPerMonth,
           ),
-          waNumbers: min(plan.waNumbers, TRIAL_LIMITS.waNumbers),
+          waNumbers:
+            TRIAL_LIMITS.waNumbers == null
+              ? plan.waNumbers
+              : min(plan.waNumbers, TRIAL_LIMITS.waNumbers),
         }
       : plan;
     return { ...org, trialing, limits };

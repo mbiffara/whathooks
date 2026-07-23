@@ -523,7 +523,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     if (!hit?.exists) {
       throw new BadRequestException('This number is not on WhatsApp');
     }
-    return hit.jid;
+    this.log.log(`resolveJid on ${sessionId}: ${to} -> ${hit.jid}`);
+    // USync may answer with the contact's LID instead of the phone JID.
+    // Keep the phone-number form: sends to @lid silently vanish on Baileys
+    // rc13, and inbound threads are keyed by phone JID anyway.
+    return hit.jid.endsWith('@lid') ? jid : hit.jid;
   }
 
   /** The connected number's own msisdn (no domain), or null if not live. */

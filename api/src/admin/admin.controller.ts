@@ -1,17 +1,28 @@
 import {
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
+  Post,
   UseGuards,
 } from '@nestjs/common';
+import { IsIn, IsOptional } from 'class-validator';
 import { readFileSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PLANS, TRIAL_LIMITS, currentMonthStart } from '../billing/plans';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
+
+export class WelcomeEmailDto {
+  // Override the recipient's stored language for this send.
+  @IsOptional()
+  @IsIn(['en', 'es'])
+  locale?: string;
+}
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
@@ -20,7 +31,24 @@ export class AdminController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly manager: ConnectionManagerService,
+    private readonly mail: MailService,
   ) {}
+
+  /** Manual founder welcome email, triggered from the admin console. */
+  @Post('users/:id/welcome-email')
+  async sendWelcomeEmail(
+    @Param('id') id: string,
+    @Body() dto: WelcomeEmailDto,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    const sent = await this.mail.sendWelcome({
+      to: user.email,
+      name: user.name,
+      locale: dto.locale ?? user.locale,
+    });
+    return { sent, to: user.email };
+  }
 
   @Get('overview')
   async overview() {
@@ -103,6 +131,7 @@ export class AdminController {
             email: true,
             name: true,
             role: true,
+            locale: true,
             createdAt: true,
           },
           orderBy: { createdAt: 'asc' },

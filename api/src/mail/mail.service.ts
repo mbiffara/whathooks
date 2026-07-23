@@ -21,6 +21,13 @@ export interface InvitationEmail {
   locale?: string | null;
 }
 
+export interface WelcomeEmail {
+  to: string;
+  name: string | null;
+  /** Recipient's language ("en" | "es"); anything else falls back to en. */
+  locale?: string | null;
+}
+
 export interface TrialEndingEmail {
   to: string;
   planLabel: string;
@@ -75,6 +82,22 @@ export class MailService {
     });
   }
 
+  /** Personal founder hello, sent manually from the admin console. */
+  async sendWelcome(email: WelcomeEmail): Promise<boolean> {
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale].welcome;
+    return this.send(email.to, {
+      locale,
+      subject: M.subject,
+      preheader: M.preheader,
+      heading: M.heading(email.name),
+      paragraphs: [M.body1, M.body2, M.body3],
+      footnote: M.footnote,
+      // Replies should land with Marcelo, not the send-only domain.
+      replyTo: this.config.get<string>('MAIL_REPLY_TO', 'hello@logicalminds.co'),
+    });
+  }
+
   /** Heads-up ~3 days before a free trial converts into the first charge. */
   async sendTrialEnding(email: TrialEndingEmail): Promise<boolean> {
     const locale = localeOf(email.locale);
@@ -94,7 +117,7 @@ export class MailService {
   /** Render through the shared layout and deliver via Resend. */
   private async send(
     to: string,
-    content: EmailContent & { subject: string },
+    content: EmailContent & { subject: string; replyTo?: string },
   ): Promise<boolean> {
     const apiKey = this.config.get<string>('RESEND_API_KEY');
     if (!apiKey) {
@@ -119,6 +142,7 @@ export class MailService {
         body: JSON.stringify({
           from,
           to: [to],
+          ...(content.replyTo ? { reply_to: [content.replyTo] } : {}),
           subject: content.subject,
           html: renderEmailHtml(content),
           text: renderEmailText(content),

@@ -1,4 +1,5 @@
 import { AdminOrgSwitch } from "@/components/admin-org-switch";
+import { AdminWelcomeEmail } from "@/components/admin-welcome-email";
 import { StatusBadge } from "@/components/status-badge";
 import { apiServer } from "@/lib/api";
 import type { AdminOrgDetail } from "@/lib/types";
@@ -148,7 +149,7 @@ export default async function AdminOrgPage({
       </Section>
 
       <Section title="Users">
-        <Table head={["Email", "Name", "Role", "Joined"]}>
+        <Table head={["Email", "Name", "Role", "Joined", ""]}>
           {org.users.map((u) => (
             <tr key={u.id} className="row">
               <td className="cell font-mono text-xs">{u.email}</td>
@@ -166,6 +167,13 @@ export default async function AdminOrgPage({
               </td>
               <td className="cell text-xs text-[var(--color-muted)]">
                 {new Date(u.createdAt).toLocaleDateString()}
+              </td>
+              <td className="cell text-right">
+                <AdminWelcomeEmail
+                  userId={u.id}
+                  email={u.email}
+                  defaultLocale={u.locale}
+                />
               </td>
             </tr>
           ))}

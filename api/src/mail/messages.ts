@@ -29,6 +29,19 @@ export const MAIL_MESSAGES = {
         `This link is valid for ${validFor} and can be used once. If you didn't request it, you can ignore this email — your password is unchanged.`,
       validFor: '1 hour',
     },
+    welcome: {
+      subject: 'Welcome to whathooks — a hello from the founder',
+      preheader: "What are you planning to build? I'd love to hear it.",
+      heading: (name: string | null) => (name ? `Hi ${name}!` : 'Hi there!'),
+      body1:
+        "I'm Marcelo, the founder of whathooks. Thanks for creating an account — it genuinely means a lot.",
+      body2:
+        "I'd love to hear what you're planning to use whathooks for — a shared support inbox, order notifications, an AI agent answering on WhatsApp? Just hit reply and tell me; I read and answer every email.",
+      body3:
+        "And if you hit any snags connecting your number or getting your first webhook to fire, reply too — I'm happy to help you get set up.",
+      footnote:
+        "You're receiving this because you created a whathooks account. It's a one-time personal note, not a newsletter.",
+    },
     trialEnding: {
       subject: 'Your whathooks trial ends soon',
       preheader: (date: string) =>
@@ -75,6 +88,19 @@ export const MAIL_MESSAGES = {
       footnote: (validFor: string) =>
         `Este enlace es válido por ${validFor} y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo — tu contraseña no cambió.`,
       validFor: '1 hora',
+    },
+    welcome: {
+      subject: 'Te damos la bienvenida a whathooks — un saludo del fundador',
+      preheader: '¿Qué planeas construir? Me encantaría saberlo.',
+      heading: (name: string | null) => (name ? `¡Hola ${name}!` : '¡Hola!'),
+      body1:
+        'Soy Marcelo, el fundador de whathooks. Gracias por crear una cuenta — de verdad significa mucho.',
+      body2:
+        '¿Me cuentas para qué planeas usar whathooks? ¿Una bandeja de soporte compartida, notificaciones de pedidos, un agente IA respondiendo en WhatsApp? Responde este correo y cuéntame; leo y contesto todos.',
+      body3:
+        'Y si te trabas conectando tu número o haciendo que dispare tu primer webhook, responde también — con gusto te ayudo a configurarlo.',
+      footnote:
+        'Recibes este correo porque creaste una cuenta en whathooks. Es una nota personal única, no un boletín.',
     },
     trialEnding: {
       subject: 'Tu prueba gratuita de whathooks termina pronto',

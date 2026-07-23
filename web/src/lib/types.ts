@@ -158,6 +158,7 @@ export interface AdminOrgDetail {
     email: string;
     name: string | null;
     role: "ADMIN" | "CLIENT";
+    locale: string;
     createdAt: string;
   }[];
   sessions: {

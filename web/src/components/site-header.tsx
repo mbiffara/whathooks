@@ -24,6 +24,12 @@ export async function SiteHeader() {
             {t("docs")}
           </Link>
           <Link
+            href="/teams"
+            className="hidden px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)] sm:block"
+          >
+            {t("forTeams")}
+          </Link>
+          <Link
             href="/#pricing"
             className="hidden px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)] sm:block"
           >

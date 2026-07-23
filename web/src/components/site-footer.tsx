@@ -12,6 +12,9 @@ export function SiteFooter() {
           <Link href="/docs" className="hover:text-[var(--color-fg)]">
             {t("docs")}
           </Link>
+          <Link href="/teams" className="hover:text-[var(--color-fg)]">
+            {t("forTeams")}
+          </Link>
           <Link href="/signin" className="hover:text-[var(--color-fg)]">
             {t("signIn")}
           </Link>

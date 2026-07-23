@@ -34,11 +34,15 @@ export const MAIL_MESSAGES = {
       preheader: "What are you planning to build? I'd love to hear it.",
       heading: (name: string | null) => (name ? `Hi ${name}!` : 'Hi there!'),
       body1:
-        "I'm Marcelo, the founder of whathooks. Thanks for creating an account — it genuinely means a lot.",
+        "I'm Marcelo, the founder of whathooks. Thanks for creating an account, it truly means a lot to me.",
       body2:
-        "I'd love to hear what you're planning to use whathooks for — a shared support inbox, order notifications, an AI agent answering on WhatsApp? Just hit reply and tell me; I read and answer every email.",
+        'What are you planning to use whathooks for? A shared support inbox, order notifications, an AI agent answering on WhatsApp?',
       body3:
-        "And if you hit any snags connecting your number or getting your first webhook to fire, reply too — I'm happy to help you get set up.",
+        "When you hit reply, this email lands directly in my work inbox, so I'll definitely get back to you quickly.",
+      body4:
+        "If you get stuck connecting your number or firing your first webhook, let me know and I'll gladly help you set it up.",
+      signoff: 'Best,',
+      signature: 'Marcelo Biffara',
       footnote:
         "You're receiving this because you created a whathooks account. It's a one-time personal note, not a newsletter.",
     },
@@ -94,11 +98,15 @@ export const MAIL_MESSAGES = {
       preheader: '¿Qué planeas construir? Me encantaría saberlo.',
       heading: (name: string | null) => (name ? `¡Hola ${name}!` : '¡Hola!'),
       body1:
-        'Soy Marcelo, el fundador de whathooks. Gracias por crear una cuenta — de verdad significa mucho.',
+        'Soy Marcelo, el fundador de whathooks. Gracias por crear una cuenta, de verdad significa mucho para mí.',
       body2:
-        '¿Me cuentas para qué planeas usar whathooks? ¿Una bandeja de soporte compartida, notificaciones de pedidos, un agente IA respondiendo en WhatsApp? Responde este correo y cuéntame; leo y contesto todos.',
+        'Me gustaría que me cuentes ¿para qué planeas usar whathooks? ¿Una bandeja de soporte compartida, notificaciones de pedidos, un agente IA respondiendo por WhatsApp?',
       body3:
-        'Y si te trabas conectando tu número o haciendo que dispare tu primer webhook, responde también — con gusto te ayudo a configurarlo.',
+        'Al responder, este correo llega directamente a mi email laboral, así que seguro voy a responderte rápidamente.',
+      body4:
+        'Si te trabas conectando tu número o haciendo que dispare tu primer webhook, avísame y con gusto te ayudo a configurarlo.',
+      signoff: 'Saludos,',
+      signature: 'Marcelo Biffara',
       footnote:
         'Recibes este correo porque creaste una cuenta en whathooks. Es una nota personal única, no un boletín.',
     },

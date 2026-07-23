@@ -145,6 +145,7 @@ export interface AdminOrg {
   createdAt: string;
   plan: Plan;
   subscriptionStatus: string | null;
+  currentPeriodEnd: string | null;
   owner: {
     id: string;
     email: string;
@@ -153,6 +154,7 @@ export interface AdminOrg {
   } | null;
   users: number;
   sessions: number;
+  agents: number;
   webhooks: number;
   conversations: number;
   messages: number;

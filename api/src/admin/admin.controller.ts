@@ -110,6 +110,7 @@ export class AdminController {
           select: {
             memberships: true,
             sessions: true,
+            agents: true,
             webhooks: true,
             conversations: true,
             messages: true,
@@ -123,6 +124,7 @@ export class AdminController {
       createdAt: o.createdAt,
       plan: o.plan,
       subscriptionStatus: o.subscriptionStatus,
+      currentPeriodEnd: o.currentPeriodEnd,
       owner: o.memberships[0]
         ? {
             id: o.memberships[0].user.id,
@@ -133,6 +135,7 @@ export class AdminController {
         : null,
       users: o._count.memberships,
       sessions: o._count.sessions,
+      agents: o._count.agents,
       webhooks: o._count.webhooks,
       conversations: o._count.conversations,
       messages: o._count.messages,

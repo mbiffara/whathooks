@@ -1,31 +1,7 @@
-import { AdminWelcomeEmail } from "@/components/admin-welcome-email";
+import { AdminOrgTable } from "@/components/admin-org-table";
 import { apiServer } from "@/lib/api";
 import type { AdminOrg, AdminOverview } from "@/lib/types";
 import Link from "next/link";
-
-const SUB_BADGE: Record<string, string> = {
-  active: "bg-[var(--color-brand)]/15 text-[var(--color-brand)]",
-  trialing: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
-  past_due: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
-  canceled: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
-};
-
-function SubscriptionBadge({ status }: { status: string | null }) {
-  if (!status) {
-    return (
-      <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
-        none
-      </span>
-    );
-  }
-  return (
-    <span
-      className={`badge ${SUB_BADGE[status] ?? "bg-[var(--color-chip)] text-[var(--color-muted)]"}`}
-    >
-      {status}
-    </span>
-  );
-}
 
 export default async function AdminPage() {
   const [overview, orgs] = await Promise.all([
@@ -66,73 +42,7 @@ export default async function AdminPage() {
 
       {overview?.system && <SystemHealth system={overview.system} />}
 
-      <section className="card overflow-x-auto p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
-              <th className="px-4 py-3 font-medium">Organization</th>
-              <th className="px-4 py-3 font-medium">Plan</th>
-              <th className="px-4 py-3 font-medium">Users</th>
-              <th className="px-4 py-3 font-medium">Sessions</th>
-              <th className="px-4 py-3 font-medium">Webhooks</th>
-              <th className="px-4 py-3 font-medium">Chats</th>
-              <th className="px-4 py-3 font-medium">Messages</th>
-              <th className="px-4 py-3 font-medium">Joined</th>
-              <th className="px-4 py-3"></th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {orgs.map((o) => (
-              <tr
-                key={o.id}
-                className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]/50"
-              >
-                <td className="px-4 py-3 font-medium">
-                  <Link
-                    href={`/admin/organizations/${o.id}`}
-                    className="hover:text-[var(--color-brand)]"
-                  >
-                    {o.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs">{o.plan}</span>
-                    <SubscriptionBadge status={o.subscriptionStatus} />
-                  </div>
-                </td>
-                <td className="px-4 py-3">{o.users}</td>
-                <td className="px-4 py-3">{o.sessions}</td>
-                <td className="px-4 py-3">{o.webhooks}</td>
-                <td className="px-4 py-3">{o.conversations}</td>
-                <td className="px-4 py-3">{o.messages}</td>
-                <td className="px-4 py-3 text-xs text-[var(--color-muted)]">
-                  {new Date(o.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3">
-                  {o.owner && (
-                    <AdminWelcomeEmail
-                      userId={o.owner.id}
-                      email={o.owner.email}
-                      defaultLocale={o.owner.locale}
-                      sentAt={o.owner.welcomeEmailSentAt}
-                    />
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/admin/organizations/${o.id}`}
-                    className="text-sm text-[var(--color-brand)]"
-                  >
-                    View →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <AdminOrgTable orgs={orgs} />
     </div>
   );
 }

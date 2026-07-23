@@ -35,14 +35,18 @@ export class QuotaService {
   private async orgBilling(organizationId: string) {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { plan: true, subscriptionStatus: true },
+      select: {
+        plan: true,
+        subscriptionStatus: true,
+        messageLimitOverride: true,
+      },
     });
     if (!org) throw new NotFoundException('Organization not found');
     const trialing = org.subscriptionStatus === 'trialing';
     const plan = PLANS[org.plan];
     // Trialing orgs get trial caps regardless of tier; history follows the
     // plan so nothing disappears when the trial converts.
-    const limits = trialing
+    const limits: (typeof PLANS)[keyof typeof PLANS] = trialing
       ? {
           ...plan,
           messagesPerMonth: min(
@@ -55,6 +59,10 @@ export class QuotaService {
               : min(plan.waNumbers, TRIAL_LIMITS.waNumbers),
         }
       : plan;
+    // A manual admin override beats both the plan and the trial cap.
+    if (org.messageLimitOverride != null) {
+      limits.messagesPerMonth = org.messageLimitOverride;
+    }
     return { ...org, trialing, limits };
   }
 

@@ -1,13 +1,14 @@
 import {
   Body,
   Controller,
+  Patch,
   Get,
   NotFoundException,
   Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { IsIn, IsOptional } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Min, ValidateIf } from 'class-validator';
 import { readFileSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -16,6 +17,15 @@ import { PLANS, TRIAL_LIMITS, currentMonthStart } from '../billing/plans';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
+
+export class OrgLimitsDto {
+  // null clears the override (back to plan/trial defaults)
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsInt()
+  @Min(1)
+  messageLimitOverride?: number | null;
+}
 
 export class WelcomeEmailDto {
   // Override the recipient's stored language for this send.
@@ -33,6 +43,22 @@ export class AdminController {
     private readonly manager: ConnectionManagerService,
     private readonly mail: MailService,
   ) {}
+
+  /** Set/clear a manual monthly message cap for one org. */
+  @Patch('organizations/:id/limits')
+  async setOrgLimits(@Param('id') id: string, @Body() dto: OrgLimitsDto) {
+    const org = await this.prisma.organization.findUnique({ where: { id } });
+    if (!org) throw new NotFoundException('Organization not found');
+    const updated = await this.prisma.organization.update({
+      where: { id },
+      data: {
+        ...(dto.messageLimitOverride !== undefined
+          ? { messageLimitOverride: dto.messageLimitOverride }
+          : {}),
+      },
+    });
+    return { ok: true, messageLimitOverride: updated.messageLimitOverride };
+  }
 
   /** Manual founder welcome email, triggered from the admin console. */
   @Post('users/:id/welcome-email')
@@ -202,11 +228,12 @@ export class AdminController {
     const planLimit = PLANS[org.plan].messagesPerMonth;
     const trialing = org.subscriptionStatus === 'trialing';
     const limit =
-      trialing && planLimit != null
+      org.messageLimitOverride ??
+      (trialing && planLimit != null
         ? Math.min(planLimit, TRIAL_LIMITS.messagesPerMonth)
         : trialing
           ? TRIAL_LIMITS.messagesPerMonth
-          : planLimit;
+          : planLimit);
     return {
       id: org.id,
       name: org.name,
@@ -219,6 +246,7 @@ export class AdminController {
         stripeCustomerId: org.stripeCustomerId,
         stripeSubscriptionId: org.stripeSubscriptionId,
         usage: { used, limit },
+        messageLimitOverride: org.messageLimitOverride,
       },
       users: org.memberships.map((m) => ({
         id: m.user.id,

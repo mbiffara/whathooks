@@ -1,3 +1,4 @@
+import { AdminMessageCap } from "@/components/admin-message-cap";
 import { AdminOrgSwitch } from "@/components/admin-org-switch";
 import { AdminWelcomeEmail } from "@/components/admin-welcome-email";
 import { StatusBadge } from "@/components/status-badge";
@@ -96,6 +97,10 @@ export default async function AdminOrgPage({
               ? "Unlimited"
               : org.billing.usage.limit.toLocaleString()}
           </div>
+          <AdminMessageCap
+            organizationId={org.id}
+            override={org.billing.messageLimitOverride}
+          />
           <div className="flex flex-wrap gap-2 text-xs">
             {org.billing.stripeCustomerId ? (
               <a

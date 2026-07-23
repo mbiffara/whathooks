@@ -172,6 +172,7 @@ export interface AdminOrgDetail {
     stripeCustomerId: string | null;
     stripeSubscriptionId: string | null;
     usage: { used: number; limit: number | null };
+    messageLimitOverride: number | null;
   };
   users: {
     id: string;

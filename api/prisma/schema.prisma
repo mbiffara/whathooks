@@ -45,6 +45,8 @@ model Organization {
   // Billing (Stripe). plan is the entitlement tier; subscriptionStatus mirrors
   // the Stripe subscription state (active | trialing | past_due | canceled | …).
   plan                 Plan      @default(STARTER)
+  // Admin override for the monthly message cap (null = plan/trial default).
+  messageLimitOverride Int?
   // X ads click id captured at signup (twclid) — used to attribute the later
   // paid-subscription conversion via X's Conversion API. Never shown in UI.
   adClickId            String?

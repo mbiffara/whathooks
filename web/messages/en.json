@@ -284,7 +284,8 @@
       "valuePlaceholder": "the value to send",
       "removeField": "Remove field",
       "addField": "+ Add field",
-      "mappingHint": "With mapping, <code>data</code> contains only these fields. Date formats: <code>iso</code>, <code>unix</code>, <code>unix_ms</code>, or a pattern like <code>yyyy-MM-dd HH:mm</code> (UTC)."
+      "mappingHint": "With mapping, <code>data</code> contains only these fields. Date formats: <code>iso</code>, <code>unix</code>, <code>unix_ms</code>, or a pattern like <code>yyyy-MM-dd HH:mm</code> (UTC).",
+      "upgradeAction": "Adding a webhook"
     },
     "team": {
       "title": "Team",

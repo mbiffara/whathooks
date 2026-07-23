@@ -18,6 +18,8 @@ export interface PlanLimits {
   waNumbers: number | null;
   /** Max users in the organization (members incl. owner); null = unlimited. */
   teamMembers: number | null;
+  /** Max webhook endpoints; null = unlimited. */
+  webhooks: number | null;
   /**
    * Env var holding the Stripe recurring Price id for this tier. Absent for
    * tiers that aren't purchasable (SPONSORED) — those also skip the
@@ -33,6 +35,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     historyDays: 30,
     waNumbers: 1,
     teamMembers: 2,
+    webhooks: 1,
     priceEnv: 'STRIPE_PRICE_STARTER',
   },
   PRO: {
@@ -41,6 +44,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     historyDays: 90,
     waNumbers: 3,
     teamMembers: 10,
+    webhooks: null,
     priceEnv: 'STRIPE_PRICE_PRO',
   },
   BUSINESS: {
@@ -49,6 +53,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     historyDays: null,
     waNumbers: 10,
     teamMembers: null,
+    webhooks: null,
     priceEnv: 'STRIPE_PRICE_BUSINESS',
   },
   SPONSORED: {
@@ -57,6 +62,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     historyDays: null,
     waNumbers: null,
     teamMembers: null,
+    webhooks: null,
   },
 };
 

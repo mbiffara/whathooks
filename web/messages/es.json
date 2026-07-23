@@ -284,7 +284,8 @@
       "valuePlaceholder": "el valor a enviar",
       "removeField": "Quitar campo",
       "addField": "+ Agregar campo",
-      "mappingHint": "Con mapeo, <code>data</code> contiene solo estos campos. Formatos de fecha: <code>iso</code>, <code>unix</code>, <code>unix_ms</code> o un patrón como <code>yyyy-MM-dd HH:mm</code> (UTC)."
+      "mappingHint": "Con mapeo, <code>data</code> contiene solo estos campos. Formatos de fecha: <code>iso</code>, <code>unix</code>, <code>unix_ms</code> o un patrón como <code>yyyy-MM-dd HH:mm</code> (UTC).",
+      "upgradeAction": "Agregar un webhook"
     },
     "team": {
       "title": "Equipo",

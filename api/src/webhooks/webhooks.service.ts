@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Webhook } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateWebhookDto,
@@ -15,7 +16,10 @@ import { mappingRulesError } from './payload-mapping';
 
 @Injectable()
 export class WebhooksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly quota: QuotaService,
+  ) {}
 
   async list(organizationId: string) {
     const hooks = await this.prisma.webhook.findMany({
@@ -26,6 +30,7 @@ export class WebhooksService {
   }
 
   async create(organizationId: string, dto: CreateWebhookDto) {
+    await this.quota.assertCanAddWebhook(organizationId);
     if (dto.sessionId) {
       const session = await this.prisma.waSession.findFirst({
         where: { id: dto.sessionId, organizationId },

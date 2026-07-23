@@ -1,6 +1,7 @@
 "use client";
 
-import { apiClient } from "@/lib/client-api";
+import { UpgradeModal } from "@/components/upgrade-modal";
+import { apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { MappingRule, WaSession, Webhook } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
@@ -178,6 +179,7 @@ export default function WebhooksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newSecret, setNewSecret] = useState<string | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   // Per-hook mapping editor (id of the hook being edited + its draft rows).
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRows, setEditRows] = useState<RuleRow[]>([]);
@@ -231,7 +233,11 @@ export default function WebhooksPage() {
       setShowMapping(false);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : tc("failedToCreate"));
+      if (isSubscriptionRequired(e)) {
+        setShowUpgrade(true);
+      } else {
+        setError(e instanceof Error ? e.message : tc("failedToCreate"));
+      }
     }
   }
 
@@ -356,6 +362,11 @@ export default function WebhooksPage() {
       </form>
 
       {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
+      <UpgradeModal
+        open={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        action={t("upgradeAction")}
+      />
       {newSecret && (
         <div className="card border-[var(--color-brand)]/40">
           <p className="text-sm font-medium">{t("secretNotice")}</p>

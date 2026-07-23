@@ -120,6 +120,22 @@ export class QuotaService {
     }
   }
 
+  /** Throw if the org may not register another webhook endpoint. */
+  async assertCanAddWebhook(organizationId: string): Promise<void> {
+    const org = await this.orgBilling(organizationId);
+    this.assertSubscribed(org);
+    const limit = org.limits.webhooks;
+    if (limit == null) return;
+    const count = await this.prisma.webhook.count({
+      where: { organizationId },
+    });
+    if (count >= limit) {
+      throw new ForbiddenException(
+        `Your plan allows ${limit} webhook endpoint(s). Upgrade to add more.`,
+      );
+    }
+  }
+
   /**
    * Earliest timestamp visible under the plan's retention window, or null when
    * history is unlimited. Use as a `createdAt >= …` filter on message reads.

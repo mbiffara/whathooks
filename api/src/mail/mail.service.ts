@@ -94,7 +94,7 @@ export class MailService {
       paragraphs: [M.body1, M.body2, M.body3],
       footnote: M.footnote,
       // Replies should land with Marcelo, not the send-only domain.
-      replyTo: this.config.get<string>('MAIL_REPLY_TO', 'hello@logicalminds.co'),
+      replyTo: this.config.get<string>('MAIL_REPLY_TO', 'marcelo@logicalminds.co'),
     });
   }
 

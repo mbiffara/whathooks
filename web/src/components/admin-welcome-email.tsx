@@ -81,7 +81,7 @@ export function AdminWelcomeEmail({
                 {email}
               </span>
               , asking what they plan to use whathooks for and offering help.
-              Replies go to hello@logicalminds.co.
+              Replies go to marcelo@logicalminds.co.
             </p>
             <div className="mt-4">
               <label className="label">Language</label>

@@ -38,7 +38,7 @@ function senderLabel(
       return "⚙ API";
     case "HUMAN":
       // Attribution: which teammate replied (older rows predate tracking).
-      return message.sentByName ? `🧑 ${message.sentByName}` : null;
+      return message.sentByName ?? null;
     default:
       return null;
   }

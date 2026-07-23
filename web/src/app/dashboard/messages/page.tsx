@@ -36,6 +36,7 @@ function mergeMessages(
 
 export default function MessagesPage() {
   const t = useTranslations("dash.messages");
+  const tc = useTranslations("common");
   const tStatus = useTranslations("dash.status");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
@@ -56,6 +57,7 @@ export default function MessagesPage() {
   const [tagFilter, setTagFilter] = useState("");
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
+  const [tagError, setTagError] = useState<string | null>(null);
   const [noteMode, setNoteMode] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [convLoading, setConvLoading] = useState(true);
@@ -354,6 +356,7 @@ export default function MessagesPage() {
   async function createTag() {
     const name = newTagName.trim();
     if (!token || !name) return;
+    setTagError(null);
     try {
       const created = await apiClient<ConversationTag>("/tags", token, {
         method: "POST",
@@ -366,8 +369,8 @@ export default function MessagesPage() {
       );
       setNewTagName("");
       await toggleTag(created.id);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      setTagError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     }
   }
 
@@ -714,6 +717,11 @@ export default function MessagesPage() {
                         );
                       })}
                     </div>
+                    {tagError && (
+                      <p className="mt-1 px-1 text-[10px] text-[var(--color-danger)]">
+                        {tagError}
+                      </p>
+                    )}
                     <div className="mt-2 flex gap-1 border-t border-[var(--color-border)] pt-2">
                       <input
                         className="input h-7 flex-1 px-2 py-0 text-xs"

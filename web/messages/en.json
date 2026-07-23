@@ -170,11 +170,11 @@
       "LOGGED_OUT": "Logged out"
     },
     "upgrade": {
-      "title": "Paid plan required",
+      "title": "Start your free trial",
       "body": "{action} requires an active subscription. Pick a plan to continue — new subscriptions start with a 7-day free trial, and you can cancel anytime.",
       "defaultAction": "This action",
       "notNow": "Not now",
-      "viewPlans": "View plans"
+      "viewPlans": "START FREE TRIAL"
     },
     "orgSwitcher": {
       "organization": "Organization"

@@ -170,11 +170,11 @@
       "LOGGED_OUT": "Sesión cerrada"
     },
     "upgrade": {
-      "title": "Se requiere un plan de pago",
+      "title": "Comienza tu prueba gratuita",
       "body": "{action} requiere una suscripción activa. Elige un plan para continuar — las suscripciones nuevas comienzan con una prueba gratuita de 7 días y puedes cancelar cuando quieras.",
       "defaultAction": "Esta acción",
       "notNow": "Ahora no",
-      "viewPlans": "Ver planes"
+      "viewPlans": "COMENZAR PRUEBA GRATIS"
     },
     "orgSwitcher": {
       "organization": "Organización"

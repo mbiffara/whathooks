@@ -97,7 +97,7 @@ export class AdminController {
       include: {
         _count: {
           select: {
-            users: true,
+            memberships: true,
             sessions: true,
             webhooks: true,
             conversations: true,
@@ -112,7 +112,7 @@ export class AdminController {
       createdAt: o.createdAt,
       plan: o.plan,
       subscriptionStatus: o.subscriptionStatus,
-      users: o._count.users,
+      users: o._count.memberships,
       sessions: o._count.sessions,
       webhooks: o._count.webhooks,
       conversations: o._count.conversations,
@@ -125,15 +125,8 @@ export class AdminController {
     const org = await this.prisma.organization.findUnique({
       where: { id },
       include: {
-        users: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            locale: true,
-            createdAt: true,
-          },
+        memberships: {
+          include: { user: true },
           orderBy: { createdAt: 'asc' },
         },
         sessions: {
@@ -204,7 +197,15 @@ export class AdminController {
         stripeSubscriptionId: org.stripeSubscriptionId,
         usage: { used, limit },
       },
-      users: org.users,
+      users: org.memberships.map((m) => ({
+        id: m.user.id,
+        email: m.user.email,
+        name: m.user.name,
+        role: m.user.role,
+        locale: m.user.locale,
+        orgRole: m.role,
+        createdAt: m.user.createdAt,
+      })),
       sessions: org.sessions,
       webhooks: org.webhooks,
       apiKeys: org.apiKeys,

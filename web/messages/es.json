@@ -231,17 +231,20 @@
       "features": {
         "STARTER": [
           "1 número de WhatsApp",
+          "2 miembros de equipo",
           "5.000 mensajes / mes",
           "Historial de 30 días"
         ],
         "PRO": [
           "3 números de WhatsApp",
+          "10 miembros de equipo y roles",
           "10.000 mensajes / mes",
           "Historial de 90 días",
-          "Agentes IA y roles de equipo"
+          "Agentes IA"
         ],
         "BUSINESS": [
           "10 números de WhatsApp",
+          "Miembros de equipo ilimitados",
           "100.000 mensajes / mes",
           "Historial completo",
           "Soporte prioritario"
@@ -489,6 +492,7 @@
         "cta": "Prueba Starter gratis",
         "items": [
           "1 número de WhatsApp",
+          "2 miembros de equipo",
           "5.000 mensajes / mes",
           "1 endpoint de webhook",
           "Historial de mensajes de 30 días",
@@ -500,10 +504,10 @@
         "cta": "Prueba Pro gratis",
         "items": [
           "3 números de WhatsApp",
+          "10 miembros de equipo y roles",
           "10.000 mensajes / mes",
           "Webhooks ilimitados",
           "Agentes IA (con tu propia clave)",
-          "Miembros de equipo y roles",
           "Historial de mensajes de 90 días",
           "Soporte por correo"
         ]
@@ -704,13 +708,14 @@
     "ctaTitle": "Saca el teléfono del flujo de trabajo",
     "ctaSubtitle": "Conecta tu número, invita al equipo y atiende WhatsApp como el resto de tus herramientas — juntos, desde el navegador.",
     "ctaButton": "Crea tu bandeja de equipo",
-    "pricingSubtitle": "La bandeja del dashboard viene incluida en todos los planes — en Pro se suma tu equipo. Ambos comienzan con una prueba gratuita de 7 días.",
+    "pricingSubtitle": "Todos los planes incluyen la bandeja compartida — el plan define cuántas personas pueden atenderla. Ambos comienzan con una prueba gratuita de 7 días.",
     "pricingStarter": {
       "name": "Starter",
       "price": "$9.99",
-      "tagline": "La misma bandeja, en solitario",
+      "tagline": "La misma bandeja — 2 cuentas",
       "items": [
         "Bandeja completa en el dashboard",
+        "2 miembros de equipo",
         "1 número de WhatsApp",
         "5.000 mensajes / mes",
         "Webhooks y API incluidos",
@@ -723,8 +728,7 @@
       "price": "$29.99",
       "tagline": "Todo lo de Starter, más tu equipo",
       "items": [
-        "Miembros de equipo y roles",
-        "Cuentas de equipo ilimitadas",
+        "10 miembros de equipo y roles",
         "3 números de WhatsApp",
         "10.000 mensajes / mes",
         "Agentes IA (con tu propia clave)",

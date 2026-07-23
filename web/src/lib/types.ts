@@ -159,6 +159,7 @@ export interface AdminOrgDetail {
     name: string | null;
     role: "ADMIN" | "CLIENT";
     locale: string;
+    orgRole: OrgRole;
     createdAt: string;
   }[];
   sessions: {

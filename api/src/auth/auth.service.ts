@@ -22,6 +22,7 @@ import {
   ResetPasswordDto,
   UpdateProfileDto,
 } from './dto/auth.dto';
+import { PLANS } from '../billing/plans';
 import { JwtPayload } from './jwt.strategy';
 
 type MembershipWithOrg = Membership & { organization: Organization };
@@ -129,6 +130,22 @@ export class AuthService {
           invite.expiresAt < new Date()
         ) {
           throw new BadRequestException('Invitation is invalid or has expired');
+        }
+        // Plan seat limit — same rule the invite-accept path applies.
+        const inviteOrg = await tx.organization.findUnique({
+          where: { id: invite.organizationId },
+          select: { plan: true },
+        });
+        const seatLimit = inviteOrg ? PLANS[inviteOrg.plan].teamMembers : null;
+        if (seatLimit != null) {
+          const members = await tx.membership.count({
+            where: { organizationId: invite.organizationId },
+          });
+          if (members >= seatLimit) {
+            throw new BadRequestException(
+              "This organization has reached its plan's team member limit.",
+            );
+          }
         }
         const created = await tx.user.create({
           data: {

@@ -231,17 +231,20 @@
       "features": {
         "STARTER": [
           "1 WhatsApp number",
+          "2 team members",
           "5,000 messages / month",
           "30-day history"
         ],
         "PRO": [
           "3 WhatsApp numbers",
+          "10 team members & roles",
           "10,000 messages / month",
           "90-day history",
-          "AI agents & team roles"
+          "AI agents"
         ],
         "BUSINESS": [
           "10 WhatsApp numbers",
+          "Unlimited team members",
           "100,000 messages / month",
           "Full history",
           "Priority support"
@@ -489,6 +492,7 @@
         "cta": "Try Starter free",
         "items": [
           "1 WhatsApp number",
+          "2 team members",
           "5,000 messages / month",
           "1 webhook endpoint",
           "30-day message history",
@@ -500,10 +504,10 @@
         "cta": "Try Pro free",
         "items": [
           "3 WhatsApp numbers",
+          "10 team members & roles",
           "10,000 messages / month",
           "Unlimited webhooks",
           "AI agents (bring your own key)",
-          "Team members & roles",
           "90-day message history",
           "Email support"
         ]
@@ -704,13 +708,14 @@
     "ctaTitle": "Get the phone out of the workflow",
     "ctaSubtitle": "Connect your number, invite the team, and answer WhatsApp like the rest of your tools — together, from the browser.",
     "ctaButton": "Create your team inbox",
-    "pricingSubtitle": "The dashboard inbox is included on every plan — Pro is where your team joins in. Both start with a 7-day free trial.",
+    "pricingSubtitle": "Every plan includes the shared inbox — the tier sets how many of you can work it. Both start with a 7-day free trial.",
     "pricingStarter": {
       "name": "Starter",
       "price": "$9.99",
-      "tagline": "The same inbox, solo",
+      "tagline": "The same inbox — 2 seats",
       "items": [
         "Full dashboard inbox",
+        "2 team members",
         "1 WhatsApp number",
         "5,000 messages / month",
         "Webhooks & API included",
@@ -723,8 +728,7 @@
       "price": "$29.99",
       "tagline": "Everything in Starter, plus your team",
       "items": [
-        "Team members & roles",
-        "Unlimited team logins",
+        "10 team members & roles",
         "3 WhatsApp numbers",
         "10,000 messages / month",
         "AI agents (bring your own key)",

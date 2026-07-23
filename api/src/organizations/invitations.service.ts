@@ -9,6 +9,7 @@ import { Invitation } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { hashToken } from '../api-keys/api-keys.service';
 import { AuthService } from '../auth/auth.service';
+import { PLANS } from '../billing/plans';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AssignableRole } from './dto/organization.dto';
@@ -91,6 +92,9 @@ export class InvitationsService {
       },
       data: { revokedAt: new Date() },
     });
+
+    // Plan seat limit: members + outstanding invites may not exceed it.
+    await this.assertSeatAvailable(organizationId, { countPending: true });
 
     const rawToken = randomBytes(24).toString('base64url');
     const invite = await this.prisma.invitation.create({
@@ -185,6 +189,21 @@ export class InvitationsService {
       throw new BadRequestException('Invitation is invalid or has expired');
     }
 
+    // Idempotent re-accepts (already a member) bypass the seat check.
+    const existingMember = await this.prisma.membership.findUnique({
+      where: {
+        userId_organizationId: {
+          userId,
+          organizationId: invite.organizationId,
+        },
+      },
+    });
+    if (!existingMember) {
+      await this.assertSeatAvailable(invite.organizationId, {
+        countPending: false,
+      });
+    }
+
     await this.prisma.$transaction(async (tx) => {
       await tx.membership.upsert({
         where: {
@@ -207,6 +226,43 @@ export class InvitationsService {
     });
 
     return this.auth.switchOrg(userId, invite.organizationId);
+  }
+
+  /**
+   * Throw when the org is at its plan's team-member limit. Invite creation
+   * also counts outstanding pending invites so seats can't be over-promised;
+   * acceptance counts memberships only (its invite already reserved a seat).
+   */
+  private async assertSeatAvailable(
+    organizationId: string,
+    opts: { countPending: boolean },
+  ): Promise<void> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { plan: true },
+    });
+    if (!org) throw new NotFoundException('Organization not found');
+    const limit = PLANS[org.plan].teamMembers;
+    if (limit == null) return;
+    const members = await this.prisma.membership.count({
+      where: { organizationId },
+    });
+    let used = members;
+    if (opts.countPending) {
+      used += await this.prisma.invitation.count({
+        where: {
+          organizationId,
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+    }
+    if (used >= limit) {
+      throw new BadRequestException(
+        `Your plan allows ${limit} team member(s), and the seats are taken (counting pending invitations). Upgrade in Billing to invite more.`,
+      );
+    }
   }
 
   private async require(organizationId: string, id: string) {

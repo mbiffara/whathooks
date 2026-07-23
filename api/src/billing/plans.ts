@@ -16,6 +16,8 @@ export interface PlanLimits {
   historyDays: number | null;
   /** Max connected WhatsApp numbers (sessions); null = unlimited. */
   waNumbers: number | null;
+  /** Max users in the organization (members incl. owner); null = unlimited. */
+  teamMembers: number | null;
   /**
    * Env var holding the Stripe recurring Price id for this tier. Absent for
    * tiers that aren't purchasable (SPONSORED) — those also skip the
@@ -30,6 +32,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     messagesPerMonth: 5_000,
     historyDays: 30,
     waNumbers: 1,
+    teamMembers: 2,
     priceEnv: 'STRIPE_PRICE_STARTER',
   },
   PRO: {
@@ -37,6 +40,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     messagesPerMonth: 10_000,
     historyDays: 90,
     waNumbers: 3,
+    teamMembers: 10,
     priceEnv: 'STRIPE_PRICE_PRO',
   },
   BUSINESS: {
@@ -44,6 +48,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     messagesPerMonth: 100_000,
     historyDays: null,
     waNumbers: 10,
+    teamMembers: null,
     priceEnv: 'STRIPE_PRICE_BUSINESS',
   },
   SPONSORED: {
@@ -51,6 +56,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     messagesPerMonth: null,
     historyDays: null,
     waNumbers: null,
+    teamMembers: null,
   },
 };
 

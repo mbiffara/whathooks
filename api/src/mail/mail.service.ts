@@ -101,6 +101,31 @@ export class MailService {
     });
   }
 
+  /** The agent paused itself on a conversation — alert the team. */
+  async sendAgentHandoff(email: {
+    to: string;
+    locale?: string | null;
+    agentName: string;
+    contact: string;
+    reason: string;
+    conversationUrl: string;
+  }): Promise<boolean> {
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale].agentHandoff;
+    return this.send(email.to, {
+      locale,
+      subject: M.subject(email.agentName),
+      preheader: M.preheader(email.contact),
+      heading: M.heading,
+      paragraphs: [
+        M.body1(email.agentName, email.contact),
+        M.body2(email.reason),
+      ],
+      cta: { label: M.cta, url: email.conversationUrl },
+      footnote: M.footnote,
+    });
+  }
+
   /** Heads-up ~3 days before a free trial converts into the first charge. */
   async sendTrialEnding(email: TrialEndingEmail): Promise<boolean> {
     const locale = localeOf(email.locale);

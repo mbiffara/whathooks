@@ -401,7 +401,9 @@
       "scheduleHint": "Outside these hours the agent stays quiet and your team replies. An end time earlier than the start crosses midnight.",
       "scheduleSummary": "{days} · {start}–{end}",
       "unlinkedWarning": "Enabled but not linked to any session — open a session and assign this agent under 'AI Agent'.",
-      "goToSessions": "Go to sessions"
+      "goToSessions": "Go to sessions",
+      "notifyOnHandoff": "Email the team on handoff",
+      "notifyOnHandoffNote": "When the agent pauses itself, everyone with access to this session gets an email linking to the conversation."
     },
     "messages": {
       "title": "Messages",

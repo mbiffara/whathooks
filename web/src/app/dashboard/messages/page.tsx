@@ -13,7 +13,15 @@ import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { TeamMember, WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const PAGE_LIMIT = 40;
@@ -34,8 +42,9 @@ function mergeMessages(
   );
 }
 
-export default function MessagesPage() {
+function MessagesInbox() {
   const t = useTranslations("dash.messages");
+  const searchParams = useSearchParams();
   const tc = useTranslations("common");
   const tStatus = useTranslations("dash.status");
   const { data: auth } = useSession();
@@ -61,7 +70,9 @@ export default function MessagesPage() {
   const [noteMode, setNoteMode] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [convLoading, setConvLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    searchParams.get("c"),
+  );
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [threadLoading, setThreadLoading] = useState(false);
@@ -927,5 +938,13 @@ export default function MessagesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={null}>
+      <MessagesInbox />
+    </Suspense>
   );
 }

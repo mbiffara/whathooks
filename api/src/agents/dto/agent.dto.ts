@@ -94,6 +94,10 @@ export class CreateAgentDto {
   allowAutoStop?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  notifyOnHandoff?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(300)
@@ -193,6 +197,10 @@ export class UpdateAgentDto {
   @IsOptional()
   @IsBoolean()
   allowAutoStop?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyOnHandoff?: boolean;
 
   @IsOptional()
   @IsInt()

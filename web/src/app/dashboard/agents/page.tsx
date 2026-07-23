@@ -31,6 +31,7 @@ type Draft = {
   apiKey: string; // blank on edit = keep existing
   apiKeyHint?: string;
   allowAutoStop: boolean;
+  notifyOnHandoff: boolean;
   replyDelayMinSeconds: number;
   replyDelayMaxSeconds: number;
   scheduleEnabled: boolean;
@@ -61,6 +62,7 @@ const EMPTY: Draft = {
   model: AGENT_MODELS.ANTHROPIC[0].id,
   apiKey: "",
   allowAutoStop: false,
+  notifyOnHandoff: false,
   replyDelayMinSeconds: 0,
   replyDelayMaxSeconds: 0,
   scheduleEnabled: false,
@@ -120,6 +122,7 @@ export default function AgentsPage() {
         provider: draft.provider,
         model: draft.model,
         allowAutoStop: draft.allowAutoStop,
+        notifyOnHandoff: draft.allowAutoStop && draft.notifyOnHandoff,
         replyDelayMinSeconds: draft.replyDelayMinSeconds,
         replyDelayMaxSeconds: draft.replyDelayMaxSeconds,
         scheduleEnabled: draft.scheduleEnabled,
@@ -563,6 +566,24 @@ export default function AgentsPage() {
               </span>
             </span>
           </label>
+          {draft.allowAutoStop && (
+            <label className="ml-6 flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={draft.notifyOnHandoff}
+                onChange={(e) =>
+                  setDraft({ ...draft, notifyOnHandoff: e.target.checked })
+                }
+              />
+              <span>
+                {t("notifyOnHandoff")}
+                <span className="block text-xs text-[var(--color-muted)]">
+                  {t("notifyOnHandoffNote")}
+                </span>
+              </span>
+            </label>
+          )}
           <div>
             <label className="label">
               {t("mcpTools")}{" "}
@@ -789,6 +810,7 @@ export default function AgentsPage() {
                       apiKey: "",
                       apiKeyHint: a.apiKeyHint,
                       allowAutoStop: a.allowAutoStop,
+                      notifyOnHandoff: a.notifyOnHandoff,
                       replyDelayMinSeconds: a.replyDelayMinSeconds,
                       replyDelayMaxSeconds: a.replyDelayMaxSeconds,
                       scheduleEnabled: a.scheduleEnabled,

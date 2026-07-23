@@ -46,6 +46,17 @@ export const MAIL_MESSAGES = {
       footnote:
         "You're receiving this because you created a whathooks account. It's a one-time personal note, not a newsletter.",
     },
+    agentHandoff: {
+      subject: (agent: string) => `${agent} needs a human — handoff`,
+      preheader: (contact: string) =>
+        `The agent paused itself on the chat with ${contact}.`,
+      heading: 'An agent handed off a conversation',
+      body1: (agent: string, contact: string) =>
+        `${agent} paused itself on the conversation with ${contact} and is waiting for a human to take over.`,
+      body2: (reason: string) => `Reason: ${reason}`,
+      cta: 'Open the conversation',
+      footnote: 'You can turn these notifications off in the agent settings.',
+    },
     trialEnding: {
       subject: 'Your whathooks trial ends soon',
       preheader: (date: string) =>
@@ -94,7 +105,8 @@ export const MAIL_MESSAGES = {
       validFor: '1 hora',
     },
     welcome: {
-      subject: 'Gracias por registrarte en Whathooks, te dejo un breve mensaje.',
+      subject:
+        'Gracias por registrarte en Whathooks, te dejo un breve mensaje.',
       preheader: '¿Qué planeas construir? Me encantaría saberlo.',
       heading: (name: string | null) => (name ? `¡Hola ${name}!` : '¡Hola!'),
       body1:
@@ -109,6 +121,18 @@ export const MAIL_MESSAGES = {
       signature: 'Marcelo Biffara',
       footnote:
         'Recibes este correo porque creaste una cuenta en whathooks. Es una nota personal única, no un boletín.',
+    },
+    agentHandoff: {
+      subject: (agent: string) => `${agent} necesita un humano — derivación`,
+      preheader: (contact: string) =>
+        `El agente se pausó en el chat con ${contact}.`,
+      heading: 'Un agente derivó una conversación',
+      body1: (agent: string, contact: string) =>
+        `${agent} se pausó en la conversación con ${contact} y está esperando que un humano la tome.`,
+      body2: (reason: string) => `Motivo: ${reason}`,
+      cta: 'Abrir la conversación',
+      footnote:
+        'Puedes desactivar estas notificaciones en la configuración del agente.',
     },
     trialEnding: {
       subject: 'Tu prueba gratuita de whathooks termina pronto',

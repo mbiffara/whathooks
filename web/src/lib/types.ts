@@ -33,6 +33,7 @@ export interface Agent {
   mcpServers: AgentMcpServer[];
   maxTokens: number;
   allowAutoStop: boolean;
+  notifyOnHandoff: boolean;
   replyDelayMinSeconds: number;
   replyDelayMaxSeconds: number;
   scheduleEnabled: boolean;

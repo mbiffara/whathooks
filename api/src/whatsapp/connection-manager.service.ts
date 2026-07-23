@@ -29,6 +29,8 @@ import pino from 'pino';
 import { AgentRunnerService } from '../agents/agent-runner.service';
 import { MediaService } from '../media/media.service';
 import { QuotaService } from '../billing/quota.service';
+import { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
 import { agentActiveNow } from './agent-schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
@@ -56,6 +58,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     private readonly media: MediaService,
     private readonly agentRunner: AgentRunnerService,
     private readonly quota: QuotaService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
   ) {}
 
   /** Restore previously-connected sockets after a restart. */
@@ -500,6 +504,15 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
           `Agent "${agent.name}" handed off conversation ${conversationId}` +
             (reply.reason ? `: ${reply.reason}` : ''),
         );
+        if (agent.notifyOnHandoff) {
+          void this.notifyHandoff(
+            session.organizationId,
+            sessionId,
+            conversationId,
+            agent.name,
+            reply.reason?.trim() || 'The agent wasn’t sure how to respond.',
+          );
+        }
       }
     } catch (e) {
       this.log.error(`Agent reply failed for ${sessionId}: ${e}`);
@@ -598,6 +611,59 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       messageId: result.messageId,
       mediaUrl: result.mediaUrl,
     };
+  }
+
+  /**
+   * Email the teammates who can actually work this session (respecting
+   * per-member session restrictions) that the agent handed off.
+   */
+  private async notifyHandoff(
+    organizationId: string,
+    sessionId: string,
+    conversationId: string,
+    agentName: string,
+    reason: string,
+  ): Promise<void> {
+    try {
+      const [convo, memberships] = await Promise.all([
+        this.prisma.conversation.findUnique({
+          where: { id: conversationId },
+          select: { name: true, remoteJid: true },
+        }),
+        this.prisma.membership.findMany({
+          where: { organizationId },
+          include: { user: { select: { email: true, locale: true } } },
+          take: 20,
+        }),
+      ]);
+      const contact =
+        convo?.name ?? `+${(convo?.remoteJid ?? '').split('@')[0]}`;
+      const base = this.config
+        .get<string>('WEB_ORIGIN', 'http://localhost:3000')
+        .split(',')[0]
+        .trim();
+      const url = `${base}/dashboard/messages?c=${conversationId}`;
+      const recipients = memberships.filter(
+        (m) =>
+          m.role !== 'MEMBER' ||
+          m.sessionIds.length === 0 ||
+          m.sessionIds.includes(sessionId),
+      );
+      await Promise.all(
+        recipients.map((m) =>
+          this.mail.sendAgentHandoff({
+            to: m.user.email,
+            locale: m.user.locale,
+            agentName,
+            contact,
+            reason,
+            conversationUrl: url,
+          }),
+        ),
+      );
+    } catch (e) {
+      this.log.warn(`Handoff notification failed: ${e}`);
+    }
   }
 
   /** Fetch + cache the WhatsApp profile picture for a conversation. */

@@ -104,7 +104,7 @@ export const MAIL_MESSAGES = {
       body3:
         'Al responder, este correo llega directamente a mi email laboral, así que seguro voy a responderte rápidamente.',
       body4:
-        'Si te trabas conectando tu número o haciendo que dispare tu primer webhook, avísame y con gusto te ayudo a configurarlo.',
+        'Si te trabas conectando tu número o haciendo que dispare tu primer webhook, avisame y con gusto te ayudo a configurarlo.',
       signoff: 'Saludos,',
       signature: 'Marcelo Biffara',
       footnote:

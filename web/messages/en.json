@@ -372,7 +372,23 @@
       "createAgent": "Create agent",
       "failedToSave": "Failed to save",
       "noAgents": "No agents yet. Create one, then assign it to a session.",
-      "sessionCount": "{count, plural, one {# session} other {# sessions}}"
+      "sessionCount": "{count, plural, one {# session} other {# sessions}}",
+      "apiKeyHelp": "How do I get a key?",
+      "apiKeyHelpTitle": "Getting your API key",
+      "anthropicSteps": [
+        "Create an account at console.anthropic.com",
+        "Add a payment method under Settings → Billing",
+        "Go to Settings → API Keys and create a key (it starts with sk-ant-…)",
+        "Paste it here — we store it encrypted and only use it for this agent's replies"
+      ],
+      "openaiSteps": [
+        "Create an account at platform.openai.com",
+        "Add a payment method under Settings → Billing",
+        "Go to API keys and create a new secret key (it starts with sk-…)",
+        "Paste it here — we store it encrypted and only use it for this agent's replies"
+      ],
+      "openConsole": "Open {provider} console ↗",
+      "byokNote": "You pay {provider} directly for usage — whathooks adds no markup."
     },
     "messages": {
       "title": "Messages",

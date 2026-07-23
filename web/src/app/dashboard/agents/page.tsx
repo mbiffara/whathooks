@@ -65,6 +65,7 @@ export default function AgentsPage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
   const [mcpAllowed, setMcpAllowed] = useState(false);
+  const [keyHelpOpen, setKeyHelpOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -266,10 +267,72 @@ export default function AgentsPage() {
             </div>
           </div>
           <div>
-            <label className="label">
-              {t("apiKey")}{" "}
-              <span className="text-[var(--color-muted)]">
-                {draft.provider === "OPENAI" ? "— OpenAI" : "— Anthropic"}
+            <label className="label flex items-center gap-2">
+              <span>
+                {t("apiKey")}{" "}
+                <span className="text-[var(--color-muted)]">
+                  {draft.provider === "OPENAI" ? "— OpenAI" : "— Anthropic"}
+                </span>
+              </span>
+              <span className="relative">
+                <button
+                  type="button"
+                  onClick={() => setKeyHelpOpen((v) => !v)}
+                  className="grid h-4 w-4 place-items-center rounded-full border border-[var(--color-border)] text-[10px] text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                  aria-label={t("apiKeyHelp")}
+                  title={t("apiKeyHelp")}
+                >
+                  ?
+                </button>
+                {keyHelpOpen && (
+                  <>
+                    <span
+                      className="fixed inset-0 z-20"
+                      onClick={() => setKeyHelpOpen(false)}
+                    />
+                    <span className="absolute left-0 top-6 z-30 block w-80 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 font-normal shadow-lg">
+                      <span className="block text-sm font-semibold">
+                        {t("apiKeyHelpTitle")}
+                      </span>
+                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-[var(--color-muted)]">
+                        {(
+                          t.raw(
+                            draft.provider === "OPENAI"
+                              ? "openaiSteps"
+                              : "anthropicSteps",
+                          ) as string[]
+                        ).map((step) => (
+                          <li key={step}>{step}</li>
+                        ))}
+                      </ol>
+                      <a
+                        href={
+                          draft.provider === "OPENAI"
+                            ? "https://platform.openai.com/api-keys"
+                            : "https://console.anthropic.com/settings/keys"
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 block text-xs font-medium text-[var(--color-brand)] hover:underline"
+                      >
+                        {t("openConsole", {
+                          provider:
+                            draft.provider === "OPENAI"
+                              ? "OpenAI"
+                              : "Anthropic",
+                        })}
+                      </a>
+                      <span className="mt-1.5 block text-[10px] text-[var(--color-muted)]">
+                        {t("byokNote", {
+                          provider:
+                            draft.provider === "OPENAI"
+                              ? "OpenAI"
+                              : "Anthropic",
+                        })}
+                      </span>
+                    </span>
+                  </>
+                )}
               </span>
             </label>
             <input

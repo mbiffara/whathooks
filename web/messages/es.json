@@ -372,7 +372,23 @@
       "createAgent": "Crear agente",
       "failedToSave": "No se pudo guardar",
       "noAgents": "Aún no hay agentes. Crea uno y asígnalo a una sesión.",
-      "sessionCount": "{count, plural, one {# sesión} other {# sesiones}}"
+      "sessionCount": "{count, plural, one {# sesión} other {# sesiones}}",
+      "apiKeyHelp": "¿Cómo obtengo una clave?",
+      "apiKeyHelpTitle": "Cómo obtener tu clave API",
+      "anthropicSteps": [
+        "Crea una cuenta en console.anthropic.com",
+        "Agrega un método de pago en Settings → Billing",
+        "Ve a Settings → API Keys y crea una clave (comienza con sk-ant-…)",
+        "Pégala aquí — la guardamos cifrada y solo se usa para las respuestas de este agente"
+      ],
+      "openaiSteps": [
+        "Crea una cuenta en platform.openai.com",
+        "Agrega un método de pago en Settings → Billing",
+        "Ve a API keys y crea una nueva clave secreta (comienza con sk-…)",
+        "Pégala aquí — la guardamos cifrada y solo se usa para las respuestas de este agente"
+      ],
+      "openConsole": "Abrir consola de {provider} ↗",
+      "byokNote": "Le pagas directamente a {provider} por el uso — whathooks no agrega recargo."
     },
     "messages": {
       "title": "Mensajes",

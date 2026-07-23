@@ -98,7 +98,12 @@
       "admin": "Admin console",
       "signOut": "Sign out",
       "collapse": "Collapse menu",
-      "expand": "Expand menu"
+      "expand": "Expand menu",
+      "groups": {
+        "automation": "Automation",
+        "developer": "Developer",
+        "organization": "Organization"
+      }
     },
     "settings": {
       "title": "Settings",

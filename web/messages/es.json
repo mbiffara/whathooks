@@ -98,7 +98,12 @@
       "admin": "Consola admin",
       "signOut": "Cerrar sesión",
       "collapse": "Contraer menú",
-      "expand": "Expandir menú"
+      "expand": "Expandir menú",
+      "groups": {
+        "automation": "Automatización",
+        "developer": "Desarrollador",
+        "organization": "Organización"
+      }
     },
     "settings": {
       "title": "Configuración",

@@ -57,8 +57,12 @@ export function OrgSwitcher() {
     }
   }
 
+  // Only meaningful once the list has loaded — while empty we can't tell a
+  // foreign org from a slow fetch.
   const inForeignOrg =
-    Boolean(activeOrgId) && !orgs.some((o) => o.id === activeOrgId);
+    orgs.length > 0 &&
+    Boolean(activeOrgId) &&
+    !orgs.some((o) => o.id === activeOrgId);
   // Hide when there's nothing to switch to — unless a platform admin is
   // parked in a foreign org (support mode) and needs a way back home.
   if (orgs.length <= 1 && !inForeignOrg) return null;

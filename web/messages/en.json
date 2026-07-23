@@ -327,7 +327,8 @@
       "allSessionsAccess": "All sessions",
       "nSessions": "{count, plural, one {# session} other {# sessions}}",
       "sessionAccessHint": "Uncheck all to restore access to every session.",
-      "saveAccess": "Save"
+      "saveAccess": "Save",
+      "allSessionsShort": "All"
     },
     "agents": {
       "title": "Agents",

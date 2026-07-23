@@ -47,14 +47,17 @@ export function MemberSessionAccess({
   }
 
   const label =
-    sessionIds.length === 0
-      ? t("allSessionsAccess")
-      : t("nSessions", { count: sessionIds.length });
+    sessionIds.length === 0 ? t("allSessionsShort") : String(sessionIds.length);
 
   return (
     <div className="relative">
       <button
-        className="btn-ghost px-2 py-1 text-xs"
+        className="btn-ghost whitespace-nowrap px-2 py-1 text-xs"
+        title={
+          sessionIds.length === 0
+            ? t("allSessionsAccess")
+            : t("nSessions", { count: sessionIds.length })
+        }
         onClick={() => {
           setSelected(sessionIds);
           setError(null);
@@ -66,7 +69,7 @@ export function MemberSessionAccess({
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-8 z-30 w-64 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-lg">
+          <div className="absolute left-0 top-8 z-30 w-64 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-lg">
             <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto">
               {sessions.map((s) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">

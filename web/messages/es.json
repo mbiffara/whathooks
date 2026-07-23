@@ -327,7 +327,8 @@
       "allSessionsAccess": "Todas las sesiones",
       "nSessions": "{count, plural, one {# sesión} other {# sesiones}}",
       "sessionAccessHint": "Desmarca todas para restaurar el acceso a todas las sesiones.",
-      "saveAccess": "Guardar"
+      "saveAccess": "Guardar",
+      "allSessionsShort": "Todas"
     },
     "agents": {
       "title": "Agentes",

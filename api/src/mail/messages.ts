@@ -30,7 +30,7 @@ export const MAIL_MESSAGES = {
       validFor: '1 hour',
     },
     welcome: {
-      subject: 'Welcome to whathooks — a hello from the founder',
+      subject: 'Thanks for signing up for Whathooks, a quick note from me.',
       preheader: "What are you planning to build? I'd love to hear it.",
       heading: (name: string | null) => (name ? `Hi ${name}!` : 'Hi there!'),
       body1:
@@ -94,7 +94,7 @@ export const MAIL_MESSAGES = {
       validFor: '1 hora',
     },
     welcome: {
-      subject: 'Te damos la bienvenida a whathooks — un saludo del fundador',
+      subject: 'Gracias por registrarte en Whathooks, te dejo un breve mensaje.',
       preheader: '¿Qué planeas construir? Me encantaría saberlo.',
       heading: (name: string | null) => (name ? `¡Hola ${name}!` : '¡Hola!'),
       body1:

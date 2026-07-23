@@ -139,6 +139,12 @@ export interface AdminOrg {
   createdAt: string;
   plan: Plan;
   subscriptionStatus: string | null;
+  owner: {
+    id: string;
+    email: string;
+    locale: string;
+    welcomeEmailSentAt: string | null;
+  } | null;
   users: number;
   sessions: number;
   webhooks: number;
@@ -166,6 +172,7 @@ export interface AdminOrgDetail {
     role: "ADMIN" | "CLIENT";
     locale: string;
     orgRole: OrgRole;
+    welcomeEmailSentAt: string | null;
     createdAt: string;
   }[];
   sessions: {

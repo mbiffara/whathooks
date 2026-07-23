@@ -73,6 +73,7 @@ model User {
   // UI + email language ("en" | "es"). Set from the visitor's locale at
   // signup; editable in dashboard settings.
   locale       String   @default("en")
+  welcomeEmailSentAt DateTime?
   role         UserRole @default(CLIENT)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

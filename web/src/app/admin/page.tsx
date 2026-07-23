@@ -1,3 +1,4 @@
+import { AdminWelcomeEmail } from "@/components/admin-welcome-email";
 import { apiServer } from "@/lib/api";
 import type { AdminOrg, AdminOverview } from "@/lib/types";
 import Link from "next/link";
@@ -12,7 +13,9 @@ const SUB_BADGE: Record<string, string> = {
 function SubscriptionBadge({ status }: { status: string | null }) {
   if (!status) {
     return (
-      <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">none</span>
+      <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
+        none
+      </span>
     );
   }
   return (
@@ -76,6 +79,7 @@ export default async function AdminPage() {
               <th className="px-4 py-3 font-medium">Messages</th>
               <th className="px-4 py-3 font-medium">Joined</th>
               <th className="px-4 py-3"></th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -105,6 +109,16 @@ export default async function AdminPage() {
                 <td className="px-4 py-3">{o.messages}</td>
                 <td className="px-4 py-3 text-xs text-[var(--color-muted)]">
                   {new Date(o.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3">
+                  {o.owner && (
+                    <AdminWelcomeEmail
+                      userId={o.owner.id}
+                      email={o.owner.email}
+                      defaultLocale={o.owner.locale}
+                      sentAt={o.owner.welcomeEmailSentAt}
+                    />
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link

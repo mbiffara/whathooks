@@ -47,6 +47,12 @@ export class AdminController {
       name: user.name,
       locale: dto.locale ?? user.locale,
     });
+    if (sent) {
+      await this.prisma.user.update({
+        where: { id },
+        data: { welcomeEmailSentAt: new Date() },
+      });
+    }
     return { sent, to: user.email };
   }
 
@@ -95,6 +101,11 @@ export class AdminController {
     const orgs = await this.prisma.organization.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        memberships: {
+          where: { role: 'OWNER' },
+          take: 1,
+          include: { user: true },
+        },
         _count: {
           select: {
             memberships: true,
@@ -112,6 +123,14 @@ export class AdminController {
       createdAt: o.createdAt,
       plan: o.plan,
       subscriptionStatus: o.subscriptionStatus,
+      owner: o.memberships[0]
+        ? {
+            id: o.memberships[0].user.id,
+            email: o.memberships[0].user.email,
+            locale: o.memberships[0].user.locale,
+            welcomeEmailSentAt: o.memberships[0].user.welcomeEmailSentAt,
+          }
+        : null,
       users: o._count.memberships,
       sessions: o._count.sessions,
       webhooks: o._count.webhooks,
@@ -204,6 +223,7 @@ export class AdminController {
         role: m.user.role,
         locale: m.user.locale,
         orgRole: m.role,
+        welcomeEmailSentAt: m.user.welcomeEmailSentAt,
         createdAt: m.user.createdAt,
       })),
       sessions: org.sessions,

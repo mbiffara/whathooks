@@ -173,6 +173,7 @@ export default async function AdminOrgPage({
                   userId={u.id}
                   email={u.email}
                   defaultLocale={u.locale}
+                  sentAt={u.welcomeEmailSentAt}
                 />
               </td>
             </tr>

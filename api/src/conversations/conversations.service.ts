@@ -342,6 +342,7 @@ export class ConversationsService {
       contact: c.remoteJid.split('@')[0],
       name: c.name,
       isGroup: c.isGroup,
+      avatarUrl: c.avatarUrl,
       unreadCount: c.unreadCount,
       lastMessageAt: c.lastMessageAt,
       lastMessageText: c.lastMessageText,

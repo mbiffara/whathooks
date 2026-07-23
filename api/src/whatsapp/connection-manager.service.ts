@@ -598,6 +598,27 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  /** Fetch + cache the WhatsApp profile picture for a conversation. */
+  private async refreshAvatar(
+    sessionId: string,
+    conversationId: string,
+    remoteJid: string,
+  ): Promise<void> {
+    try {
+      const live = this.sessions.get(sessionId);
+      if (!live) return;
+      const url = await live.sock
+        .profilePictureUrl(remoteJid, 'image')
+        .catch(() => null);
+      await this.prisma.conversation.update({
+        where: { id: conversationId },
+        data: { avatarUrl: url ?? null, avatarFetchedAt: new Date() },
+      });
+    } catch (e) {
+      this.log.debug(`Avatar refresh failed for ${conversationId}: ${e}`);
+    }
+  }
+
   /** Set/replace/remove one reactor's reaction on the targeted message. */
   private async applyReaction(
     sessionId: string,
@@ -682,6 +703,16 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         ...(p.incrementUnread ? { unreadCount: { increment: 1 } } : {}),
       },
     });
+
+    // Refresh the contact's profile picture at most once a day, off the hot
+    // path — failures (privacy settings, no photo) just stamp the attempt.
+    const AVATAR_TTL_MS = 24 * 60 * 60 * 1000;
+    if (
+      !conversation.avatarFetchedAt ||
+      Date.now() - conversation.avatarFetchedAt.getTime() > AVATAR_TTL_MS
+    ) {
+      void this.refreshAvatar(p.sessionId, conversation.id, p.remoteJid);
+    }
 
     const message = await this.prisma.message.create({
       data: {

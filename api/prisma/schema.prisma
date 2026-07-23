@@ -355,6 +355,8 @@ model Conversation {
   lastMessageType MessageType?
   unreadCount     Int          @default(0)
   archived        Boolean      @default(false)
+  avatarUrl       String? // WhatsApp profile picture (CDN URL, refreshed daily)
+  avatarFetchedAt DateTime?
   agentPaused     Boolean      @default(false) // operator took over → agent won't auto-reply
   agentPausedReason String?    // why the agent handed off (null when paused manually)
   status          ConversationStatus @default(OPEN)

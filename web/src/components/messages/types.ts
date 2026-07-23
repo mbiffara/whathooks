@@ -56,6 +56,7 @@ export interface Conversation {
   contact: string;
   name: string | null;
   isGroup: boolean;
+  avatarUrl: string | null;
   unreadCount: number;
   lastMessageAt: string | null;
   lastMessageText: string | null;

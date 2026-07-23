@@ -522,9 +522,18 @@ export default function MessagesPage() {
                       : "hover:bg-[var(--color-surface-2)]"
                   }`}
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-sm font-semibold uppercase text-[var(--color-brand)]">
-                    {(c.name || c.contact || "?").charAt(0)}
-                  </span>
+                  {c.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={c.avatarUrl}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-sm font-semibold uppercase text-[var(--color-brand)]">
+                      {(c.name || c.contact || "?").charAt(0)}
+                    </span>
+                  )}
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-medium text-[var(--color-fg)]">
@@ -572,14 +581,37 @@ export default function MessagesPage() {
         ) : (
           <>
             <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
-              <div className="min-w-0">
-                <div className="truncate font-medium text-[var(--color-fg)]">
-                  {selectedConv.name || `+${selectedConv.contact}`}
-                </div>
-                <div className="text-xs text-[var(--color-muted)]">
-                  {selectedSession
-                    ? `${selectedSession.label} · ${tStatus(selectedSession.status).toLowerCase()}`
-                    : " "}
+              <div className="flex min-w-0 items-center gap-2.5">
+                {selectedConv.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selectedConv.avatarUrl}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-sm font-semibold uppercase text-[var(--color-brand)]">
+                    {(selectedConv.name || selectedConv.contact || "?").charAt(
+                      0,
+                    )}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <div className="truncate font-medium text-[var(--color-fg)]">
+                    {selectedConv.name || `+${selectedConv.contact}`}
+                  </div>
+                  <div className="truncate text-xs text-[var(--color-muted)]">
+                    {[
+                      !selectedConv.isGroup && selectedConv.name
+                        ? `+${selectedConv.contact}`
+                        : null,
+                      selectedSession
+                        ? `${selectedSession.label} · ${tStatus(selectedSession.status).toLowerCase()}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || " "}
+                  </div>
                 </div>
               </div>
 

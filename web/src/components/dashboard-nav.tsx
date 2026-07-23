@@ -147,6 +147,7 @@ export function DashboardNav() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const [collapsed, setCollapsed] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // localStorage isn't available during SSR — restore the preference on mount.
   useEffect(() => {
@@ -184,6 +185,24 @@ export function DashboardNav() {
         className="mt-2 hidden h-8 w-8 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)] md:grid"
       >
         »
+      </button>
+      <button
+        onClick={() => setDrawerOpen(true)}
+        aria-label={t("expand")}
+        className="mt-2 grid h-8 w-8 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)] md:hidden"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          aria-hidden
+        >
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
       </button>
       <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
         {GROUPS.map((group, gi) => (
@@ -308,6 +327,26 @@ export function DashboardNav() {
       {/* Phones: always the rail. md+: whichever the user chose. */}
       <div className="contents md:hidden">{rail}</div>
       <div className="hidden md:contents">{collapsed ? rail : expanded}</div>
+      {/* Phone drawer: the full labeled menu over the content. Any tap on a
+          link or button inside closes it. */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <div
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw]"
+            onClickCapture={(e) => {
+              if ((e.target as HTMLElement).closest("a, button")) {
+                setDrawerOpen(false);
+              }
+            }}
+          >
+            {expanded}
+          </div>
+        </div>
+      )}
     </>
   );
 }

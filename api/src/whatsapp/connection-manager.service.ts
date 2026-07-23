@@ -432,6 +432,14 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       incrementUnread: true,
     });
 
+    // Group context: who wrote (participant JID) and whether the connected
+    // number was @mentioned — consumers use this to reply only when addressed.
+    const botNum = this.botNumber(sessionId);
+    const senderJid = msg.key.participant ?? undefined;
+    const mentionedMe =
+      botNum != null &&
+      extractMentions(msg).some((j) => j.split('@')[0] === botNum);
+
     await this.webhooks.dispatch({
       organizationId,
       sessionId,
@@ -442,6 +450,9 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         conversationId: result.conversationId,
         sessionId,
         from: remoteJid,
+        isGroup,
+        participant: isGroup ? (senderJid ?? null) : null,
+        mentionedMe,
         pushName: msg.pushName ?? null,
         type: described.type,
         text: described.text,
@@ -462,12 +473,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     if (!isGroup) {
       void this.maybeAgentReply(sessionId, remoteJid, result.conversationId);
     } else {
-      const botNum = this.botNumber(sessionId);
-      const senderJid = msg.key.participant ?? undefined;
-      const mentioned =
-        botNum != null &&
-        extractMentions(msg).some((j) => j.split('@')[0] === botNum);
-      if (mentioned && senderJid) {
+      if (mentionedMe && senderJid) {
         void this.maybeAgentReply(sessionId, remoteJid, result.conversationId, {
           jid: senderJid,
           number: senderJid.split('@')[0],

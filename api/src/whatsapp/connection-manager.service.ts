@@ -30,6 +30,10 @@ import { AgentRunnerService } from '../agents/agent-runner.service';
 import { MediaService } from '../media/media.service';
 import { QuotaService } from '../billing/quota.service';
 import { ConfigService } from '@nestjs/config';
+import { Inject, ServiceUnavailableException } from '@nestjs/common';
+import type Redis from 'ioredis';
+import { randomUUID } from 'crypto';
+import { REDIS_PUB } from '../common/redis/redis.module';
 import { MailService } from '../mail/mail.service';
 import { agentActiveNow } from './agent-schedule';
 import { PrismaService } from '../prisma/prisma.service';
@@ -60,10 +64,66 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     private readonly quota: QuotaService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    @Inject(REDIS_PUB) private readonly redis: Redis,
   ) {}
 
-  /** Restore previously-connected sockets after a restart. */
+  /**
+   * Session leadership: exactly one task may run the Baileys sockets. During
+   * start-then-stop deploys both tasks serve HTTP, but the new one waits for
+   * the old to release this Redis lock (SIGTERM → releaseLeadership) before
+   * connecting sessions — keeping the WhatsApp handover to seconds while HTTP
+   * never drops.
+   */
+  private static readonly LEADER_KEY = 'whathooks:session-leader';
+  private static readonly LEADER_TTL_MS = 20_000;
+  private readonly instanceId = randomUUID();
+  private isLeader = false;
+  private leadershipTimer?: ReturnType<typeof setInterval>;
+
+  /** Acquire/renew leadership; on first acquisition restore the sockets. */
   async onModuleInit() {
+    const tick = async () => {
+      if (this.shuttingDown) return;
+      try {
+        const key = ConnectionManagerService.LEADER_KEY;
+        const ttl = ConnectionManagerService.LEADER_TTL_MS;
+        const acquired = await this.redis.set(
+          key,
+          this.instanceId,
+          'PX',
+          ttl,
+          'NX',
+        );
+        if (acquired) {
+          if (!this.isLeader) {
+            this.isLeader = true;
+            this.log.log('Acquired session leadership');
+            await this.restoreSessions();
+          }
+          return;
+        }
+        const holder = await this.redis.get(key);
+        if (holder === this.instanceId) {
+          await this.redis.pexpire(key, ttl);
+          if (!this.isLeader) {
+            this.isLeader = true;
+            await this.restoreSessions();
+          }
+        } else if (this.isLeader) {
+          // Should not happen while healthy — another task took over.
+          this.log.warn('Lost session leadership — closing sockets');
+          this.isLeader = false;
+          this.closeAllSockets();
+        }
+      } catch (e) {
+        this.log.warn(`Leadership tick failed: ${e}`);
+      }
+    };
+    void tick();
+    this.leadershipTimer = setInterval(() => void tick(), 5_000);
+  }
+
+  private async restoreSessions() {
     const sessions = await this.prisma.waSession.findMany({
       where: {
         status: { in: ['CONNECTED', 'CONNECTING', 'QR', 'DISCONNECTED'] },
@@ -78,13 +138,33 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async onModuleDestroy() {
-    this.shuttingDown = true;
+  private closeAllSockets() {
     for (const [, live] of this.sessions) {
       try {
         live.sock.end(undefined);
       } catch {
         /* ignore */
+      }
+    }
+    this.sessions.clear();
+  }
+
+  async onModuleDestroy() {
+    this.shuttingDown = true;
+    if (this.leadershipTimer) clearInterval(this.leadershipTimer);
+    this.closeAllSockets();
+    // Release the lock only if we hold it, so the next task takes over fast.
+    if (this.isLeader) {
+      try {
+        const holder = await this.redis.get(
+          ConnectionManagerService.LEADER_KEY,
+        );
+        if (holder === this.instanceId) {
+          await this.redis.del(ConnectionManagerService.LEADER_KEY);
+        }
+        this.log.log('Released session leadership');
+      } catch {
+        /* the TTL will expire it */
       }
     }
   }
@@ -100,6 +180,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
 
   /** Boot (or reboot) the Baileys socket for a session. */
   async start(sessionId: string): Promise<void> {
+    if (!this.isLeader && !this.shuttingDown) {
+      throw new ServiceUnavailableException(
+        'A deploy is finishing up — try again in a few seconds.',
+      );
+    }
     const existing = this.sessions.get(sessionId);
     if (existing?.starting) return;
 

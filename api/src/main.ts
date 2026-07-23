@@ -33,6 +33,9 @@ async function bootstrap() {
   );
 
   const port = config.get<number>('PORT', 3001);
+  // SIGTERM (deploy roll) must close WhatsApp sockets + release the session
+  // leadership lock so the incoming task can take over in seconds.
+  app.enableShutdownHooks();
   await app.listen(port);
 
   console.log(`whathooks api listening on http://localhost:${port}/v1`);

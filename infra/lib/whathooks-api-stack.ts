@@ -258,10 +258,12 @@ export class WhathooksApiStack extends cdk.Stack {
       assignPublicIp: !usePrivate,
       vpcSubnets: taskSubnets,
       securityGroups: [taskSg],
-      // Stop the old task before starting the new one — never run two Baileys
-      // processes for the same numbers at once.
-      minHealthyPercent: 0,
-      maxHealthyPercent: 100,
+      // Start-then-stop: the new task serves HTTP immediately while the old
+      // one keeps the WhatsApp sockets until SIGTERM releases the Redis
+      // session-leadership lock (connection-manager) — zero HTTP downtime,
+      // seconds of socket handover.
+      minHealthyPercent: 100,
+      maxHealthyPercent: 200,
       healthCheckGracePeriod: cdk.Duration.seconds(90),
       circuitBreaker: { rollback: true },
     });

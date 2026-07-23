@@ -217,7 +217,7 @@ export default function TeamPage() {
             return (
               <div
                 key={m.userId}
-                className="card flex items-center justify-between gap-4"
+                className="card flex flex-wrap items-center justify-between gap-4"
               >
                 <div>
                   <div className="font-medium">
@@ -325,7 +325,7 @@ export default function TeamPage() {
           {pending.map((i) => (
             <div
               key={i.id}
-              className="card flex items-center justify-between gap-4"
+              className="card flex flex-wrap items-center justify-between gap-4"
             >
               <div>
                 <div className="font-medium">

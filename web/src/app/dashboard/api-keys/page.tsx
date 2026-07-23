@@ -107,7 +107,7 @@ export default function ApiKeysPage() {
           {keys.map((k) => (
             <div
               key={k.id}
-              className="card flex items-center justify-between gap-4"
+              className="card flex flex-wrap items-center justify-between gap-4"
             >
               <div>
                 <div className="font-medium">

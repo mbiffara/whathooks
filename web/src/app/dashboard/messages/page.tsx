@@ -444,8 +444,12 @@ function MessagesInbox() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* Left pane */}
-      <div className="flex w-[320px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:w-[360px]">
+      {/* Left pane — on phones it swaps with the thread (master-detail) */}
+      <div
+        className={`${
+          selectedId ? "hidden md:flex" : "flex"
+        } w-full shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] md:w-[320px] lg:w-[360px]`}
+      >
         <div className="border-b border-[var(--color-border)] p-3">
           <h1 className="mb-2 text-lg font-semibold">{t("title")}</h1>
           <select
@@ -584,14 +588,25 @@ function MessagesInbox() {
       </div>
 
       {/* Right pane */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div
+        className={`${
+          selectedId ? "flex" : "hidden md:flex"
+        } min-w-0 flex-1 flex-col`}
+      >
         {!selectedConv ? (
           <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-muted)]">
             {t("selectConversation")}
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
+              <button
+                onClick={() => setSelectedId(null)}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] md:hidden"
+                aria-label={t("title")}
+              >
+                ←
+              </button>
               <div className="flex min-w-0 items-center gap-2.5">
                 {selectedConv.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -626,7 +641,7 @@ function MessagesInbox() {
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <select
                   className="input h-8 w-36 px-2 py-0 text-xs"
                   value={selectedConv.assignedTo?.id ?? ""}
@@ -664,7 +679,7 @@ function MessagesInbox() {
               </div>
 
               {selectedConv.agent && (
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   {!selectedConv.agent.enabled ? (
                     <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
                       {t("agentDisabled", { name: selectedConv.agent.name })}

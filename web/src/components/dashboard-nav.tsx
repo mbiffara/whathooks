@@ -147,10 +147,16 @@ export function DashboardNav() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const [collapsed, setCollapsed] = useState(false);
+  const [isSmall, setIsSmall] = useState(false);
 
   // localStorage isn't available during SSR — restore the preference on mount.
   useEffect(() => {
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => setIsSmall(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
   function toggleCollapsed() {
@@ -164,7 +170,8 @@ export function DashboardNav() {
     return exact ? pathname === href : pathname.startsWith(href);
   }
 
-  if (collapsed) {
+  // Phones always get the icon rail — a 240px sidebar doesn't fit.
+  if (collapsed || isSmall) {
     return (
       <aside className="flex w-14 shrink-0 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-surface)] py-4">
         <Link
@@ -176,14 +183,16 @@ export function DashboardNav() {
             w
           </span>
         </Link>
-        <button
-          onClick={toggleCollapsed}
-          aria-label={t("expand")}
-          title={t("expand")}
-          className="mt-2 grid h-8 w-8 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
-        >
-          »
-        </button>
+        {!isSmall && (
+          <button
+            onClick={toggleCollapsed}
+            aria-label={t("expand")}
+            title={t("expand")}
+            className="mt-2 grid h-8 w-8 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+          >
+            »
+          </button>
+        )}
         <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
           {GROUPS.map((group, gi) => (
             <div

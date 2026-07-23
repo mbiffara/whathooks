@@ -386,7 +386,7 @@ export default function WebhooksPage() {
         <div className="flex flex-col gap-3">
           {hooks.map((h) => (
             <div key={h.id} className="card flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="min-w-0">
                   <div className="truncate font-mono text-sm">{h.url}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">

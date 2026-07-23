@@ -10,6 +10,9 @@ import {
 } from '@nestjs/common';
 import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
+import { SessionAccessService } from '../auth/session-access.service';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { ApiOrg } from '../common/decorators/org.decorator';
 import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { IsString, MaxLength, MinLength } from 'class-validator';
@@ -36,7 +39,10 @@ class TestMessageDto {
 @UseGuards(JwtOrApiKeyGuard, OrgRolesGuard)
 @Controller('sessions')
 export class SessionsController {
-  constructor(private readonly whatsapp: WhatsappService) {}
+  constructor(
+    private readonly whatsapp: WhatsappService,
+    private readonly access: SessionAccessService,
+  ) {}
 
   private orgOf(organizationId: string | undefined): string {
     if (!organizationId)
@@ -45,8 +51,16 @@ export class SessionsController {
   }
 
   @Get()
-  list(@ApiOrg() org: string | undefined) {
-    return this.whatsapp.list(this.orgOf(org));
+  async list(
+    @ApiOrg() org: string | undefined,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    const organizationId = this.orgOf(org);
+    const allowed = await this.access.restrictedSessionIds(
+      user,
+      organizationId,
+    );
+    return this.whatsapp.list(organizationId, allowed);
   }
 
   @OrgRoles('ADMIN')
@@ -56,8 +70,14 @@ export class SessionsController {
   }
 
   @Get(':id')
-  get(@ApiOrg() org: string | undefined, @Param('id') id: string) {
-    return this.whatsapp.get(this.orgOf(org), id);
+  async get(
+    @ApiOrg() org: string | undefined,
+    @Param('id') id: string,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    const organizationId = this.orgOf(org);
+    await this.access.assertSessionAllowed(user, organizationId, id);
+    return this.whatsapp.get(organizationId, id);
   }
 
   @OrgRoles('ADMIN')
@@ -73,12 +93,15 @@ export class SessionsController {
   }
 
   @Post(':id/test-message')
-  testMessage(
+  async testMessage(
     @ApiOrg() org: string | undefined,
     @Param('id') id: string,
     @Body() dto: TestMessageDto,
+    @CurrentUser() user?: AuthUser,
   ) {
-    return this.whatsapp.sendTest(this.orgOf(org), id, dto.to, dto.text);
+    const organizationId = this.orgOf(org);
+    await this.access.assertSessionAllowed(user, organizationId, id);
+    return this.whatsapp.sendTest(organizationId, id, dto.to, dto.text);
   }
 
   @OrgRoles('ADMIN')

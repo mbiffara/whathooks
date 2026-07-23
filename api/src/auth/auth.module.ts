@@ -6,6 +6,7 @@ import { MailModule } from '../mail/mail.module';
 import { MarketingModule } from '../marketing/marketing.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { SessionAccessService } from './session-access.service';
 import { JwtStrategy } from './jwt.strategy';
 
 @Module({
@@ -25,7 +26,7 @@ import { JwtStrategy } from './jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, SessionAccessService],
+  exports: [AuthService, SessionAccessService],
 })
 export class AuthModule {}

@@ -313,7 +313,12 @@
       "revoke": "Revoke",
       "failedToInvite": "Failed to invite",
       "failedToRegenerate": "Failed to regenerate",
-      "failedToLeave": "Failed to leave"
+      "failedToLeave": "Failed to leave",
+      "sessionAccess": "Sessions",
+      "allSessionsAccess": "All sessions",
+      "nSessions": "{count, plural, one {# session} other {# sessions}}",
+      "sessionAccessHint": "Uncheck all to restore access to every session.",
+      "saveAccess": "Save"
     },
     "agents": {
       "title": "Agents",

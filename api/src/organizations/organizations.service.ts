@@ -37,8 +37,42 @@ export class OrganizationsService {
       email: m.user.email,
       name: m.user.name,
       role: m.role,
+      sessionIds: m.sessionIds,
       joinedAt: m.createdAt,
     }));
+  }
+
+  /**
+   * Scope a MEMBER to specific sessions (empty = all). Owners/admins are
+   * never restricted, so setting a list on them is rejected.
+   */
+  async updateMemberSessions(
+    organizationId: string,
+    userId: string,
+    sessionIds: string[],
+  ) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId, organizationId } },
+    });
+    if (!membership) throw new NotFoundException('Member not found');
+    if (membership.role !== 'MEMBER' && sessionIds.length > 0) {
+      throw new BadRequestException(
+        'Session restrictions only apply to members',
+      );
+    }
+    if (sessionIds.length > 0) {
+      const owned = await this.prisma.waSession.count({
+        where: { id: { in: sessionIds }, organizationId },
+      });
+      if (owned !== sessionIds.length) {
+        throw new BadRequestException('Unknown session');
+      }
+    }
+    await this.prisma.membership.update({
+      where: { userId_organizationId: { userId, organizationId } },
+      data: { sessionIds },
+    });
+    return { ok: true, sessionIds };
   }
 
   rename(organizationId: string, name: string) {

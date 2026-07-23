@@ -193,7 +193,8 @@ regardless of tier.
 ## Product extras (dashboard)
 
 - Shared team inbox: multiple team members answer the same number from the
-  web dashboard, with roles (owner/admin/member) and full history.
+  web dashboard, with roles (owner/admin/member), full history, tags,
+  internal notes, assignment, and per-member session access restrictions.
 - AI agents: bring-your-own-key (Anthropic or OpenAI) auto-responders per
   session, with human handoff. MCP tool support on Anthropic agents (Pro+).
 

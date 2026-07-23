@@ -17,9 +17,9 @@ export class WhatsappService {
     private readonly quota: QuotaService,
   ) {}
 
-  async list(organizationId: string) {
+  async list(organizationId: string, allowed?: string[] | null) {
     const sessions = await this.prisma.waSession.findMany({
-      where: { organizationId },
+      where: { organizationId, ...(allowed ? { id: { in: allowed } } : {}) },
       orderBy: { createdAt: 'desc' },
     });
     return sessions.map((s) => this.toPublic(s));

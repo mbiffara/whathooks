@@ -18,6 +18,7 @@ import {
   InviteMemberDto,
   TransferOwnershipDto,
   UpdateMemberRoleDto,
+  UpdateMemberSessionsDto,
   UpdateOrganizationDto,
 } from './dto/organization.dto';
 import { InvitationsService } from './invitations.service';
@@ -85,6 +86,22 @@ export class OrganizationsController {
   @Delete('members/:userId')
   removeMember(@CurrentUser() user: AuthUser, @Param('userId') userId: string) {
     return this.organizations.removeMember(this.orgOf(user), user, userId);
+  }
+
+  // Owners and admins can scope a MEMBER to specific sessions.
+  @UseGuards(OrgRolesGuard)
+  @OrgRoles('ADMIN')
+  @Patch('members/:userId/sessions')
+  updateMemberSessions(
+    @CurrentUser() user: AuthUser,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateMemberSessionsDto,
+  ) {
+    return this.organizations.updateMemberSessions(
+      this.orgOf(user),
+      userId,
+      dto.sessionIds,
+    );
   }
 
   @UseGuards(OrgRolesGuard)

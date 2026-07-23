@@ -218,6 +218,8 @@ export interface TeamMember {
   email: string;
   name: string | null;
   role: OrgRole;
+  /** Session allow-list; empty = access to all sessions. */
+  sessionIds: string[];
   joinedAt: string;
 }
 

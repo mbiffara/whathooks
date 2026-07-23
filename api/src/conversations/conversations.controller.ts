@@ -25,6 +25,7 @@ import {
 } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
+import { SessionAccessService } from '../auth/session-access.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { ConversationsService } from './conversations.service';
@@ -70,7 +71,14 @@ class NoteDto {
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
 @Controller('conversations')
 export class ConversationsController {
-  constructor(private readonly conversations: ConversationsService) {}
+  constructor(
+    private readonly conversations: ConversationsService,
+    private readonly access: SessionAccessService,
+  ) {}
+
+  private allowedFor(user: AuthUser) {
+    return this.access.restrictedSessionIds(user, this.orgOf(user));
+  }
 
   private orgOf(user: AuthUser): string {
     if (!user.organizationId)
@@ -88,21 +96,24 @@ export class ConversationsController {
     @Query('assigned') assigned?: string,
     @Query('tag') tag?: string,
   ) {
-    return this.conversations.list(this.orgOf(user), {
-      sessionId,
-      limit: limit ? Number(limit) : undefined,
-      q,
-      status:
-        status === 'OPEN' || status === 'RESOLVED' || status === 'ALL'
-          ? status
-          : undefined,
-      assigned:
-        assigned === 'me' || assigned === 'unassigned' || assigned === 'all'
-          ? assigned
-          : undefined,
-      userId: user.userId,
-      tagId: tag,
-    });
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.list(this.orgOf(user), {
+        sessionId,
+        limit: limit ? Number(limit) : undefined,
+        q,
+        status:
+          status === 'OPEN' || status === 'RESOLVED' || status === 'ALL'
+            ? status
+            : undefined,
+        assigned:
+          assigned === 'me' || assigned === 'unassigned' || assigned === 'all'
+            ? assigned
+            : undefined,
+        userId: user.userId,
+        tagId: tag,
+        allowed,
+      }),
+    );
   }
 
   @Patch(':id')
@@ -111,12 +122,15 @@ export class ConversationsController {
     @Param('id') id: string,
     @Body() body: UpdateConversationDto,
   ) {
-    return this.conversations.update(this.orgOf(user), id, body);
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.update(this.orgOf(user), id, body, allowed),
+    );
   }
 
   @Get(':id')
-  get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.conversations.get(this.orgOf(user), id);
+  async get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const allowed = await this.allowedFor(user);
+    return this.conversations.get(this.orgOf(user), id, allowed);
   }
 
   @Get(':id/messages')
@@ -126,10 +140,14 @@ export class ConversationsController {
     @Query('before') before?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.conversations.messages(this.orgOf(user), id, {
-      before,
-      limit: limit ? Number(limit) : undefined,
-    });
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.messages(
+        this.orgOf(user),
+        id,
+        { before, limit: limit ? Number(limit) : undefined },
+        allowed,
+      ),
+    );
   }
 
   @Post(':id/notes')
@@ -138,17 +156,22 @@ export class ConversationsController {
     @Param('id') id: string,
     @Body() body: NoteDto,
   ) {
-    return this.conversations.addNote(
-      this.orgOf(user),
-      id,
-      body.text,
-      user.userId,
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.addNote(
+        this.orgOf(user),
+        id,
+        body.text,
+        user.userId,
+        allowed,
+      ),
     );
   }
 
   @Post(':id/read')
   read(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.conversations.markRead(this.orgOf(user), id);
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.markRead(this.orgOf(user), id, allowed),
+    );
   }
 
   @Post(':id/agent/pause')
@@ -157,7 +180,14 @@ export class ConversationsController {
     @Param('id') id: string,
     @Body() body: AgentPauseDto,
   ) {
-    return this.conversations.setAgentPaused(this.orgOf(user), id, body.paused);
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.setAgentPaused(
+        this.orgOf(user),
+        id,
+        body.paused,
+        allowed,
+      ),
+    );
   }
 
   @Post(':id/messages')
@@ -170,6 +200,7 @@ export class ConversationsController {
   ) {
     const org = this.orgOf(user);
     if (file) {
+      const allowed = await this.access.restrictedSessionIds(user, org);
       return this.conversations.sendMedia(
         org,
         id,
@@ -180,9 +211,17 @@ export class ConversationsController {
         },
         body.text,
         user.userId,
+        allowed,
       );
     }
     if (!body.text) throw new BadRequestException('Provide text or a file');
-    return this.conversations.sendText(org, id, body.text, user.userId);
+    const allowed = await this.access.restrictedSessionIds(user, org);
+    return this.conversations.sendText(
+      org,
+      id,
+      body.text,
+      user.userId,
+      allowed,
+    );
   }
 }

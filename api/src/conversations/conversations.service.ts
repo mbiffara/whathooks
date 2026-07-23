@@ -50,13 +50,19 @@ export class ConversationsService {
       assigned?: 'me' | 'unassigned' | 'all';
       userId?: string;
       tagId?: string;
+      /** Session allow-list for restricted members (null = unrestricted). */
+      allowed?: string[] | null;
     },
   ) {
     const q = opts.q?.trim();
     const rows = await this.prisma.conversation.findMany({
       where: {
         organizationId,
-        sessionId: opts.sessionId,
+        sessionId: opts.allowed
+          ? opts.sessionId && opts.allowed.includes(opts.sessionId)
+            ? opts.sessionId
+            : { in: opts.allowed }
+          : opts.sessionId,
         lastMessageAt: { not: null },
         ...(opts.status && opts.status !== 'ALL'
           ? { status: opts.status }
@@ -98,8 +104,9 @@ export class ConversationsService {
       /** Full replacement set of tag ids (org-scoped). */
       tagIds?: string[];
     },
+    allowed?: string[] | null,
   ) {
-    await this.requireConversation(organizationId, id);
+    await this.requireConversation(organizationId, id, false, allowed);
     if (patch.tagIds) {
       const owned = await this.prisma.tag.count({
         where: { id: { in: patch.tagIds }, organizationId },
@@ -139,14 +146,19 @@ export class ConversationsService {
     return this.toConversationDto(updated);
   }
 
-  async get(organizationId: string, id: string) {
-    const c = await this.requireConversation(organizationId, id, true);
+  async get(organizationId: string, id: string, allowed?: string[] | null) {
+    const c = await this.requireConversation(organizationId, id, true, allowed);
     return this.toConversationDto(c);
   }
 
   /** Pause or resume the assigned agent's auto-replies for one conversation. */
-  async setAgentPaused(organizationId: string, id: string, paused: boolean) {
-    await this.requireConversation(organizationId, id);
+  async setAgentPaused(
+    organizationId: string,
+    id: string,
+    paused: boolean,
+    allowed?: string[] | null,
+  ) {
+    await this.requireConversation(organizationId, id, false, allowed);
     // A manual toggle has no handoff reason — clear any the agent left behind.
     await this.prisma.conversation.update({
       where: { id },
@@ -159,8 +171,9 @@ export class ConversationsService {
     organizationId: string,
     id: string,
     opts: { before?: string; limit?: number },
+    allowed?: string[] | null,
   ) {
-    await this.requireConversation(organizationId, id);
+    await this.requireConversation(organizationId, id, false, allowed);
     // Same retention window the flat message log applies (quota.service).
     const since = await this.quota.historyWindowStart(organizationId);
     const limit = Math.min(opts.limit ?? 40, 100);
@@ -189,8 +202,12 @@ export class ConversationsService {
     };
   }
 
-  async markRead(organizationId: string, id: string) {
-    await this.requireConversation(organizationId, id);
+  async markRead(
+    organizationId: string,
+    id: string,
+    allowed?: string[] | null,
+  ) {
+    await this.requireConversation(organizationId, id, false, allowed);
     await this.prisma.conversation.update({
       where: { id },
       data: { unreadCount: 0 },
@@ -203,9 +220,10 @@ export class ConversationsService {
     id: string,
     text: string,
     sentByUserId?: string,
+    allowed?: string[] | null,
   ) {
     await this.quota.assertCanSend(organizationId);
-    const c = await this.assertSendable(organizationId, id);
+    const c = await this.assertSendable(organizationId, id, allowed);
     const r = await this.manager.sendText(c.sessionId, c.remoteJid, text, {
       sentByUserId,
     });
@@ -218,9 +236,10 @@ export class ConversationsService {
     file: { buffer: Buffer; mimeType: string; fileName?: string | null },
     caption?: string,
     sentByUserId?: string,
+    allowed?: string[] | null,
   ) {
     await this.quota.assertCanSend(organizationId);
-    const c = await this.assertSendable(organizationId, id);
+    const c = await this.assertSendable(organizationId, id, allowed);
     const r = await this.manager.sendMedia(
       c.sessionId,
       c.remoteJid,
@@ -241,8 +260,14 @@ export class ConversationsService {
     id: string,
     text: string,
     sentByUserId: string,
+    allowed?: string[] | null,
   ) {
-    const c = await this.requireConversation(organizationId, id);
+    const c = await this.requireConversation(
+      organizationId,
+      id,
+      false,
+      allowed,
+    );
     const m = await this.prisma.message.create({
       data: {
         organizationId,
@@ -266,8 +291,17 @@ export class ConversationsService {
     return this.toMessageDto(m);
   }
 
-  private async assertSendable(organizationId: string, id: string) {
-    const c = await this.requireConversation(organizationId, id);
+  private async assertSendable(
+    organizationId: string,
+    id: string,
+    allowed?: string[] | null,
+  ) {
+    const c = await this.requireConversation(
+      organizationId,
+      id,
+      false,
+      allowed,
+    );
     const session = await this.prisma.waSession.findUnique({
       where: { id: c.sessionId },
     });
@@ -285,12 +319,17 @@ export class ConversationsService {
     organizationId: string,
     id: string,
     withAgent = false,
+    allowed?: string[] | null,
   ) {
     const c = await this.prisma.conversation.findFirst({
       where: { id, organizationId },
       ...(withAgent ? { include: AGENT_INCLUDE } : {}),
     });
     if (!c) throw new NotFoundException('Conversation not found');
+    // Restricted members: 404 to avoid probing threads on hidden sessions.
+    if (allowed && !allowed.includes(c.sessionId)) {
+      throw new NotFoundException('Conversation not found');
+    }
     return c;
   }
 

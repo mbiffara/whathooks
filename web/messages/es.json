@@ -313,7 +313,12 @@
       "revoke": "Revocar",
       "failedToInvite": "No se pudo invitar",
       "failedToRegenerate": "No se pudo regenerar",
-      "failedToLeave": "No se pudo salir"
+      "failedToLeave": "No se pudo salir",
+      "sessionAccess": "Sesiones",
+      "allSessionsAccess": "Todas las sesiones",
+      "nSessions": "{count, plural, one {# sesión} other {# sesiones}}",
+      "sessionAccessHint": "Desmarca todas para restaurar el acceso a todas las sesiones.",
+      "saveAccess": "Guardar"
     },
     "agents": {
       "title": "Agentes",

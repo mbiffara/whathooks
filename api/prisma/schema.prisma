@@ -118,6 +118,8 @@ model Membership {
 
   @@unique([userId, organizationId])
   @@index([organizationId])
+  // Session-level access: empty = all sessions (default); ignored for OWNER/ADMIN.
+  sessionIds String[] @default([])
 }
 
 // Pending/accepted invites to join an organization. The raw token is shown

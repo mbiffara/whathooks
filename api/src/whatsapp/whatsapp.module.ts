@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { AgentsModule } from '../agents/agents.module';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { BillingModule } from '../billing/billing.module';
@@ -8,7 +9,7 @@ import { SessionsController } from './sessions.controller';
 import { WhatsappService } from './whatsapp.service';
 
 @Module({
-  imports: [WebhooksModule, AgentsModule, BillingModule, ApiKeysModule],
+  imports: [AuthModule, WebhooksModule, AgentsModule, BillingModule, ApiKeysModule],
   controllers: [SessionsController],
   providers: [ConnectionManagerService, WhatsappService],
   exports: [ConnectionManagerService, WhatsappService],

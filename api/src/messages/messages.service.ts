@@ -69,13 +69,17 @@ export class MessagesService {
   /** Flat recent message list (for the dashboard message log). */
   async list(
     organizationId: string,
-    opts: { sessionId?: string; limit?: number },
+    opts: { sessionId?: string; limit?: number; allowed?: string[] | null },
   ) {
     const since = await this.quota.historyWindowStart(organizationId);
     const rows = await this.prisma.message.findMany({
       where: {
         organizationId,
-        sessionId: opts.sessionId,
+        sessionId: opts.allowed
+          ? opts.sessionId && opts.allowed.includes(opts.sessionId)
+            ? opts.sessionId
+            : { in: opts.allowed }
+          : opts.sessionId,
         ...(since ? { createdAt: { gte: since } } : {}),
       },
       orderBy: { timestamp: 'desc' },

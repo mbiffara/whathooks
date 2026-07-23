@@ -1,11 +1,13 @@
 "use client";
 
+import { MemberSessionAccess } from "@/components/member-session-access";
 import { apiClient } from "@/lib/client-api";
 import type {
   Invitation,
   InvitationCreated,
   OrgRole,
   TeamMember,
+  WaSession,
 } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { signOut, useSession } from "next-auth/react";
@@ -29,6 +31,7 @@ export default function TeamPage() {
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invites, setInvites] = useState<Invitation[]>([]);
+  const [sessions, setSessions] = useState<WaSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +51,9 @@ export default function TeamPage() {
         requests.push(
           apiClient<Invitation[]>("/organizations/invitations", token),
         );
+        apiClient<WaSession[]>("/sessions", token)
+          .then(setSessions)
+          .catch(() => {});
       }
       const [m, i] = await Promise.all(requests);
       setMembers(m as TeamMember[]);
@@ -233,6 +239,18 @@ export default function TeamPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {canManage &&
+                    m.role === "MEMBER" &&
+                    token &&
+                    sessions.length > 0 && (
+                      <MemberSessionAccess
+                        token={token}
+                        userId={m.userId}
+                        sessionIds={m.sessionIds}
+                        sessions={sessions}
+                        onSaved={() => void load()}
+                      />
+                    )}
                   {isOwner && !isSelf && m.role !== "OWNER" && (
                     <>
                       <select

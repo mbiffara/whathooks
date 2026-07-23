@@ -1,4 +1,12 @@
-import { IsEmail, IsIn, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsString,
+  MaxLength,
+  MinLength,
+  ArrayMaxSize,
+  IsArray,
+} from 'class-validator';
 
 // Invitable/assignable roles. OWNER is excluded on purpose: ownership only
 // moves via the transfer-ownership endpoint.
@@ -21,6 +29,14 @@ export class UpdateMemberRoleDto {
 export class TransferOwnershipDto {
   @IsString()
   userId!: string;
+}
+
+export class UpdateMemberSessionsDto {
+  // Empty array = access to all sessions (the default).
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  sessionIds!: string[];
 }
 
 export class UpdateOrganizationDto {

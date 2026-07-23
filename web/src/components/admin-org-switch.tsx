@@ -21,11 +21,13 @@ export function AdminOrgSwitch({ organizationId }: { organizationId: string }) {
   const { data: session, update } = useSession();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function switchInto() {
     const token = session?.accessToken;
     if (!token || busy) return;
     setBusy(true);
+    setError(null);
     try {
       const res = await apiClient<SwitchOrgResponse>(
         "/auth/switch-org",
@@ -42,14 +44,20 @@ export function AdminOrgSwitch({ organizationId }: { organizationId: string }) {
       });
       router.push("/dashboard");
       router.refresh();
-    } finally {
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Switch failed");
       setBusy(false);
     }
   }
 
   return (
-    <button onClick={switchInto} disabled={busy} className="btn-ghost">
-      {busy ? "Switching…" : "Open dashboard as this org"}
-    </button>
+    <span className="flex items-center gap-2">
+      {error && (
+        <span className="text-xs text-[var(--color-danger)]">{error}</span>
+      )}
+      <button onClick={switchInto} disabled={busy} className="btn-ghost">
+        {busy ? "Switching…" : "Open dashboard as this org"}
+      </button>
+    </span>
   );
 }

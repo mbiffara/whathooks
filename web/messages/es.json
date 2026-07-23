@@ -388,7 +388,20 @@
         "Pégala aquí — la guardamos cifrada y solo se usa para las respuestas de este agente"
       ],
       "openConsole": "Abrir consola de {provider} ↗",
-      "byokNote": "Le pagas directamente a {provider} por el uso — whathooks no agrega recargo."
+      "byokNote": "Le pagas directamente a {provider} por el uso — whathooks no agrega recargo.",
+      "activeHours": "Horario activo",
+      "activeHoursSuffix": "— cuándo responde el agente",
+      "alwaysOn": "Siempre activo",
+      "scheduled": "Programado",
+      "scheduleDaysLabel": "Días",
+      "dayNames": ["D", "L", "M", "M", "J", "V", "S"],
+      "fromTime": "Desde",
+      "toTime": "Hasta",
+      "timezone": "Zona horaria",
+      "scheduleHint": "Fuera de este horario el agente guarda silencio y responde tu equipo. Una hora de fin anterior al inicio cruza la medianoche.",
+      "scheduleSummary": "{days} · {start}–{end}",
+      "unlinkedWarning": "Habilitado pero sin vincular a ninguna sesión — abre una sesión y asigna este agente en 'Agente IA'.",
+      "goToSessions": "Ir a sesiones"
     },
     "messages": {
       "title": "Mensajes",

@@ -33,9 +33,25 @@ type Draft = {
   allowAutoStop: boolean;
   replyDelayMinSeconds: number;
   replyDelayMaxSeconds: number;
+  scheduleEnabled: boolean;
+  scheduleDays: number[];
+  scheduleStart: string; // "HH:MM"
+  scheduleEnd: string;
+  scheduleTimezone: string;
   enabled: boolean;
   mcpServers: McpServerDraft[];
 };
+
+const toHHMM = (m: number) =>
+  `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+const toMinutes = (s: string) => {
+  const [h, m] = s.split(":").map(Number);
+  return (h % 24) * 60 + (m || 0);
+};
+const browserTz = () =>
+  typeof Intl !== "undefined"
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : "UTC";
 
 const EMPTY: Draft = {
   name: "",
@@ -47,6 +63,11 @@ const EMPTY: Draft = {
   allowAutoStop: false,
   replyDelayMinSeconds: 0,
   replyDelayMaxSeconds: 0,
+  scheduleEnabled: false,
+  scheduleDays: [5, 6, 0],
+  scheduleStart: "18:00",
+  scheduleEnd: "00:00",
+  scheduleTimezone: "UTC",
   enabled: true,
   mcpServers: [],
 };
@@ -101,6 +122,11 @@ export default function AgentsPage() {
         allowAutoStop: draft.allowAutoStop,
         replyDelayMinSeconds: draft.replyDelayMinSeconds,
         replyDelayMaxSeconds: draft.replyDelayMaxSeconds,
+        scheduleEnabled: draft.scheduleEnabled,
+        scheduleDays: draft.scheduleDays,
+        scheduleStartMinute: toMinutes(draft.scheduleStart),
+        scheduleEndMinute: toMinutes(draft.scheduleEnd),
+        scheduleTimezone: draft.scheduleTimezone,
         enabled: draft.enabled,
       };
       // Only send the key when the user entered one (blank = keep existing).
@@ -161,7 +187,9 @@ export default function AgentsPage() {
         </div>
         {!draft && (
           <button
-            onClick={() => setDraft({ ...EMPTY })}
+            onClick={() =>
+              setDraft({ ...EMPTY, scheduleTimezone: browserTz() })
+            }
             className="btn-primary"
           >
             {t("newAgent")}
@@ -406,6 +434,119 @@ export default function AgentsPage() {
               {t("replyDelayNote")}
             </p>
           </div>
+          <div>
+            <label className="label">
+              {t("activeHours")}{" "}
+              <span className="text-[var(--color-muted)]">
+                {t("activeHoursSuffix")}
+              </span>
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDraft({ ...draft, scheduleEnabled: false })}
+                className={`rounded-md px-3 py-1.5 text-xs ${
+                  !draft.scheduleEnabled
+                    ? "bg-[var(--color-surface-2)] font-medium"
+                    : "text-[var(--color-muted)]"
+                }`}
+              >
+                {t("alwaysOn")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraft({ ...draft, scheduleEnabled: true })}
+                className={`rounded-md px-3 py-1.5 text-xs ${
+                  draft.scheduleEnabled
+                    ? "bg-[var(--color-surface-2)] font-medium"
+                    : "text-[var(--color-muted)]"
+                }`}
+              >
+                {t("scheduled")}
+              </button>
+            </div>
+            {draft.scheduleEnabled && (
+              <div className="mt-3 flex flex-col gap-3">
+                <div className="flex items-center gap-1.5">
+                  {(t.raw("dayNames") as string[]).map((label, day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          scheduleDays: draft.scheduleDays.includes(day)
+                            ? draft.scheduleDays.filter((d) => d !== day)
+                            : [...draft.scheduleDays, day],
+                        })
+                      }
+                      className={`grid h-8 w-8 place-items-center rounded-full text-xs font-medium ${
+                        draft.scheduleDays.includes(day)
+                          ? "bg-[var(--color-brand)] text-[var(--color-on-brand)]"
+                          : "border border-[var(--color-border)] text-[var(--color-muted)]"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="label">{t("fromTime")}</label>
+                    <input
+                      type="time"
+                      className="input w-28"
+                      value={draft.scheduleStart}
+                      onChange={(e) =>
+                        setDraft({ ...draft, scheduleStart: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="label">{t("toTime")}</label>
+                    <input
+                      type="time"
+                      className="input w-28"
+                      value={draft.scheduleEnd}
+                      onChange={(e) =>
+                        setDraft({ ...draft, scheduleEnd: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="min-w-48 flex-1">
+                    <label className="label">{t("timezone")}</label>
+                    <select
+                      className="input"
+                      value={draft.scheduleTimezone}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          scheduleTimezone: e.target.value,
+                        })
+                      }
+                    >
+                      {[
+                        ...new Set([
+                          draft.scheduleTimezone,
+                          browserTz(),
+                          ...(typeof Intl.supportedValuesOf === "function"
+                            ? Intl.supportedValuesOf("timeZone")
+                            : ["UTC"]),
+                        ]),
+                      ].map((tz) => (
+                        <option key={tz} value={tz}>
+                          {tz}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-[var(--color-muted)]">
+                  {t("scheduleHint")}
+                </p>
+              </div>
+            )}
+          </div>
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
@@ -602,6 +743,12 @@ export default function AgentsPage() {
                       </span>
                     )}
                     <span>{t("sessionCount", { count: a.sessionCount })}</span>
+                    {a.scheduleEnabled && (
+                      <span className="pill">
+                        🕒 {toHHMM(a.scheduleStartMinute)}–
+                        {toHHMM(a.scheduleEndMinute)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button
@@ -618,6 +765,17 @@ export default function AgentsPage() {
               <p className="line-clamp-2 text-sm text-[var(--color-muted)]">
                 {a.soul}
               </p>
+              {a.enabled && a.sessionCount === 0 && (
+                <p className="rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning-bg)] px-3 py-2 text-xs text-[var(--color-warning)]">
+                  ⚠ {t("unlinkedWarning")}{" "}
+                  <Link
+                    href="/dashboard/sessions"
+                    className="font-medium underline"
+                  >
+                    {t("goToSessions")}
+                  </Link>
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() =>
@@ -633,6 +791,11 @@ export default function AgentsPage() {
                       allowAutoStop: a.allowAutoStop,
                       replyDelayMinSeconds: a.replyDelayMinSeconds,
                       replyDelayMaxSeconds: a.replyDelayMaxSeconds,
+                      scheduleEnabled: a.scheduleEnabled,
+                      scheduleDays: a.scheduleDays,
+                      scheduleStart: toHHMM(a.scheduleStartMinute),
+                      scheduleEnd: toHHMM(a.scheduleEndMinute),
+                      scheduleTimezone: a.scheduleTimezone,
                       enabled: a.enabled,
                       mcpServers: (a.mcpServers ?? []).map((s) => ({
                         name: s.name,

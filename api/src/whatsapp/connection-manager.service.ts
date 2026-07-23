@@ -29,6 +29,7 @@ import pino from 'pino';
 import { AgentRunnerService } from '../agents/agent-runner.service';
 import { MediaService } from '../media/media.service';
 import { QuotaService } from '../billing/quota.service';
+import { agentActiveNow } from './agent-schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { usePrismaAuthState } from './baileys-auth-state';
@@ -442,6 +443,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     });
     const agent = session?.agent;
     if (!agent || !agent.enabled) return;
+    if (!agentActiveNow(agent)) return; // outside its scheduled hours
 
     // Agents send on the org's behalf, so they respect the same quota gate as
     // manual sends (subscription + monthly cap). Skip quietly — an inbound

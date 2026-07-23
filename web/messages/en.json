@@ -388,7 +388,20 @@
         "Paste it here — we store it encrypted and only use it for this agent's replies"
       ],
       "openConsole": "Open {provider} console ↗",
-      "byokNote": "You pay {provider} directly for usage — whathooks adds no markup."
+      "byokNote": "You pay {provider} directly for usage — whathooks adds no markup.",
+      "activeHours": "Active hours",
+      "activeHoursSuffix": "— when the agent replies",
+      "alwaysOn": "Always on",
+      "scheduled": "Scheduled",
+      "scheduleDaysLabel": "Days",
+      "dayNames": ["S", "M", "T", "W", "T", "F", "S"],
+      "fromTime": "From",
+      "toTime": "To",
+      "timezone": "Timezone",
+      "scheduleHint": "Outside these hours the agent stays quiet and your team replies. An end time earlier than the start crosses midnight.",
+      "scheduleSummary": "{days} · {start}–{end}",
+      "unlinkedWarning": "Enabled but not linked to any session — open a session and assign this agent under 'AI Agent'.",
+      "goToSessions": "Go to sessions"
     },
     "messages": {
       "title": "Messages",

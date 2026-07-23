@@ -35,6 +35,11 @@ export interface Agent {
   allowAutoStop: boolean;
   replyDelayMinSeconds: number;
   replyDelayMaxSeconds: number;
+  scheduleEnabled: boolean;
+  scheduleDays: number[];
+  scheduleStartMinute: number;
+  scheduleEndMinute: number;
+  scheduleTimezone: string;
   enabled: boolean;
   sessionCount: number;
   createdAt: string;

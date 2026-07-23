@@ -210,6 +210,14 @@ model Agent {
   mcpServers      Json?
   replyDelayMinSeconds Int      @default(0) // hold the reply a random time in [min,max] (0 = send immediately)
   replyDelayMaxSeconds Int      @default(0)
+  // Active-hours schedule: when set, the agent only auto-replies inside the
+  // window. Days are 0-6 (Sunday=0) in scheduleTimezone; minutes are from
+  // midnight. end <= start means the window crosses midnight.
+  scheduleEnabled     Boolean  @default(false)
+  scheduleDays        Int[]    @default([])
+  scheduleStartMinute Int      @default(0)
+  scheduleEndMinute   Int      @default(0)
+  scheduleTimezone    String   @default("UTC")
   enabled         Boolean       @default(true)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

@@ -11,6 +11,7 @@ import {
   Min,
   MinLength,
   ValidateNested,
+  ArrayMaxSize,
 } from 'class-validator';
 
 /**
@@ -106,6 +107,36 @@ export class CreateAgentDto {
 
   @IsOptional()
   @IsBoolean()
+  scheduleEnabled?: boolean;
+
+  // 0-6, Sunday = 0
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(7)
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  scheduleDays?: number[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1439)
+  scheduleStartMinute?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1439)
+  scheduleEndMinute?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  scheduleTimezone?: string;
+
+  @IsOptional()
+  @IsBoolean()
   enabled?: boolean;
 
   // Empty array clears the list. Servers matching an existing name keep their
@@ -174,6 +205,36 @@ export class UpdateAgentDto {
   @Min(0)
   @Max(300)
   replyDelayMaxSeconds?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  scheduleEnabled?: boolean;
+
+  // 0-6, Sunday = 0
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(7)
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  scheduleDays?: number[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1439)
+  scheduleStartMinute?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1439)
+  scheduleEndMinute?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  scheduleTimezone?: string;
 
   @IsOptional()
   @IsBoolean()

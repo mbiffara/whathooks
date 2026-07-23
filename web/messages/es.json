@@ -258,7 +258,8 @@
           "Soporte prioritario"
         ]
       },
-      "trialEnds": "la prueba gratuita termina el {date}"
+      "trialEnds": "la prueba gratuita termina el {date}",
+      "startTrial": "Comenzar prueba gratis"
     },
     "webhooks": {
       "title": "Webhooks",

@@ -64,6 +64,9 @@ function BillingContent() {
   }
 
   const unlimited = sub?.usage.limit == null;
+  // Never subscribed before (status is only ever set once a subscription
+  // exists) — checkout will grant the 7-day trial, so the CTA can say so.
+  const trialEligible = !!sub && !sub.subscribed && sub.status === null;
   const usagePct =
     sub && sub.usage.limit != null
       ? Math.min(100, Math.round((sub.usage.used / sub.usage.limit) * 100))
@@ -224,7 +227,9 @@ function BillingContent() {
                         ? t("currentPlanBtn")
                         : busy === "/billing/checkout"
                           ? t("redirecting")
-                          : t("choosePlan")}
+                          : trialEligible
+                            ? t("startTrial")
+                            : t("choosePlan")}
                     </button>
                   </div>
                 );

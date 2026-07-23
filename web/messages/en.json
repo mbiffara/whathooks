@@ -258,7 +258,8 @@
           "Priority support"
         ]
       },
-      "trialEnds": "free trial ends {date}"
+      "trialEnds": "free trial ends {date}",
+      "startTrial": "Start free trial"
     },
     "webhooks": {
       "title": "Webhooks",

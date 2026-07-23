@@ -4,6 +4,7 @@ import { MessageBubble } from "@/components/messages/message-bubble";
 import type {
   ChatMessage,
   Conversation,
+  ConversationTag,
   MessagesPage,
 } from "@/components/messages/types";
 import { previewText, relativeTime } from "@/components/messages/utils";
@@ -51,6 +52,11 @@ export default function MessagesPage() {
   >("all");
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [updatingConv, setUpdatingConv] = useState(false);
+  const [tags, setTags] = useState<ConversationTag[]>([]);
+  const [tagFilter, setTagFilter] = useState("");
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [noteMode, setNoteMode] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [convLoading, setConvLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -101,6 +107,9 @@ export default function MessagesPage() {
     apiClient<TeamMember[]>("/organizations/members", token)
       .then(setMembers)
       .catch(() => setMembers([]));
+    apiClient<ConversationTag[]>("/tags", token)
+      .then(setTags)
+      .catch(() => setTags([]));
   }, [token]);
 
   useEffect(() => {
@@ -116,6 +125,7 @@ export default function MessagesPage() {
     if (debouncedSearch) params.set("q", debouncedSearch);
     params.set("status", statusFilter);
     if (assignedFilter !== "all") params.set("assigned", assignedFilter);
+    if (tagFilter) params.set("tag", tagFilter);
     try {
       const data = await apiClient<Conversation[]>(
         `/conversations?${params.toString()}`,
@@ -127,7 +137,14 @@ export default function MessagesPage() {
     } finally {
       setConvLoading(false);
     }
-  }, [token, sessionFilter, debouncedSearch, statusFilter, assignedFilter]);
+  }, [
+    token,
+    sessionFilter,
+    debouncedSearch,
+    statusFilter,
+    assignedFilter,
+    tagFilter,
+  ]);
 
   useEffect(() => {
     setConvLoading(true);
@@ -305,6 +322,7 @@ export default function MessagesPage() {
   async function updateConversation(patch: {
     assignedToUserId?: string | null;
     status?: "OPEN" | "RESOLVED";
+    tagIds?: string[];
   }) {
     if (!token || !selectedConv || updatingConv) return;
     setUpdatingConv(true);
@@ -321,6 +339,55 @@ export default function MessagesPage() {
       /* surface via next poll */
     } finally {
       setUpdatingConv(false);
+    }
+  }
+
+  async function toggleTag(tagId: string) {
+    if (!selectedConv) return;
+    const current = selectedConv.tags.map((t) => t.id);
+    const next = current.includes(tagId)
+      ? current.filter((id) => id !== tagId)
+      : [...current, tagId];
+    await updateConversation({ tagIds: next });
+  }
+
+  async function createTag() {
+    const name = newTagName.trim();
+    if (!token || !name) return;
+    try {
+      const created = await apiClient<ConversationTag>("/tags", token, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      setTags((prev) =>
+        prev.some((t) => t.id === created.id)
+          ? prev
+          : [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      setNewTagName("");
+      await toggleTag(created.id);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function sendNote() {
+    if (!token || !selectedId || sending) return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      await apiClient(`/conversations/${selectedId}/notes`, token, {
+        method: "POST",
+        body: JSON.stringify({ text: trimmed }),
+      });
+      setText("");
+      await refetchThread();
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : t("failedToSend"));
+    } finally {
+      setSending(false);
     }
   }
 
@@ -355,7 +422,8 @@ export default function MessagesPage() {
   function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (noteMode) void sendNote();
+      else handleSend();
     }
   }
 
@@ -407,6 +475,20 @@ export default function MessagesPage() {
               <option value="unassigned">{t("filterUnassigned")}</option>
             </select>
           </div>
+          {tags.length > 0 && (
+            <select
+              className="input mt-2 h-8 w-full px-2 py-0 text-xs"
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+            >
+              <option value="">{t("filterAllTags")}</option>
+              {tags.map((tg) => (
+                <option key={tg.id} value={tg.id}>
+                  {tg.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto">
           {convLoading ? (
@@ -584,6 +666,80 @@ export default function MessagesPage() {
               )}
             </div>
 
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--color-border)] px-4 py-2">
+              {selectedConv.tags.map((tg) => (
+                <button
+                  key={tg.id}
+                  onClick={() => toggleTag(tg.id)}
+                  title={tg.name}
+                  className="rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                  style={{
+                    color: tg.color,
+                    borderColor: `${tg.color}55`,
+                    backgroundColor: `${tg.color}1a`,
+                  }}
+                >
+                  {tg.name} ×
+                </button>
+              ))}
+              <div className="relative">
+                <button
+                  onClick={() => setTagPickerOpen((v) => !v)}
+                  className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                >
+                  {t("addTag")}
+                </button>
+                {tagPickerOpen && (
+                  <div className="absolute left-0 top-6 z-30 w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-lg">
+                    <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+                      {tags.map((tg) => {
+                        const active = selectedConv.tags.some(
+                          (x) => x.id === tg.id,
+                        );
+                        return (
+                          <button
+                            key={tg.id}
+                            onClick={() => toggleTag(tg.id)}
+                            className={`flex items-center gap-2 rounded-md px-2 py-1 text-left text-xs hover:bg-[var(--color-surface-2)] ${
+                              active ? "font-semibold" : ""
+                            }`}
+                          >
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: tg.color }}
+                            />
+                            <span className="flex-1 truncate">{tg.name}</span>
+                            {active && <span>✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2 flex gap-1 border-t border-[var(--color-border)] pt-2">
+                      <input
+                        className="input h-7 flex-1 px-2 py-0 text-xs"
+                        placeholder={t("newTagPlaceholder")}
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void createTag();
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => void createTag()}
+                        disabled={!newTagName.trim()}
+                        className="btn-primary h-7 px-2 py-0 text-xs"
+                      >
+                        {t("createTag")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div
               ref={scrollRef}
               onScroll={onThreadScroll}
@@ -647,10 +803,32 @@ export default function MessagesPage() {
                   </button>
                 </div>
               )}
+              <div className="mb-2 flex gap-1">
+                <button
+                  onClick={() => setNoteMode(false)}
+                  className={`rounded-md px-2 py-1 text-xs ${
+                    !noteMode
+                      ? "bg-[var(--color-surface-2)] font-medium"
+                      : "text-[var(--color-muted)]"
+                  }`}
+                >
+                  {t("modeReply")}
+                </button>
+                <button
+                  onClick={() => setNoteMode(true)}
+                  className={`rounded-md px-2 py-1 text-xs ${
+                    noteMode
+                      ? "bg-[var(--color-warning-bg)] font-medium text-[var(--color-warning)]"
+                      : "text-[var(--color-muted)]"
+                  }`}
+                >
+                  🗒 {t("modeNote")}
+                </button>
+              </div>
               <div className="flex items-end gap-2">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={!isConnected || sending}
+                  disabled={noteMode || !isConnected || sending}
                   className="btn-ghost rounded-lg px-3 py-2 text-sm disabled:opacity-50"
                   aria-label={t("attachFile")}
                 >
@@ -663,22 +841,35 @@ export default function MessagesPage() {
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
                 <textarea
-                  className="input flex-1 resize-none"
+                  className={`input flex-1 resize-none ${
+                    noteMode
+                      ? "border-[var(--color-warning)]/50 bg-[var(--color-warning-bg)]"
+                      : ""
+                  }`}
                   rows={1}
                   placeholder={
-                    isConnected ? t("typeMessage") : t("numberDisconnected")
+                    noteMode
+                      ? t("notePlaceholder")
+                      : isConnected
+                        ? t("typeMessage")
+                        : t("numberDisconnected")
                   }
                   value={text}
-                  disabled={!isConnected}
+                  disabled={!noteMode && !isConnected}
                   onChange={(e) => setText(e.target.value)}
                   onKeyDown={onComposerKeyDown}
                 />
                 <button
-                  onClick={handleSend}
-                  disabled={!isConnected || sending || (!text.trim() && !file)}
+                  onClick={noteMode ? sendNote : handleSend}
+                  disabled={
+                    sending ||
+                    (noteMode
+                      ? !text.trim()
+                      : !isConnected || (!text.trim() && !file))
+                  }
                   className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-50"
                 >
-                  {sending ? t("sending") : t("send")}
+                  {sending ? t("sending") : noteMode ? t("addNote") : t("send")}
                 </button>
               </div>
             </div>

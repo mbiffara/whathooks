@@ -19,7 +19,13 @@ export interface ChatMedia {
   size: number | null;
 }
 
-export type MessageSource = "CONTACT" | "HUMAN" | "API" | "AGENT";
+export type MessageSource = "CONTACT" | "HUMAN" | "API" | "AGENT" | "NOTE";
+
+export interface ConversationTag {
+  id: string;
+  name: string;
+  color: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -56,6 +62,7 @@ export interface Conversation {
   agentPaused: boolean;
   agentPausedReason: string | null;
   status: "OPEN" | "RESOLVED";
+  tags: ConversationTag[];
   assignedTo: { id: string; name: string } | null;
 }
 

@@ -403,7 +403,8 @@
         "document": "Document",
         "location": "📍 Location",
         "contact": "👤 Contact",
-        "unsupported": "Unsupported message"
+        "unsupported": "Unsupported message",
+        "note": "Note"
       },
       "searchPlaceholder": "Search name, number, or text…",
       "filterOpen": "Open",
@@ -416,7 +417,15 @@
       "noAssignee": "Unassigned",
       "resolve": "Resolve",
       "reopen": "Reopen",
-      "resolved": "Resolved"
+      "resolved": "Resolved",
+      "filterAllTags": "All tags",
+      "addTag": "+ Tag",
+      "newTagPlaceholder": "New tag name…",
+      "createTag": "Create",
+      "modeReply": "Reply",
+      "modeNote": "Note",
+      "notePlaceholder": "Internal note — the contact won't see this…",
+      "addNote": "Add note"
     }
   },
   "landing": {

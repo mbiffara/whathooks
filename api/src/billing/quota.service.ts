@@ -81,6 +81,8 @@ export class QuotaService {
       where: {
         organizationId,
         createdAt: { gte: currentMonthStart(new Date()) },
+        // Internal team notes never touch WhatsApp — they're free.
+        source: { not: 'NOTE' },
       },
     });
     return { used, limit: limits.messagesPerMonth };

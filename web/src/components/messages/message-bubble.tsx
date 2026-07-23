@@ -2,6 +2,31 @@ import { useTranslations } from "next-intl";
 import type { ChatMessage } from "./types";
 import { clockTime, formatBytes } from "./utils";
 
+/** Internal note: amber sticky-note style, clearly not a WhatsApp message. */
+function NoteBubble({
+  message,
+  label,
+}: {
+  message: ChatMessage;
+  label: string;
+}) {
+  return (
+    <div className="flex justify-center">
+      <div className="max-w-[85%] rounded-xl border border-[var(--color-warning)]/40 bg-[var(--color-warning-bg)] px-3 py-2">
+        <div className="mb-0.5 text-[10px] font-semibold text-[var(--color-warning)]">
+          🗒 {label}
+        </div>
+        <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-fg)]">
+          {message.text}
+        </p>
+        <div className="mt-1 text-right text-[10px] text-[var(--color-muted)]">
+          {clockTime(message.timestamp)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function senderLabel(
   message: ChatMessage,
   t: (key: string) => string,
@@ -23,6 +48,12 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   const t = useTranslations("dash.messages.bubble");
   const outbound = message.fromMe || message.direction === "OUTBOUND";
   const media = message.media;
+
+  if (message.source === "NOTE") {
+    return (
+      <NoteBubble message={message} label={message.sentByName ?? t("note")} />
+    );
+  }
 
   return (
     <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>

@@ -13,11 +13,13 @@ import { MessagesModule } from './messages/messages.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { TagsModule } from './tags/tags.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 
 @Module({
   imports: [
+    TagsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     RedisModule,

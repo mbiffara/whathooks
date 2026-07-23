@@ -193,6 +193,7 @@ export class AdminController {
       where: {
         organizationId: id,
         createdAt: { gte: currentMonthStart(new Date()) },
+        source: { not: 'NOTE' },
       },
     });
     const planLimit = PLANS[org.plan].messagesPerMonth;

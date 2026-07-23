@@ -14,6 +14,7 @@ type ConversationWithAgent = Conversation & {
     agent: { id: string; name: string; enabled: boolean } | null;
   } | null;
   assignedTo?: { id: string; name: string | null; email: string } | null;
+  tags?: { id: string; name: string; color: string }[];
 };
 const AGENT_INCLUDE = {
   session: {
@@ -22,6 +23,7 @@ const AGENT_INCLUDE = {
     },
   },
   assignedTo: { select: { id: true, name: true, email: true } },
+  tags: { select: { id: true, name: true, color: true } },
 } as const;
 import { QuotaService } from '../billing/quota.service';
 import { MediaService } from '../media/media.service';
@@ -47,6 +49,7 @@ export class ConversationsService {
       status?: 'OPEN' | 'RESOLVED' | 'ALL';
       assigned?: 'me' | 'unassigned' | 'all';
       userId?: string;
+      tagId?: string;
     },
   ) {
     const q = opts.q?.trim();
@@ -63,6 +66,7 @@ export class ConversationsService {
           : opts.assigned === 'unassigned'
             ? { assignedToUserId: null }
             : {}),
+        ...(opts.tagId ? { tags: { some: { id: opts.tagId } } } : {}),
         ...(q
           ? {
               OR: [
@@ -91,9 +95,19 @@ export class ConversationsService {
     patch: {
       assignedToUserId?: string | null;
       status?: 'OPEN' | 'RESOLVED';
+      /** Full replacement set of tag ids (org-scoped). */
+      tagIds?: string[];
     },
   ) {
     await this.requireConversation(organizationId, id);
+    if (patch.tagIds) {
+      const owned = await this.prisma.tag.count({
+        where: { id: { in: patch.tagIds }, organizationId },
+      });
+      if (owned !== patch.tagIds.length) {
+        throw new BadRequestException('Unknown tag');
+      }
+    }
     if (patch.assignedToUserId) {
       const member = await this.prisma.membership.findUnique({
         where: {
@@ -116,6 +130,9 @@ export class ConversationsService {
           ? { assignedToUserId: patch.assignedToUserId }
           : {}),
         ...(patch.status ? { status: patch.status } : {}),
+        ...(patch.tagIds
+          ? { tags: { set: patch.tagIds.map((id) => ({ id })) } }
+          : {}),
       },
       include: AGENT_INCLUDE,
     });
@@ -218,6 +235,37 @@ export class ConversationsService {
     };
   }
 
+  /** Internal team note: stored in the thread, never sent to WhatsApp. */
+  async addNote(
+    organizationId: string,
+    id: string,
+    text: string,
+    sentByUserId: string,
+  ) {
+    const c = await this.requireConversation(organizationId, id);
+    const m = await this.prisma.message.create({
+      data: {
+        organizationId,
+        conversationId: c.id,
+        sessionId: c.sessionId,
+        direction: 'OUTBOUND',
+        fromMe: true,
+        source: 'NOTE',
+        sentByUserId,
+        type: 'TEXT',
+        text,
+        status: 'SENT',
+        timestamp: new Date(),
+      },
+      include: {
+        media: true,
+        agent: { select: { name: true } },
+        sentBy: { select: { name: true, email: true } },
+      },
+    });
+    return this.toMessageDto(m);
+  }
+
   private async assertSendable(organizationId: string, id: string) {
     const c = await this.requireConversation(organizationId, id);
     const session = await this.prisma.waSession.findUnique({
@@ -265,6 +313,7 @@ export class ConversationsService {
       agentPaused: c.agentPaused,
       agentPausedReason: c.agentPausedReason,
       status: c.status,
+      tags: c.tags ?? [],
       assignedTo: c.assignedTo
         ? {
             id: c.assignedTo.id,

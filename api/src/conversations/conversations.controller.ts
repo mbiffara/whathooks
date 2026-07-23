@@ -13,11 +13,14 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsOptional,
   IsString,
   MaxLength,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -48,6 +51,20 @@ class UpdateConversationDto {
   @IsOptional()
   @IsIn(['OPEN', 'RESOLVED'])
   status?: 'OPEN' | 'RESOLVED';
+
+  // Full replacement set of tag ids.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  tagIds?: string[];
+}
+
+class NoteDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4096)
+  text!: string;
 }
 
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
@@ -69,6 +86,7 @@ export class ConversationsController {
     @Query('q') q?: string,
     @Query('status') status?: string,
     @Query('assigned') assigned?: string,
+    @Query('tag') tag?: string,
   ) {
     return this.conversations.list(this.orgOf(user), {
       sessionId,
@@ -83,6 +101,7 @@ export class ConversationsController {
           ? assigned
           : undefined,
       userId: user.userId,
+      tagId: tag,
     });
   }
 
@@ -111,6 +130,20 @@ export class ConversationsController {
       before,
       limit: limit ? Number(limit) : undefined,
     });
+  }
+
+  @Post(':id/notes')
+  addNote(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: NoteDto,
+  ) {
+    return this.conversations.addNote(
+      this.orgOf(user),
+      id,
+      body.text,
+      user.userId,
+    );
   }
 
   @Post(':id/read')

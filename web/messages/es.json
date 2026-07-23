@@ -403,7 +403,8 @@
         "document": "Documento",
         "location": "📍 Ubicación",
         "contact": "👤 Contacto",
-        "unsupported": "Mensaje no compatible"
+        "unsupported": "Mensaje no compatible",
+        "note": "Nota"
       },
       "searchPlaceholder": "Busca nombre, número o texto…",
       "filterOpen": "Abiertas",
@@ -416,7 +417,15 @@
       "noAssignee": "Sin asignar",
       "resolve": "Resolver",
       "reopen": "Reabrir",
-      "resolved": "Resuelta"
+      "resolved": "Resuelta",
+      "filterAllTags": "Todas las etiquetas",
+      "addTag": "+ Etiqueta",
+      "newTagPlaceholder": "Nombre de la etiqueta…",
+      "createTag": "Crear",
+      "modeReply": "Responder",
+      "modeNote": "Nota",
+      "notePlaceholder": "Nota interna — el contacto no la verá…",
+      "addNote": "Agregar nota"
     }
   },
   "landing": {

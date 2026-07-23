@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -60,7 +61,11 @@ export class AuthService {
       locale: user.locale,
       role: user.role,
       organizationId: user.organizationId,
-      orgRole: active?.role ?? null,
+      // Platform ADMINs in a foreign org (support mode) report OWNER so the
+      // UI matches the server, where OrgRolesGuard bypasses them anyway.
+      orgRole:
+        active?.role ??
+        (user.role === 'ADMIN' && user.organizationId ? 'OWNER' : null),
       organizations: memberships.map((m) => ({
         id: m.organizationId,
         name: m.organization.name,
@@ -276,11 +281,21 @@ export class AuthService {
   }
 
   async switchOrg(userId: string, organizationId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
     const membership = await this.prisma.membership.findUnique({
       where: { userId_organizationId: { userId, organizationId } },
     });
     if (!membership) {
-      throw new ForbiddenException('Not a member of this organization');
+      // Platform ADMINs may enter any org (support mode); the org-roles
+      // guard already bypasses them server-side, this just aligns switching.
+      if (user.role !== 'ADMIN') {
+        throw new ForbiddenException('Not a member of this organization');
+      }
+      const org = await this.prisma.organization.findUnique({
+        where: { id: organizationId },
+      });
+      if (!org) throw new NotFoundException('Organization not found');
     }
     await this.prisma.user.update({
       where: { id: userId },

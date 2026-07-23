@@ -1,3 +1,4 @@
+import { AdminOrgSwitch } from "@/components/admin-org-switch";
 import { StatusBadge } from "@/components/status-badge";
 import { apiServer } from "@/lib/api";
 import type { AdminOrgDetail } from "@/lib/types";
@@ -33,7 +34,10 @@ export default async function AdminOrgPage({
         >
           ← Admin Console
         </Link>
-        <h1 className="text-2xl font-bold">{org.name}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">{org.name}</h1>
+          <AdminOrgSwitch organizationId={org.id} />
+        </div>
         <p className="text-sm text-[var(--color-muted)]">
           Org ID <span className="pill">{org.id}</span> · joined{" "}
           {new Date(org.createdAt).toLocaleDateString()}

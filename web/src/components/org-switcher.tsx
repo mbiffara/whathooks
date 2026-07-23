@@ -57,7 +57,11 @@ export function OrgSwitcher() {
     }
   }
 
-  if (orgs.length <= 1) return null;
+  const inForeignOrg =
+    Boolean(activeOrgId) && !orgs.some((o) => o.id === activeOrgId);
+  // Hide when there's nothing to switch to — unless a platform admin is
+  // parked in a foreign org (support mode) and needs a way back home.
+  if (orgs.length <= 1 && !inForeignOrg) return null;
 
   return (
     <div className="px-2 pt-2">
@@ -70,6 +74,11 @@ export function OrgSwitcher() {
         disabled={switching}
         onChange={(e) => switchTo(e.target.value)}
       >
+        {inForeignOrg && (
+          <option value={activeOrgId ?? ""} disabled>
+            (support) {activeOrgId}
+          </option>
+        )}
         {orgs.map((o) => (
           <option key={o.id} value={o.id}>
             {o.name}

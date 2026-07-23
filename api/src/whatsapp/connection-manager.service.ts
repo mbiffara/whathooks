@@ -211,12 +211,15 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       version: undefined as unknown as [number, number, number],
     }));
 
+    // Tag Baileys' own logs (decrypt failures, stream errors) with the session
+    // so prod incidents are attributable to a number without DB access.
+    const sessionLogger = logger.child({ sessionId });
     const sock = makeWASocket({
       version,
-      logger,
+      logger: sessionLogger,
       auth: {
         creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, logger),
+        keys: makeCacheableSignalKeyStore(state.keys, sessionLogger),
       },
       browser: Browsers.appropriate('Chrome'),
       generateHighQualityLinkPreview: false,
@@ -356,7 +359,22 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   ) {
     if (upsert.type !== 'notify') return;
     for (const msg of upsert.messages) {
-      if (!msg.message || msg.key.fromMe) continue;
+      if (msg.key.fromMe) continue;
+      if (!msg.message) {
+        // Decryption failed (missing sender key — common in LID groups):
+        // Baileys emits a CIPHERTEXT stub and asks the sender to re-send.
+        // Nothing is persisted and no webhook fires, so leave a trace.
+        if (
+          msg.messageStubType === proto.WebMessageInfo.StubType.CIPHERTEXT
+        ) {
+          this.log.warn(
+            `Undecryptable message on ${sessionId} in ${msg.key.remoteJid} ` +
+              `(sender ${msg.key.participant ?? msg.key.remoteJid}, ` +
+              `waMessageId ${msg.key.id}) — retry requested from sender`,
+          );
+        }
+        continue;
+      }
       try {
         await this.handleInbound(sessionId, msg);
       } catch (e) {

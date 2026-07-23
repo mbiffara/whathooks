@@ -250,8 +250,72 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     sock.ev.on('groups.update', (updates) =>
       this.onGroupsUpdate(sessionId, updates),
     );
+    sock.ev.on('messages.update', (updates) =>
+      this.onMessageStatusUpdates(sessionId, updates),
+    );
 
     live.starting = false;
+  }
+
+  /**
+   * Track server acks for outbound messages. Most importantly: the server can
+   * REJECT a send after sendMessage resolves (e.g. error 463 — missing privacy
+   * token when cold-messaging a stranger). Without this, the row stays "SENT"
+   * while nothing was delivered.
+   */
+  private async onMessageStatusUpdates(
+    sessionId: string,
+    updates: Array<{
+      key: { id?: string | null };
+      update: { status?: number | null; messageStubParameters?: string[] };
+    }>,
+  ) {
+    for (const { key, update } of updates) {
+      const waMessageId = key?.id;
+      const status = update?.status;
+      if (!waMessageId || status == null) continue;
+      // proto.WebMessageInfo.Status: ERROR=0, DELIVERY_ACK=3, READ=4
+      if (status === 0) {
+        const code = update.messageStubParameters?.[0];
+        const error = `WhatsApp rejected the message${code ? ` (error ${code})` : ''}`;
+        this.log.warn(`Outbound ${waMessageId} on ${sessionId} failed: ${error}`);
+        await this.prisma.message
+          .updateMany({
+            where: {
+              sessionId,
+              waMessageId,
+              direction: MessageDirection.OUTBOUND,
+            },
+            data: { status: MessageStatus.FAILED, error },
+          })
+          .catch(() => undefined);
+      } else if (status === 3 || status === 4) {
+        await this.prisma.message
+          .updateMany({
+            where: {
+              sessionId,
+              waMessageId,
+              direction: MessageDirection.OUTBOUND,
+              // Never downgrade READ back to DELIVERED on late acks.
+              status: {
+                in:
+                  status === 4
+                    ? [
+                        MessageStatus.QUEUED,
+                        MessageStatus.SENT,
+                        MessageStatus.DELIVERED,
+                      ]
+                    : [MessageStatus.QUEUED, MessageStatus.SENT],
+              },
+            },
+            data: {
+              status:
+                status === 4 ? MessageStatus.READ : MessageStatus.DELIVERED,
+            },
+          })
+          .catch(() => undefined);
+      }
+    }
   }
 
   // Keep group conversation titles in sync with the group subject.

@@ -87,8 +87,15 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           )}
           <span className="text-right text-[10px] text-[var(--color-muted)]">
             {clockTime(message.timestamp)}
+            {outbound && message.status === "DELIVERED" && " ✓✓"}
+            {outbound && message.status === "READ" && " ✓✓"}
           </span>
         </div>
+        {outbound && message.status === "FAILED" && (
+          <div className="mt-1 text-right text-[10px] font-medium text-[var(--color-danger)]">
+            ⚠ {t("notDelivered")}
+          </div>
+        )}
       </div>
     </div>
   );

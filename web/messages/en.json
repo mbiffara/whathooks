@@ -469,7 +469,8 @@
         "location": "📍 Location",
         "contact": "👤 Contact",
         "unsupported": "Unsupported message",
-        "note": "Note"
+        "note": "Note",
+        "notDelivered": "Not delivered"
       },
       "searchPlaceholder": "Search name, number, or text…",
       "filterOpen": "Open",

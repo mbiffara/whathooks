@@ -1,4 +1,5 @@
 import { ExpandableText } from "@/components/expandable-text";
+import { LogMedia } from "@/components/log-media";
 import { apiServer } from "@/lib/api";
 import { getTranslations } from "next-intl/server";
 import type { MessageLog } from "@/lib/types";
@@ -55,7 +56,14 @@ export default async function LogsPage() {
                   </td>
                   <td className="px-4 py-3">{m.type}</td>
                   <td className="px-4 py-3 align-top">
-                    {m.text ? <ExpandableText text={m.text} /> : "—"}
+                    <div className="flex items-center gap-2">
+                      {m.media && <LogMedia media={m.media} />}
+                      {m.text ? (
+                        <ExpandableText text={m.text} />
+                      ) : m.media ? null : (
+                        "—"
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-[var(--color-muted)]">
                     {m.status}

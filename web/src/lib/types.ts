@@ -108,6 +108,12 @@ export interface MessageLog {
   text: string | null;
   status: string;
   createdAt: string;
+  media: {
+    url: string;
+    mimeType: string;
+    fileName: string | null;
+    size: number | null;
+  } | null;
 }
 
 export interface AdminOverview {

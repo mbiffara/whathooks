@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { QuotaService } from '../billing/quota.service';
+import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -16,6 +17,7 @@ export class MessagesService {
     private readonly prisma: PrismaService,
     private readonly manager: ConnectionManagerService,
     private readonly quota: QuotaService,
+    private readonly media: MediaService,
   ) {}
 
   async send(organizationId: string, dto: SendMessageDto) {
@@ -78,19 +80,36 @@ export class MessagesService {
       },
       orderBy: { timestamp: 'desc' },
       take: Math.min(opts.limit ?? 50, 200),
-      include: { conversation: { select: { remoteJid: true, name: true } } },
+      include: {
+        conversation: { select: { remoteJid: true, name: true } },
+        media: true,
+      },
     });
-    return rows.map((m) => ({
-      id: m.id,
-      sessionId: m.sessionId,
-      direction: m.direction,
-      remoteJid: m.conversation.remoteJid,
-      contactName: m.conversation.name,
-      type: m.type,
-      text: m.text,
-      status: m.status,
-      createdAt: m.createdAt,
-    }));
+    return Promise.all(
+      rows.map(async (m) => ({
+        id: m.id,
+        sessionId: m.sessionId,
+        direction: m.direction,
+        remoteJid: m.conversation.remoteJid,
+        contactName: m.conversation.name,
+        type: m.type,
+        text: m.text,
+        status: m.status,
+        createdAt: m.createdAt,
+        media: m.media
+          ? {
+              url: await this.media.viewUrl(
+                m.media.storageKey,
+                m.media.mimeType,
+                m.media.fileName ?? undefined,
+              ),
+              mimeType: m.media.mimeType,
+              fileName: m.media.fileName,
+              size: m.media.size,
+            }
+          : null,
+      })),
+    );
   }
 }
 

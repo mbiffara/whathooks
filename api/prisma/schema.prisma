@@ -395,6 +395,9 @@ model Message {
   agentId String?
   agent   Agent?  @relation(fields: [agentId], references: [id], onDelete: SetNull)
 
+  // WhatsApp reactions on this message: [{ emoji, by }]. One per reactor.
+  reactions Json?
+
   // Which team member sent this (HUMAN outbound from the dashboard).
   sentByUserId String?
   sentBy       User?   @relation("SentMessages", fields: [sentByUserId], references: [id], onDelete: SetNull)

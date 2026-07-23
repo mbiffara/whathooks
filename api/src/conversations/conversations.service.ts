@@ -386,6 +386,7 @@ export class ConversationsService {
       source: m.source,
       agentName: m.agent?.name ?? null,
       sentByName: m.sentBy ? (m.sentBy.name ?? m.sentBy.email) : null,
+      reactions: Array.isArray(m.reactions) ? m.reactions : [],
       type: m.type,
       text: m.text,
       status: m.status,

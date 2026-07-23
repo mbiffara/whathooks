@@ -279,6 +279,19 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     const organizationId = await this.orgIdOf(sessionId);
     const remoteJid = msg.key.remoteJid ?? 'unknown';
     const isGroup = remoteJid.endsWith('@g.us');
+
+    // Reactions attach to the message they target — no new row, no unread
+    // bump, no preview change. An empty emoji means the reaction was removed.
+    const reaction = msg.message?.reactionMessage;
+    if (reaction) {
+      await this.applyReaction(sessionId, {
+        targetWaMessageId: reaction.key?.id ?? null,
+        emoji: reaction.text ?? '',
+        reactor: msg.key.participant ?? remoteJid,
+        reactorName: msg.pushName ?? null,
+      });
+      return;
+    }
     // For groups the conversation title is the group subject (pushName is the
     // individual sender, not the group); for 1:1 it's the contact's pushName.
     const contactName = isGroup
@@ -583,6 +596,36 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       messageId: result.messageId,
       mediaUrl: result.mediaUrl,
     };
+  }
+
+  /** Set/replace/remove one reactor's reaction on the targeted message. */
+  private async applyReaction(
+    sessionId: string,
+    r: {
+      targetWaMessageId: string | null;
+      emoji: string;
+      reactor: string;
+      reactorName: string | null;
+    },
+  ): Promise<void> {
+    if (!r.targetWaMessageId) return;
+    const target = await this.prisma.message.findFirst({
+      where: { sessionId, waMessageId: r.targetWaMessageId },
+      select: { id: true, reactions: true },
+    });
+    if (!target) return; // reacting to a message outside our history
+    const by = r.reactorName ?? r.reactor.split('@')[0];
+    const existing = Array.isArray(target.reactions)
+      ? (target.reactions as { emoji: string; by: string; key?: string }[])
+      : [];
+    const others = existing.filter((x) => x.key !== r.reactor);
+    const next = r.emoji
+      ? [...others, { emoji: r.emoji, by, key: r.reactor }]
+      : others;
+    await this.prisma.message.update({
+      where: { id: target.id },
+      data: { reactions: next },
+    });
   }
 
   /** Upsert the conversation, create the message row, store media. */

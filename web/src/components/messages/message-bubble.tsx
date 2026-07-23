@@ -70,8 +70,24 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           </div>
         )}
         <MessageBody message={message} />
-        <div className="mt-1 text-right text-[10px] text-[var(--color-muted)]">
-          {clockTime(message.timestamp)}
+        <div className="mt-1 flex items-center justify-end gap-2">
+          {(message.reactions?.length ?? 0) > 0 && (
+            <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[11px] leading-none">
+              {message.reactions!.map((r) => (
+                <span key={`${r.by}-${r.emoji}`} title={r.by}>
+                  {r.emoji}
+                </span>
+              ))}
+              {message.reactions!.length > 1 && (
+                <span className="ml-0.5 text-[9px] text-[var(--color-muted)]">
+                  {message.reactions!.length}
+                </span>
+              )}
+            </span>
+          )}
+          <span className="text-right text-[10px] text-[var(--color-muted)]">
+            {clockTime(message.timestamp)}
+          </span>
         </div>
       </div>
     </div>

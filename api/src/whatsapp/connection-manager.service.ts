@@ -44,7 +44,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { usePrismaAuthState } from './baileys-auth-state';
 
-const logger = pino({ level: 'error' });
+// Baileys internals log at debug/warn (device enumeration, session asserts);
+// crank BAILEYS_LOG_LEVEL up temporarily when diagnosing delivery issues.
+const logger = pino({ level: process.env.BAILEYS_LOG_LEVEL ?? 'error' });
 
 interface LiveSession {
   sock: WASocket;

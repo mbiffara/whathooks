@@ -197,6 +197,9 @@ export class WhathooksApiStack extends cdk.Stack {
       environment: {
         NODE_ENV: 'production',
         PORT: '3001',
+        // TEMP: Baileys debug logging while diagnosing silent new-contact
+        // sends (2026-07-23). Revert to 'error' (or drop) once resolved.
+        BAILEYS_LOG_LEVEL: 'debug',
         API_KEY_PREFIX: 'wh_live',
         JWT_EXPIRES_IN: '7d',
         WEB_ORIGIN: props.webOrigin,

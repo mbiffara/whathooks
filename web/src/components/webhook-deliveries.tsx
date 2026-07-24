@@ -116,7 +116,7 @@ export function WebhookDeliveries({ webhookId }: { webhookId: string }) {
                 {openId === d.id && (
                   <tr>
                     <td colSpan={5} className="px-2 pb-3">
-                      <pre className="max-h-72 overflow-auto rounded-lg bg-[var(--color-surface-2)] p-3 font-mono text-xs">
+                      <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-all rounded-lg bg-[var(--color-surface-2)] p-3 font-mono text-xs">
                         {JSON.stringify(d.payload, null, 2)}
                       </pre>
                     </td>

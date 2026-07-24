@@ -704,6 +704,17 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
+      // The agent called notify_owner → email the account owner. Does not
+      // pause the agent (unlike handoff).
+      if (reply.notify) {
+        void this.notifyOwner(
+          session.organizationId,
+          conversationId,
+          agent.name,
+          reply.notify,
+        );
+      }
+
       // The agent asked to hand off → pause it on this conversation until an
       // operator resumes. Same flag the operator toggles manually.
       if (reply.handoff) {
@@ -826,6 +837,47 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       messageId: result.messageId,
       mediaUrl: result.mediaUrl,
     };
+  }
+
+  /** The agent's notify_owner tool: email the organization owner. */
+  private async notifyOwner(
+    organizationId: string,
+    conversationId: string,
+    agentName: string,
+    message: string,
+  ): Promise<void> {
+    try {
+      const [convo, owner] = await Promise.all([
+        this.prisma.conversation.findUnique({
+          where: { id: conversationId },
+          select: { name: true, remoteJid: true },
+        }),
+        this.prisma.membership.findFirst({
+          where: { organizationId, role: 'OWNER' },
+          include: { user: { select: { email: true, locale: true } } },
+        }),
+      ]);
+      if (!owner) return;
+      const contact =
+        convo?.name ?? `+${(convo?.remoteJid ?? '').split('@')[0]}`;
+      const base = this.config
+        .get<string>('WEB_ORIGIN', 'http://localhost:3000')
+        .split(',')[0]
+        .trim();
+      await this.mail.sendAgentNotify({
+        to: owner.user.email,
+        locale: owner.user.locale,
+        agentName,
+        contact,
+        message,
+        conversationUrl: `${base}/dashboard/messages?c=${conversationId}`,
+      });
+      this.log.log(
+        `Agent "${agentName}" notified the owner about ${conversationId}`,
+      );
+    } catch (e) {
+      this.log.warn(`notify_owner email failed: ${e}`);
+    }
   }
 
   /**

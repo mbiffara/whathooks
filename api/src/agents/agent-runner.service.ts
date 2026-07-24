@@ -19,6 +19,8 @@ export interface AgentReply {
   text: string | null;
   handoff: boolean;
   reason?: string;
+  /** notify_owner tool call: message for the owner's email (null = not called). */
+  notify?: string | null;
 }
 
 // A tool the agent may call to pause itself on a conversation (handoff to human).
@@ -36,6 +38,27 @@ const HANDOFF_SCHEMA = {
       description: 'Short note for the operator on why you handed off.',
     },
   },
+};
+
+// Always-available tool: email the business owner about this conversation.
+// Deliberately NOT mentioned in the base prompt — the agent only reaches for
+// it when the operator's own instructions tell it to (e.g. "when someone asks
+// for a quote, use notify_owner"). Does not pause the agent.
+const NOTIFY_TOOL = 'notify_owner';
+const NOTIFY_DESCRIPTION =
+  'Send an email notification to the business owner about this conversation. ' +
+  'Only use it when your instructions tell you to. It does not pause you — ' +
+  'you can keep replying normally.';
+const NOTIFY_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    message: {
+      type: 'string',
+      description:
+        'What to tell the owner — include the relevant details from the conversation.',
+    },
+  },
+  required: ['message'],
 };
 
 /**
@@ -151,15 +174,22 @@ export class AgentRunnerService {
       return this.replyAnthropicMcp(agent, client, system, turns, mcpServers);
     }
 
-    const tools: Anthropic.Tool[] = agent.allowAutoStop
-      ? [
-          {
-            name: HANDOFF_TOOL,
-            description: HANDOFF_DESCRIPTION,
-            input_schema: HANDOFF_SCHEMA,
-          },
-        ]
-      : [];
+    const tools: Anthropic.Tool[] = [
+      ...(agent.allowAutoStop
+        ? [
+            {
+              name: HANDOFF_TOOL,
+              description: HANDOFF_DESCRIPTION,
+              input_schema: HANDOFF_SCHEMA,
+            },
+          ]
+        : []),
+      {
+        name: NOTIFY_TOOL,
+        description: NOTIFY_DESCRIPTION,
+        input_schema: NOTIFY_SCHEMA,
+      },
+    ];
     const response = await client.messages.create({
       model: agent.model,
       max_tokens: agent.maxTokens,
@@ -208,6 +238,11 @@ export class AgentRunnerService {
             },
           ]
         : []),
+      {
+        name: NOTIFY_TOOL,
+        description: NOTIFY_DESCRIPTION,
+        input_schema: NOTIFY_SCHEMA,
+      },
     ];
 
     const messages: Anthropic.Beta.BetaMessageParam[] = turns.map((t) => ({
@@ -250,11 +285,11 @@ export class AgentRunnerService {
     turns: Turn[],
   ): Promise<AgentReply> {
     const client = new OpenAI({ apiKey });
-    const tools: OpenAI.Chat.Completions.ChatCompletionTool[] =
-      agent.allowAutoStop
+    const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+      ...(agent.allowAutoStop
         ? [
             {
-              type: 'function',
+              type: 'function' as const,
               function: {
                 name: HANDOFF_TOOL,
                 description: HANDOFF_DESCRIPTION,
@@ -262,7 +297,16 @@ export class AgentRunnerService {
               },
             },
           ]
-        : [];
+        : []),
+      {
+        type: 'function' as const,
+        function: {
+          name: NOTIFY_TOOL,
+          description: NOTIFY_DESCRIPTION,
+          parameters: NOTIFY_SCHEMA,
+        },
+      },
+    ];
     const response = await client.chat.completions.create({
       model: agent.model,
       messages: [
@@ -275,20 +319,23 @@ export class AgentRunnerService {
     const message = response.choices[0]?.message;
     let handoff = false;
     let reason: string | undefined;
-    const call = message?.tool_calls?.find(
-      (c) => c.type === 'function' && c.function.name === HANDOFF_TOOL,
-    );
-    if (call && call.type === 'function') {
-      handoff = true;
+    let notify: string | null = null;
+    for (const call of message?.tool_calls ?? []) {
+      if (call.type !== 'function') continue;
+      let args: { reason?: string; message?: string } = {};
       try {
-        reason = (
-          JSON.parse(call.function.arguments || '{}') as { reason?: string }
-        ).reason;
+        args = JSON.parse(call.function.arguments || '{}');
       } catch {
         /* ignore malformed args */
       }
+      if (call.function.name === HANDOFF_TOOL) {
+        handoff = true;
+        reason = args.reason;
+      } else if (call.function.name === NOTIFY_TOOL) {
+        notify = args.message?.trim() || null;
+      }
     }
-    return { text: message?.content?.trim() || null, handoff, reason };
+    return { text: message?.content?.trim() || null, handoff, reason, notify };
   }
 }
 
@@ -299,17 +346,20 @@ function extractAnthropicReply(
   let text = '';
   let handoff = false;
   let reason: string | undefined;
+  let notify: string | null = null;
   for (const block of content) {
     if (block.type === 'text') {
       text += block.text;
     } else if (block.type === 'tool_use' && block.name === HANDOFF_TOOL) {
       handoff = true;
       reason = (block.input as { reason?: string })?.reason;
+    } else if (block.type === 'tool_use' && block.name === NOTIFY_TOOL) {
+      notify = (block.input as { message?: string })?.message?.trim() || null;
     }
     // mcp_tool_use / mcp_tool_result blocks are the server-side tool calls —
     // nothing to do client-side; the model folds results into its text.
   }
-  return { text: text.trim() || null, handoff, reason };
+  return { text: text.trim() || null, handoff, reason, notify };
 }
 
 /**

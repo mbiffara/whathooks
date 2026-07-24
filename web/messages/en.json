@@ -188,7 +188,8 @@
       "creating": "Creating…",
       "upgradeAction": "Connecting a WhatsApp number",
       "noSessions": "No sessions yet. Create one above to get a QR code.",
-      "notLinked": "Not linked yet"
+      "notLinked": "Not linked yet",
+      "coldSendWarning": "WhatsApp restricts messaging numbers that never wrote to you — a test to a complete stranger may not be delivered. Use a number that has already texted this session, or start the chat from the phone first."
     },
     "sessionDetail": {
       "back": "← Sessions",
@@ -430,7 +431,8 @@
         "empty": "No documents yet. Upload a PDF, .txt, .md or .csv.",
         "upload": "Add document",
         "usage": "{docs}/5 documents · {chars}/100,000 characters"
-      }
+      },
+      "notifyOwnerHint": "The agent also has a notify_owner tool that emails the account owner. Mention it in the instructions to use it — e.g. \"when someone asks for a quote, use notify_owner with their details\"."
     },
     "messages": {
       "title": "Messages",
@@ -504,7 +506,8 @@
       "newConvNumber": "WhatsApp number",
       "newConvNumberHint": "Digits with country code (no +), e.g. 5491155551234 — we'll verify it's on WhatsApp.",
       "newConvStart": "Start conversation",
-      "newConvNoSessions": "You need a connected WhatsApp number to start a conversation. Connect one in Sessions first."
+      "newConvNoSessions": "You need a connected WhatsApp number to start a conversation. Connect one in Sessions first.",
+      "newConvColdWarning": "WhatsApp restricts messaging numbers that never wrote to you: the first message to a complete stranger may not be delivered. It works reliably with people who already texted this number, or whose chat exists on the phone."
     }
   },
   "landing": {

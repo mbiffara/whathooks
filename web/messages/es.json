@@ -188,7 +188,8 @@
       "creating": "Creando…",
       "upgradeAction": "Conectar un número de WhatsApp",
       "noSessions": "Aún no hay sesiones. Crea una arriba para obtener un código QR.",
-      "notLinked": "Aún sin vincular"
+      "notLinked": "Aún sin vincular",
+      "coldSendWarning": "WhatsApp restringe enviar mensajes a números que nunca te escribieron — una prueba a un desconocido puede no entregarse. Usa un número que ya haya escrito a esta sesión, o inicia el chat desde el teléfono primero."
     },
     "sessionDetail": {
       "back": "← Sesiones",
@@ -430,7 +431,8 @@
         "empty": "Todavía no hay documentos. Sube un PDF, .txt, .md o .csv.",
         "upload": "Agregar documento",
         "usage": "{docs}/5 documentos · {chars}/100.000 caracteres"
-      }
+      },
+      "notifyOwnerHint": "El agente también tiene una herramienta notify_owner que envía un email al dueño de la cuenta. Mencionala en las instrucciones para usarla — ej.: \"cuando alguien pida una cotización, usa notify_owner con sus datos\"."
     },
     "messages": {
       "title": "Mensajes",
@@ -504,7 +506,8 @@
       "newConvNumber": "Número de WhatsApp",
       "newConvNumberHint": "Solo dígitos con código de país (sin +), ej. 5491155551234 — verificamos que esté en WhatsApp.",
       "newConvStart": "Iniciar conversación",
-      "newConvNoSessions": "Necesitas un número de WhatsApp conectado para iniciar una conversación. Conecta uno en Sesiones primero."
+      "newConvNoSessions": "Necesitas un número de WhatsApp conectado para iniciar una conversación. Conecta uno en Sesiones primero.",
+      "newConvColdWarning": "WhatsApp restringe enviar mensajes a números que nunca te escribieron: el primer mensaje a un desconocido puede no entregarse. Funciona de forma confiable con personas que ya escribieron a este número, o cuyo chat existe en el teléfono."
     }
   },
   "landing": {

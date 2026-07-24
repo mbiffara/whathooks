@@ -541,6 +541,9 @@ function MessagesInbox() {
                     {t("newConvNumberHint")}
                   </p>
                 </div>
+                <p className="mt-3 rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning-bg)] px-3 py-2 text-xs text-[var(--color-warning)]">
+                  ⚠ {t("newConvColdWarning")}
+                </p>
                 {newConvError && (
                   <p className="mt-3 text-sm text-[var(--color-danger)]">
                     {newConvError}

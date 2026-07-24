@@ -57,6 +57,18 @@ export const MAIL_MESSAGES = {
       cta: 'Open the conversation',
       footnote: 'You can turn these notifications off in the agent settings.',
     },
+    agentNotify: {
+      subject: (agent: string, contact: string) =>
+        `${agent} left you a note about ${contact}`,
+      preheader: (message: string) => message,
+      heading: 'Your agent has something for you',
+      body1: (agent: string, contact: string) =>
+        `${agent} sent you this note from the conversation with ${contact}:`,
+      body2: (message: string) => `“${message}”`,
+      cta: 'Open the conversation',
+      footnote:
+        'The agent sends these when its instructions tell it to use the notify_owner tool.',
+    },
     trialEnding: {
       subject: 'Your whathooks trial ends soon',
       preheader: (date: string) =>
@@ -121,6 +133,18 @@ export const MAIL_MESSAGES = {
       signature: 'Marcelo Biffara',
       footnote:
         'Recibes este correo porque creaste una cuenta en whathooks. Es una nota personal única, no un boletín.',
+    },
+    agentNotify: {
+      subject: (agent: string, contact: string) =>
+        `${agent} te dejó un aviso sobre ${contact}`,
+      preheader: (message: string) => message,
+      heading: 'Tu agente tiene algo para ti',
+      body1: (agent: string, contact: string) =>
+        `${agent} te envió este aviso desde la conversación con ${contact}:`,
+      body2: (message: string) => `“${message}”`,
+      cta: 'Abrir la conversación',
+      footnote:
+        'El agente envía estos avisos cuando sus instrucciones le indican usar la herramienta notify_owner.',
     },
     agentHandoff: {
       subject: (agent: string) => `${agent} necesita un humano — derivación`,

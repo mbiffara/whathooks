@@ -101,6 +101,31 @@ export class MailService {
     });
   }
 
+  /** The agent called notify_owner — email the account owner. */
+  async sendAgentNotify(email: {
+    to: string;
+    locale?: string | null;
+    agentName: string;
+    contact: string;
+    message: string;
+    conversationUrl: string;
+  }): Promise<boolean> {
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale].agentNotify;
+    return this.send(email.to, {
+      locale,
+      subject: M.subject(email.agentName, email.contact),
+      preheader: M.preheader(email.message),
+      heading: M.heading,
+      paragraphs: [
+        M.body1(email.agentName, email.contact),
+        M.body2(email.message),
+      ],
+      cta: { label: M.cta, url: email.conversationUrl },
+      footnote: M.footnote,
+    });
+  }
+
   /** The agent paused itself on a conversation — alert the team. */
   async sendAgentHandoff(email: {
     to: string;

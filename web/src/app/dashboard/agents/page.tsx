@@ -251,6 +251,9 @@ export default function AgentsPage() {
               placeholder={t("instructionsPlaceholder")}
               required
             />
+            <p className="mt-1 text-xs text-[var(--color-muted)]">
+              💡 {t("notifyOwnerHint")}
+            </p>
           </div>
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-40">

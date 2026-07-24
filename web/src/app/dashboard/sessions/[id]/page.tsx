@@ -226,8 +226,11 @@ export default function SessionDetailPage() {
       {isConnected && (
         <div className="card">
           <h2 className="mb-1 font-semibold">{t("sendTest")}</h2>
-          <p className="mb-4 text-sm text-[var(--color-muted)]">
+          <p className="mb-2 text-sm text-[var(--color-muted)]">
             {t("sendTestHint")}
+          </p>
+          <p className="mb-4 rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning-bg)] px-3 py-2 text-xs text-[var(--color-warning)]">
+            ⚠ {t("coldSendWarning")}
           </p>
           <form onSubmit={sendTest} className="flex flex-col gap-3">
             <input

@@ -376,6 +376,26 @@ function cachedSystem(
   ];
 }
 
+/**
+ * Today's date in the agent's timezone (falls back to UTC on a bad tz).
+ * Date-only on purpose: the system prompt is cached, and clock time would
+ * bust the cache on every reply — a date busts it once a day.
+ */
+function todayIn(timezone: string): string {
+  const opts = { dateStyle: 'full' as const };
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      ...opts,
+      timeZone: timezone || 'UTC',
+    }).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat('en-US', {
+      ...opts,
+      timeZone: 'UTC',
+    }).format(new Date());
+  }
+}
+
 function buildSystemPrompt(
   agent: Agent,
   isGroup: boolean,
@@ -384,6 +404,7 @@ function buildSystemPrompt(
 ): string {
   return [
     `You are ${agent.name}, an assistant replying to messages on WhatsApp.`,
+    `Today's date is ${todayIn(agent.scheduleTimezone)}.`,
     '',
     '# Your character',
     agent.soul,

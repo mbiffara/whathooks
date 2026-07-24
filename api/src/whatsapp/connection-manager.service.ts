@@ -522,11 +522,13 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
 
     // Group context: who wrote (participant JID) and whether the connected
     // number was @mentioned — consumers use this to reply only when addressed.
-    const botNum = this.botNumber(sessionId);
+    // Mentions in LID-addressed groups carry the account's LID, not its phone
+    // number, so match against every identity of the connected account.
+    const botIds = this.botUserIds(sessionId);
     const senderJid = msg.key.participant ?? undefined;
-    const mentionedMe =
-      botNum != null &&
-      extractMentions(msg).some((j) => j.split('@')[0] === botNum);
+    const mentionedMe = extractMentions(msg).some((j) =>
+      botIds.has(j.split('@')[0]),
+    );
 
     await this.webhooks.dispatch({
       organizationId,
@@ -596,10 +598,18 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     return hit.jid.endsWith('@lid') ? jid : hit.jid;
   }
 
-  /** The connected number's own msisdn (no domain), or null if not live. */
-  private botNumber(sessionId: string): string | null {
-    const id = this.sessions.get(sessionId)?.sock.user?.id;
-    return id ? jidNormalizedUser(id).split('@')[0] : null;
+  /**
+   * Every user-part identifying the connected account: msisdn AND LID (groups
+   * on WhatsApp's newer privacy addressing mention the LID). Empty if the
+   * session isn't live.
+   */
+  private botUserIds(sessionId: string): Set<string> {
+    const me = this.sessions.get(sessionId)?.sock.user;
+    const ids = new Set<string>();
+    for (const jid of [me?.id, me?.lid, me?.phoneNumber]) {
+      if (jid) ids.add(jidNormalizedUser(jid).split('@')[0]);
+    }
+    return ids;
   }
 
   /**

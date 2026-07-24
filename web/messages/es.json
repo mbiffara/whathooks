@@ -423,7 +423,14 @@
       "unlinkedWarning": "Habilitado pero sin vincular a ninguna sesión — abre una sesión y asigna este agente en 'Agente IA'.",
       "goToSessions": "Ir a sesiones",
       "notifyOnHandoff": "Avisar al equipo por correo al derivar",
-      "notifyOnHandoffNote": "Cuando el agente se pausa, todos los que tienen acceso a esta sesión reciben un correo con el enlace a la conversación."
+      "notifyOnHandoffNote": "Cuando el agente se pausa, todos los que tienen acceso a esta sesión reciben un correo con el enlace a la conversación.",
+      "knowledge": {
+        "button": "Conocimiento",
+        "hint": "Documentos de referencia que el agente usa para responder (listas de precios, FAQs, políticas). El texto se extrae y se entrega al agente en cada respuesta — hasta 5 documentos / 100.000 caracteres.",
+        "empty": "Todavía no hay documentos. Sube un PDF, .txt, .md o .csv.",
+        "upload": "Agregar documento",
+        "usage": "{docs}/5 documentos · {chars}/100.000 caracteres"
+      }
     },
     "messages": {
       "title": "Mensajes",

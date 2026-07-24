@@ -423,7 +423,14 @@
       "unlinkedWarning": "Enabled but not linked to any session — open a session and assign this agent under 'AI Agent'.",
       "goToSessions": "Go to sessions",
       "notifyOnHandoff": "Email the team on handoff",
-      "notifyOnHandoffNote": "When the agent pauses itself, everyone with access to this session gets an email linking to the conversation."
+      "notifyOnHandoffNote": "When the agent pauses itself, everyone with access to this session gets an email linking to the conversation.",
+      "knowledge": {
+        "button": "Knowledge",
+        "hint": "Reference documents the agent uses to answer (price lists, FAQs, policies). Text is extracted and given to the agent with every reply — up to 5 documents / 100,000 characters.",
+        "empty": "No documents yet. Upload a PDF, .txt, .md or .csv.",
+        "upload": "Add document",
+        "usage": "{docs}/5 documents · {chars}/100,000 characters"
+      }
     },
     "messages": {
       "title": "Messages",

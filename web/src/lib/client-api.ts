@@ -1,6 +1,6 @@
 "use client";
 
-const API_URL =
+export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
 /** Error thrown for non-2xx API responses; carries the HTTP status. */

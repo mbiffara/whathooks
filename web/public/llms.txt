@@ -223,5 +223,7 @@ count inbound + outbound. During a trial: 300 messages
   internal notes, assignment, and per-member session access restrictions.
 - AI agents: bring-your-own-key (Anthropic or OpenAI) auto-responders per
   session, with human handoff. MCP tool support on Anthropic agents (Pro+).
+  Knowledge documents (PDF/TXT/MD/CSV, up to 5 docs / 100k characters per
+  agent) ground the agent's answers in your own content.
 
 Human-readable docs: https://www.whathooks.app/docs

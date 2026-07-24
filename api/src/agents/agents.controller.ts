@@ -7,8 +7,11 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -62,6 +65,37 @@ export class AgentsController {
   @Delete(':id')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.agents.remove(this.orgOf(user), id);
+  }
+
+  @Get(':id/knowledge')
+  listKnowledge(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.agents.listKnowledge(this.orgOf(user), id);
+  }
+
+  @OrgRoles('ADMIN')
+  @Post(':id/knowledge')
+  @UseInterceptors(FileInterceptor('file'))
+  addKnowledge(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Provide a file');
+    return this.agents.addKnowledge(this.orgOf(user), id, {
+      buffer: file.buffer,
+      mimeType: file.mimetype || 'application/octet-stream',
+      fileName: file.originalname,
+    });
+  }
+
+  @OrgRoles('ADMIN')
+  @Delete(':id/knowledge/:docId')
+  removeKnowledge(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('docId') docId: string,
+  ) {
+    return this.agents.removeKnowledge(this.orgOf(user), id, docId);
   }
 
   /** Assign or clear the agent for a session. */

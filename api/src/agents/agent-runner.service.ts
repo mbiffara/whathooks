@@ -84,10 +84,16 @@ export class AgentRunnerService {
     );
     if (!turns.length) return null;
 
+    const knowledge = await this.prisma.agentKnowledgeDoc.findMany({
+      where: { agentId: agent.id },
+      orderBy: { createdAt: 'asc' },
+      select: { fileName: true, text: true },
+    });
     const system = buildSystemPrompt(
       agent,
       convo?.isGroup ?? false,
       agent.allowAutoStop,
+      knowledge,
     );
     try {
       if (agent.provider === 'OPENAI') {
@@ -157,7 +163,7 @@ export class AgentRunnerService {
     const response = await client.messages.create({
       model: agent.model,
       max_tokens: agent.maxTokens,
-      system,
+      system: cachedSystem(system),
       messages: turns.map((t) => ({ role: t.role, content: t.text })),
       ...(tools.length ? { tools } : {}),
     });
@@ -211,7 +217,7 @@ export class AgentRunnerService {
     let response = await client.beta.messages.create({
       model: agent.model,
       max_tokens: agent.maxTokens,
-      system,
+      system: cachedSystem(system),
       messages,
       betas: [MCP_BETA],
       mcp_servers: servers,
@@ -227,7 +233,7 @@ export class AgentRunnerService {
       response = await client.beta.messages.create({
         model: agent.model,
         max_tokens: agent.maxTokens,
-        system,
+        system: cachedSystem(system),
         messages,
         betas: [MCP_BETA],
         mcp_servers: servers,
@@ -306,10 +312,25 @@ function extractAnthropicReply(
   return { text: text.trim() || null, handoff, reason };
 }
 
+/**
+ * System prompt as a cacheable block: with knowledge docs injected the prompt
+ * can be large, and it's identical across replies — provider-side prompt
+ * caching makes repeat replies cheap. Below the cacheable minimum the marker
+ * is ignored, so this is safe for small prompts too.
+ */
+function cachedSystem(
+  system: string,
+): Array<{ type: 'text'; text: string; cache_control: { type: 'ephemeral' } }> {
+  return [
+    { type: 'text', text: system, cache_control: { type: 'ephemeral' } },
+  ];
+}
+
 function buildSystemPrompt(
   agent: Agent,
   isGroup: boolean,
   allowAutoStop: boolean,
+  knowledge: Array<{ fileName: string; text: string }> = [],
 ): string {
   return [
     `You are ${agent.name}, an assistant replying to messages on WhatsApp.`,
@@ -320,6 +341,16 @@ function buildSystemPrompt(
     '# Instructions',
     agent.instructions,
     '',
+    ...(knowledge.length
+      ? [
+          '# Knowledge base',
+          'Reference documents provided by your operator. Ground your answers',
+          'in them when relevant; if something is not covered, say you are not',
+          'sure instead of inventing an answer.',
+          '',
+          ...knowledge.flatMap((d) => [`## ${d.fileName}`, d.text, '']),
+        ]
+      : []),
     ...(isGroup
       ? [
           '# Group chat',

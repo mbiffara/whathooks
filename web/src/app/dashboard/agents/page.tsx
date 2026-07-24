@@ -1,5 +1,6 @@
 "use client";
 
+import { AgentKnowledge } from "@/components/agent-knowledge";
 import { apiClient } from "@/lib/client-api";
 import Link from "next/link";
 import {
@@ -84,6 +85,8 @@ export default function AgentsPage() {
   const token = auth?.accessToken;
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  // Which agent's knowledge section is expanded.
+  const [knowledgeId, setKnowledgeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -832,10 +835,25 @@ export default function AgentsPage() {
                 >
                   {tc("edit")}
                 </button>
+                <button
+                  onClick={() =>
+                    setKnowledgeId((v) => (v === a.id ? null : a.id))
+                  }
+                  className="btn-ghost"
+                >
+                  {knowledgeId === a.id
+                    ? tc("close")
+                    : t("knowledge.button")}
+                </button>
                 <button onClick={() => remove(a.id)} className="btn-danger">
                   {tc("delete")}
                 </button>
               </div>
+              {knowledgeId === a.id && (
+                <div className="border-t border-[var(--color-border)] pt-3">
+                  <AgentKnowledge agentId={a.id} />
+                </div>
+              )}
             </div>
           ))}
         </div>

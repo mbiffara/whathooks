@@ -227,8 +227,27 @@ model Agent {
 
   sessions WaSession[]
   messages Message[]
+  knowledgeDocs AgentKnowledgeDoc[]
 
   @@index([organizationId])
+}
+
+// Reference documents injected into the agent's system prompt (context
+// injection — no RAG). Text is extracted once at upload; caps are enforced
+// in AgentsService (docs per agent, total characters).
+model AgentKnowledgeDoc {
+  id             String   @id @default(cuid())
+  organizationId String
+  agentId        String
+  agent          Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  charCount      Int
+  text           String
+  createdAt      DateTime @default(now())
+
+  @@index([agentId])
 }
 
 // Baileys auth state, persisted to Postgres so sockets survive restarts.

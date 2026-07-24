@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Agent, Plan, Prisma } from '@prisma/client';
+import pdfParse from 'pdf-parse';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AgentProviderName,
@@ -22,6 +23,47 @@ import {
 
 /** Plans allowed to attach MCP servers to agents. */
 const MCP_PLANS: Plan[] = ['PRO', 'BUSINESS', 'SPONSORED'];
+
+// Knowledge caps keep the per-reply token cost bounded — every reply carries
+// the full knowledge base in the system prompt (cached by the provider).
+const KNOWLEDGE_MAX_DOCS = 5;
+const KNOWLEDGE_MAX_TOTAL_CHARS = 100_000;
+const KNOWLEDGE_MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+/** Extract plain text from an uploaded knowledge file (pdf, txt, md). */
+async function extractText(file: {
+  buffer: Buffer;
+  mimeType: string;
+  fileName: string;
+}): Promise<string> {
+  const lower = file.fileName.toLowerCase();
+  const isPdf =
+    file.mimeType === 'application/pdf' || lower.endsWith('.pdf');
+  const isText =
+    file.mimeType.startsWith('text/') ||
+    /\.(txt|md|markdown|csv)$/.test(lower);
+  if (isPdf) {
+    try {
+      const parsed = await pdfParse(file.buffer);
+      return normalizeText(parsed.text);
+    } catch {
+      throw new BadRequestException('Could not read this PDF');
+    }
+  }
+  if (isText) return normalizeText(file.buffer.toString('utf8'));
+  throw new BadRequestException(
+    'Unsupported file type — upload a PDF, .txt, .md or .csv',
+  );
+}
+
+/** Collapse extraction artifacts: repeated blank lines, trailing spaces. */
+function normalizeText(raw: string): string {
+  return raw
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 @Injectable()
 export class AgentsService {
@@ -172,6 +214,94 @@ export class AgentsService {
   async remove(organizationId: string, id: string) {
     await this.require(organizationId, id);
     await this.prisma.agent.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ---- knowledge documents (context injection) ----
+
+  async listKnowledge(organizationId: string, agentId: string) {
+    await this.require(organizationId, agentId);
+    return this.prisma.agentKnowledgeDoc.findMany({
+      where: { agentId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        fileName: true,
+        mimeType: true,
+        sizeBytes: true,
+        charCount: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async addKnowledge(
+    organizationId: string,
+    agentId: string,
+    file: { buffer: Buffer; mimeType: string; fileName: string },
+  ) {
+    await this.require(organizationId, agentId);
+    if (file.buffer.length > KNOWLEDGE_MAX_FILE_BYTES) {
+      throw new BadRequestException('File is too large (max 10 MB)');
+    }
+    const existing = await this.prisma.agentKnowledgeDoc.findMany({
+      where: { agentId },
+      select: { charCount: true },
+    });
+    if (existing.length >= KNOWLEDGE_MAX_DOCS) {
+      throw new BadRequestException(
+        `An agent can have at most ${KNOWLEDGE_MAX_DOCS} documents`,
+      );
+    }
+
+    const text = await extractText(file);
+    if (text.length < 20) {
+      throw new BadRequestException(
+        'No text could be extracted from this file. Scanned (image-only) ' +
+          'PDFs are not supported — upload a text PDF, .txt or .md instead.',
+      );
+    }
+    const usedChars = existing.reduce((sum, d) => sum + d.charCount, 0);
+    if (usedChars + text.length > KNOWLEDGE_MAX_TOTAL_CHARS) {
+      const left = Math.max(0, KNOWLEDGE_MAX_TOTAL_CHARS - usedChars);
+      throw new BadRequestException(
+        `Knowledge base is full: this document has ${text.length.toLocaleString()} ` +
+          `characters but only ${left.toLocaleString()} remain (limit ` +
+          `${KNOWLEDGE_MAX_TOTAL_CHARS.toLocaleString()} across all documents)`,
+      );
+    }
+
+    return this.prisma.agentKnowledgeDoc.create({
+      data: {
+        organizationId,
+        agentId,
+        fileName: file.fileName,
+        mimeType: file.mimeType,
+        sizeBytes: file.buffer.length,
+        charCount: text.length,
+        text,
+      },
+      select: {
+        id: true,
+        fileName: true,
+        mimeType: true,
+        sizeBytes: true,
+        charCount: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async removeKnowledge(
+    organizationId: string,
+    agentId: string,
+    docId: string,
+  ) {
+    await this.require(organizationId, agentId);
+    const { count } = await this.prisma.agentKnowledgeDoc.deleteMany({
+      where: { id: docId, agentId },
+    });
+    if (!count) throw new NotFoundException('Document not found');
     return { ok: true };
   }
 

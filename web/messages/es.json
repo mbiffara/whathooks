@@ -188,8 +188,7 @@
       "creating": "Creando…",
       "upgradeAction": "Conectar un número de WhatsApp",
       "noSessions": "Aún no hay sesiones. Crea una arriba para obtener un código QR.",
-      "notLinked": "Aún sin vincular",
-      "coldSendWarning": "WhatsApp restringe enviar mensajes a números que nunca te escribieron — una prueba a un desconocido puede no entregarse. Usa un número que ya haya escrito a esta sesión, o inicia el chat desde el teléfono primero."
+      "notLinked": "Aún sin vincular"
     },
     "sessionDetail": {
       "back": "← Sesiones",
@@ -215,7 +214,8 @@
       "recipientPlaceholder": "Número del destinatario",
       "messagePlaceholder": "Tu mensaje",
       "send": "Enviar",
-      "rename": "Renombrar"
+      "rename": "Renombrar",
+      "coldSendWarning": "WhatsApp restringe enviar mensajes a números que nunca te escribieron — una prueba a un desconocido puede no entregarse. Usa un número que ya haya escrito a esta sesión, o inicia el chat desde el teléfono primero."
     },
     "billing": {
       "title": "Facturación",

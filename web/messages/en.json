@@ -188,8 +188,7 @@
       "creating": "Creating…",
       "upgradeAction": "Connecting a WhatsApp number",
       "noSessions": "No sessions yet. Create one above to get a QR code.",
-      "notLinked": "Not linked yet",
-      "coldSendWarning": "WhatsApp restricts messaging numbers that never wrote to you — a test to a complete stranger may not be delivered. Use a number that has already texted this session, or start the chat from the phone first."
+      "notLinked": "Not linked yet"
     },
     "sessionDetail": {
       "back": "← Sessions",
@@ -215,7 +214,8 @@
       "recipientPlaceholder": "Recipient number",
       "messagePlaceholder": "Your message",
       "send": "Send",
-      "rename": "Rename"
+      "rename": "Rename",
+      "coldSendWarning": "WhatsApp restricts messaging numbers that never wrote to you — a test to a complete stranger may not be delivered. Use a number that has already texted this session, or start the chat from the phone first."
     },
     "billing": {
       "title": "Billing",

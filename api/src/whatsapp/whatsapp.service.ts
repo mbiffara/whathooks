@@ -43,6 +43,15 @@ export class WhatsappService {
     return { ...this.toPublic(session), qr: session.qr, qrDataUrl };
   }
 
+  async rename(organizationId: string, id: string, label: string) {
+    await this.requireSession(organizationId, id);
+    const session = await this.prisma.waSession.update({
+      where: { id },
+      data: { label },
+    });
+    return this.toPublic(session);
+  }
+
   async connect(organizationId: string, id: string) {
     await this.requireSession(organizationId, id);
     await this.manager.start(id);

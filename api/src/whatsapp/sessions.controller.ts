@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -16,7 +17,7 @@ import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { ApiOrg } from '../common/decorators/org.decorator';
 import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { IsString, MaxLength, MinLength } from 'class-validator';
-import { CreateSessionDto } from './dto/session.dto';
+import { CreateSessionDto, UpdateSessionDto } from './dto/session.dto';
 import { WhatsappService } from './whatsapp.service';
 
 class TestMessageDto {
@@ -78,6 +79,16 @@ export class SessionsController {
     const organizationId = this.orgOf(org);
     await this.access.assertSessionAllowed(user, organizationId, id);
     return this.whatsapp.get(organizationId, id);
+  }
+
+  @OrgRoles('ADMIN')
+  @Patch(':id')
+  rename(
+    @ApiOrg() org: string | undefined,
+    @Param('id') id: string,
+    @Body() dto: UpdateSessionDto,
+  ) {
+    return this.whatsapp.rename(this.orgOf(org), id, dto.label);
   }
 
   @OrgRoles('ADMIN')

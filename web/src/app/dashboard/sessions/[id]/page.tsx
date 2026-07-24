@@ -24,6 +24,8 @@ export default function SessionDetailPage() {
   const [text, setText] = useState("");
   const [sendResult, setSendResult] = useState<string | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [renaming, setRenaming] = useState(false);
+  const [labelDraft, setLabelDraft] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -84,6 +86,27 @@ export default function SessionDetailPage() {
     }
   }
 
+  async function saveRename(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || busy) return;
+    const label = labelDraft.trim();
+    if (!label) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient(`/sessions/${id}`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ label }),
+      });
+      setRenaming(false);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("actionFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function remove() {
     if (!token) return;
     setBusy(true);
@@ -130,7 +153,46 @@ export default function SessionDetailPage() {
           >
             {t("back")}
           </button>
-          <h1 className="text-2xl font-bold">{session.label}</h1>
+          {renaming ? (
+            <form
+              onSubmit={saveRename}
+              className="flex items-center gap-2"
+            >
+              <input
+                className="input h-10 w-64 text-lg font-bold"
+                value={labelDraft}
+                onChange={(e) => setLabelDraft(e.target.value)}
+                maxLength={80}
+                autoFocus
+                required
+              />
+              <button type="submit" className="btn-primary text-xs" disabled={busy}>
+                {tc("save")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setRenaming(false)}
+                className="btn-ghost text-xs"
+              >
+                {tc("cancel")}
+              </button>
+            </form>
+          ) : (
+            <h1 className="group flex items-center gap-2 text-2xl font-bold">
+              {session.label}
+              <button
+                onClick={() => {
+                  setLabelDraft(session.label);
+                  setRenaming(true);
+                }}
+                className="text-sm text-[var(--color-muted)] opacity-60 hover:text-[var(--color-fg)] hover:opacity-100"
+                aria-label={t("rename")}
+                title={t("rename")}
+              >
+                ✎
+              </button>
+            </h1>
+          )}
           <div className="mt-2 flex items-center gap-3">
             <StatusBadge status={session.status} />
             {session.phoneNumber && (

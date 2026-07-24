@@ -6,3 +6,10 @@ export class CreateSessionDto {
   @MaxLength(80)
   label!: string;
 }
+
+export class UpdateSessionDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  label!: string;
+}

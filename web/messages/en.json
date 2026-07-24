@@ -214,7 +214,8 @@
       "sendTestHint": "Phone number with country code, no “+”. e.g. 15551234567",
       "recipientPlaceholder": "Recipient number",
       "messagePlaceholder": "Your message",
-      "send": "Send"
+      "send": "Send",
+      "rename": "Rename"
     },
     "billing": {
       "title": "Billing",

@@ -713,7 +713,9 @@
     "err400": "The session is not <pill>CONNECTED</pill>, or the request body is invalid.",
     "errWebhooksLabel": "Webhooks",
     "errWebhooks": "Delivery requests time out after 10 seconds. For now we make a single delivery attempt per event — automatic retries are coming.",
-    "agentsCallout": "Building with an AI coding agent? Give it the whole API in one markdown file: <link>whathooks.app/llms.txt</link>"
+    "agentsCallout": "Building with an AI coding agent? Give it the whole API in one markdown file: <link>whathooks.app/llms.txt</link>",
+    "payloadNotes": "<pill>type</pill> is uppercase (<pill>TEXT</pill>, <pill>IMAGE</pill>, <pill>AUDIO</pill>, <pill>VIDEO</pill>, <pill>DOCUMENT</pill>, <pill>STICKER</pill>, <pill>LOCATION</pill>, <pill>CONTACT</pill>, <pill>UNKNOWN</pill>). <pill>data.timestamp</pill> is unix seconds (the WhatsApp message time); the envelope <pill>timestamp</pill> is the ISO delivery time.",
+    "mediaDesc": "For media messages, <pill>media</pill> carries a signed download link (expires after 1 hour — download promptly, or re-fetch the message via <pill>GET /v1/messages</pill> for a fresh link). <pill>text</pill> holds the caption, if any:"
   },
   "teams": {
     "meta": {

@@ -86,20 +86,36 @@ Every delivery shares `{ event, sessionId, data, timestamp }`:
   "sessionId": "sess_8f2a...",
   "data": {
     "id": "msg_3c91...",
+    "conversationId": "conv_9d41...",
     "sessionId": "sess_8f2a...",
     "from": "15551234567",
     "isGroup": false,
     "participant": null,
     "mentionedMe": false,
     "pushName": "Jane Doe",
-    "type": "text",
+    "type": "TEXT",
     "text": "Hi there!",
+    "media": null,
     "waMessageId": "3EB0A1B2C3D4E5F6",
-    "timestamp": "2026-06-29T14:21:07.000Z"
+    "timestamp": 1784892795
   },
-  "timestamp": "2026-06-29T14:21:07.412Z"
+  "timestamp": "2026-07-24T11:33:15.401Z"
 }
 ```
+
+Field notes:
+
+- `type` is one of `TEXT`, `IMAGE`, `AUDIO`, `VIDEO`, `DOCUMENT`, `STICKER`,
+  `LOCATION`, `CONTACT`, `UNKNOWN` (uppercase).
+- `data.timestamp` is unix **seconds** (the WhatsApp message time); the
+  envelope `timestamp` is an ISO string (the delivery time).
+- `media` is `null` for text messages. For media messages it is
+  `{ "url": "...", "mimeType": "image/jpeg", "fileName": "photo.jpg" }` —
+  `fileName` may be null. `url` is a signed download link that expires after
+  **1 hour**; download promptly (or re-fetch the message via
+  `GET /v1/messages`, which returns a freshly signed link).
+- `text` carries the caption for media messages, and `null` when there is
+  neither text nor caption.
 
 Group messages: `from` is the group JID (ends in `@g.us`), `isGroup` is
 `true`, `participant` is the JID of the group member who wrote the message,

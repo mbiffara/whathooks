@@ -108,18 +108,29 @@ const payloadExample = `{
   "sessionId": "sess_8f2a...",
   "data": {
     "id": "msg_3c91...",
+    "conversationId": "conv_9d41...",
     "sessionId": "sess_8f2a...",
     "from": "15551234567",
     "isGroup": false,
     "participant": null,
     "mentionedMe": false,
     "pushName": "Jane Doe",
-    "type": "text",
+    "type": "TEXT",
     "text": "Hi there!",
+    "media": null,
     "waMessageId": "3EB0A1B2C3D4E5F6",
-    "timestamp": "2026-06-29T14:21:07.000Z"
+    "timestamp": 1784892795
   },
-  "timestamp": "2026-06-29T14:21:07.412Z"
+  "timestamp": "2026-07-24T11:33:15.401Z"
+}`;
+
+// Shown under the payload example: media messages carry a signed URL.
+const mediaExample = `"type": "IMAGE",
+"text": "the caption, if any",
+"media": {
+  "url": "https://api.whathooks.app/v1/media/raw?key=...&exp=...&sig=...",
+  "mimeType": "image/jpeg",
+  "fileName": "photo.jpg"
 }`;
 
 const sendCurl = `curl -X POST https://api.whathooks.com/v1/messages \\
@@ -373,6 +384,17 @@ export default function DocsPage() {
               <pre className="mt-3">
                 <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
                   {payloadExample}
+                </code>
+              </pre>
+              <p className="mt-2 text-sm text-[var(--color-muted)]">
+                {t.rich("payloadNotes", rich)}
+              </p>
+              <p className="mt-4 text-sm text-[var(--color-muted)]">
+                {t.rich("mediaDesc", rich)}
+              </p>
+              <pre className="mt-3">
+                <code className="block bg-[var(--color-surface-2)] rounded-lg p-4 overflow-x-auto text-xs font-mono">
+                  {mediaExample}
                 </code>
               </pre>
 

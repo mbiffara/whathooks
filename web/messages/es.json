@@ -713,7 +713,9 @@
     "err400": "La sesión no está <pill>CONNECTED</pill> o el cuerpo de la petición es inválido.",
     "errWebhooksLabel": "Webhooks",
     "errWebhooks": "Las entregas expiran a los 10 segundos. Por ahora hacemos un solo intento de entrega por evento — los reintentos automáticos vienen en camino.",
-    "agentsCallout": "¿Programas con un agente de IA? Dale toda la API en un solo archivo markdown: <link>whathooks.app/llms.txt</link>"
+    "agentsCallout": "¿Programas con un agente de IA? Dale toda la API en un solo archivo markdown: <link>whathooks.app/llms.txt</link>",
+    "payloadNotes": "<pill>type</pill> viene en mayúsculas (<pill>TEXT</pill>, <pill>IMAGE</pill>, <pill>AUDIO</pill>, <pill>VIDEO</pill>, <pill>DOCUMENT</pill>, <pill>STICKER</pill>, <pill>LOCATION</pill>, <pill>CONTACT</pill>, <pill>UNKNOWN</pill>). <pill>data.timestamp</pill> es unix en segundos (la hora del mensaje de WhatsApp); el <pill>timestamp</pill> del sobre es la hora de entrega en formato ISO.",
+    "mediaDesc": "Para mensajes con multimedia, <pill>media</pill> trae un enlace de descarga firmado (expira en 1 hora — descárgalo pronto, o vuelve a consultar el mensaje con <pill>GET /v1/messages</pill> para un enlace nuevo). <pill>text</pill> contiene el caption, si lo hay:"
   },
   "teams": {
     "meta": {

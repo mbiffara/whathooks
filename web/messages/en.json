@@ -298,7 +298,8 @@
       "deliveryError": "Error",
       "deliveryPayload": "Payload",
       "deliveryFailed": "failed",
-      "deliveryPending": "pending"
+      "deliveryPending": "pending",
+      "deliveryFrom": "From"
     },
     "team": {
       "title": "Team",

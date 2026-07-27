@@ -298,7 +298,8 @@
       "deliveryError": "Error",
       "deliveryPayload": "Payload",
       "deliveryFailed": "falló",
-      "deliveryPending": "pendiente"
+      "deliveryPending": "pendiente",
+      "deliveryFrom": "De"
     },
     "team": {
       "title": "Equipo",

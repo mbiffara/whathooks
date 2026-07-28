@@ -417,6 +417,10 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     if (connection === 'close') {
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
       const loggedOut = statusCode === DisconnectReason.loggedOut;
+      this.log.warn(
+        `Session ${sessionId} closed: status ${statusCode ?? 'n/a'} ` +
+          `(${(lastDisconnect?.error as Error)?.message ?? 'no error'})`,
+      );
 
       if (loggedOut) {
         await this.sessions.get(sessionId)?.clearAuth();

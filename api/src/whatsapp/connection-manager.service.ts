@@ -60,6 +60,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(ConnectionManagerService.name);
   private readonly sessions = new Map<string, LiveSession>();
   private readonly groupNames = new Map<string, string>(); // jid -> subject
+  // Consecutive reconnect failures per session (drives backoff; reset on open).
+  private readonly reconnectAttempts = new Map<string, number>();
   private shuttingDown = false;
 
   constructor(
@@ -383,6 +385,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (connection === 'open') {
+      this.reconnectAttempts.delete(sessionId);
       const sock = this.sessions.get(sessionId)?.sock;
       const phoneNumber = sock?.user?.id
         ? jidNormalizedUser(sock.user.id).split('@')[0]
@@ -413,12 +416,26 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       await this.dispatchStatus(sessionId, 'DISCONNECTED');
 
       if (!this.shuttingDown) {
-        // reconnect with a small delay
+        // Exponential backoff with jitter. A fixed short delay hammers
+        // WhatsApp when a session flaps (e.g. reconnecting through a big
+        // offline backlog) — WA answers with 503 throttling and the loop
+        // never converges. Reset on a successful 'open'.
+        const attempts = (this.reconnectAttempts.get(sessionId) ?? 0) + 1;
+        this.reconnectAttempts.set(sessionId, attempts);
+        const delay =
+          Math.min(2_000 * 2 ** (attempts - 1), 300_000) +
+          Math.floor(Math.random() * 1_000);
+        if (attempts > 3) {
+          this.log.warn(
+            `Session ${sessionId} reconnect attempt ${attempts}; ` +
+              `waiting ${Math.round(delay / 1000)}s`,
+          );
+        }
         setTimeout(() => {
           this.start(sessionId).catch((e) =>
             this.log.error(`Reconnect failed for ${sessionId}: ${e}`),
           );
-        }, 2_000);
+        }, delay);
       }
     }
   }

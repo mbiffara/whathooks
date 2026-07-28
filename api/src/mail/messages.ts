@@ -57,6 +57,40 @@ export const MAIL_MESSAGES = {
       cta: 'Open the conversation',
       footnote: 'You can turn these notifications off in the agent settings.',
     },
+    sessionDown: {
+      subject: (label: string) => `⚠ Your WhatsApp number "${label}" is disconnected`,
+      preheader: 'It has been failing to reconnect for over a minute.',
+      heading: 'A WhatsApp number is disconnected',
+      body1: (label: string, phone: string) =>
+        `Your session "${label}"${phone ? ` (+${phone})` : ''} dropped and has been failing to reconnect for over a minute. Messages are not being received while it is down.`,
+      body2:
+        'It usually recovers on its own (we keep retrying). If it stays down, check that the phone is on and connected to the internet, and that whathooks still appears under WhatsApp → Linked devices.',
+      cta: 'View session',
+      footnote: 'You will get another email when it reconnects.',
+    },
+    sessionLoggedOut: {
+      subject: (label: string) =>
+        `Your WhatsApp number "${label}" was unlinked — new QR scan needed`,
+      preheader: 'The device was removed from WhatsApp; messages have stopped.',
+      heading: 'A WhatsApp number was unlinked',
+      body1: (label: string, phone: string) =>
+        `Your session "${label}"${phone ? ` (+${phone})` : ''} was unlinked from WhatsApp (removed from Linked devices). It will NOT reconnect on its own.`,
+      body2:
+        'To bring it back, open the session and scan the QR code again with the phone: WhatsApp → Settings → Linked devices → Link a device.',
+      cta: 'Re-scan the QR',
+      footnote: 'Messages are not received until the number is linked again.',
+    },
+    sessionRestored: {
+      subject: (label: string) => `✓ "${label}" is back online`,
+      preheader: 'The session reconnected and is receiving messages again.',
+      heading: 'Back online',
+      body1: (label: string, phone: string) =>
+        `Your session "${label}"${phone ? ` (+${phone})` : ''} reconnected and is receiving messages again.`,
+      body2:
+        'Messages sent to the number while it was down are usually delivered by WhatsApp on reconnection.',
+      cta: 'View session',
+      footnote: '',
+    },
     agentNotify: {
       subject: (agent: string, contact: string) =>
         `${agent} left you a note about ${contact}`,
@@ -133,6 +167,41 @@ export const MAIL_MESSAGES = {
       signature: 'Marcelo Biffara',
       footnote:
         'Recibes este correo porque creaste una cuenta en whathooks. Es una nota personal única, no un boletín.',
+    },
+    sessionDown: {
+      subject: (label: string) =>
+        `⚠ Tu número de WhatsApp "${label}" está desconectado`,
+      preheader: 'Lleva más de un minuto sin poder reconectarse.',
+      heading: 'Un número de WhatsApp está desconectado',
+      body1: (label: string, phone: string) =>
+        `Tu sesión "${label}"${phone ? ` (+${phone})` : ''} se desconectó y lleva más de un minuto sin poder reconectarse. Mientras esté caída no se reciben mensajes.`,
+      body2:
+        'Normalmente se recupera sola (seguimos reintentando). Si sigue caída, verifica que el teléfono esté encendido y con internet, y que whathooks siga apareciendo en WhatsApp → Dispositivos vinculados.',
+      cta: 'Ver sesión',
+      footnote: 'Te enviaremos otro correo cuando se reconecte.',
+    },
+    sessionLoggedOut: {
+      subject: (label: string) =>
+        `Tu número de WhatsApp "${label}" se desvinculó — hay que escanear el QR de nuevo`,
+      preheader: 'El dispositivo fue eliminado de WhatsApp; dejaron de llegar mensajes.',
+      heading: 'Un número de WhatsApp se desvinculó',
+      body1: (label: string, phone: string) =>
+        `Tu sesión "${label}"${phone ? ` (+${phone})` : ''} fue desvinculada de WhatsApp (eliminada de Dispositivos vinculados). NO se va a reconectar sola.`,
+      body2:
+        'Para recuperarla, abre la sesión y escanea el código QR de nuevo con el teléfono: WhatsApp → Configuración → Dispositivos vinculados → Vincular un dispositivo.',
+      cta: 'Escanear el QR',
+      footnote: 'No se reciben mensajes hasta volver a vincular el número.',
+    },
+    sessionRestored: {
+      subject: (label: string) => `✓ "${label}" está en línea de nuevo`,
+      preheader: 'La sesión se reconectó y vuelve a recibir mensajes.',
+      heading: 'En línea de nuevo',
+      body1: (label: string, phone: string) =>
+        `Tu sesión "${label}"${phone ? ` (+${phone})` : ''} se reconectó y vuelve a recibir mensajes.`,
+      body2:
+        'Los mensajes enviados al número mientras estuvo caída normalmente los entrega WhatsApp al reconectar.',
+      cta: 'Ver sesión',
+      footnote: '',
     },
     agentNotify: {
       subject: (agent: string, contact: string) =>

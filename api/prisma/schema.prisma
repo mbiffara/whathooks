@@ -168,6 +168,9 @@ model WaSession {
   status         WaSessionStatus @default(PENDING)
   qr             String? // latest QR string while status = QR (transient)
   lastConnectedAt DateTime?
+  // Set when a "session down / unlinked" alert email went out for the current
+  // outage; cleared (with a recovery email) when the session reconnects.
+  alertedDisconnectAt DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 

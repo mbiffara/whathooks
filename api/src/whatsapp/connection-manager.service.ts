@@ -62,6 +62,9 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private readonly groupNames = new Map<string, string>(); // jid -> subject
   // Consecutive reconnect failures per session (drives backoff; reset on open).
   private readonly reconnectAttempts = new Map<string, number>();
+  // Sessions being logged out on purpose (dashboard/API) — suppresses the
+  // "unlinked" alert email that fires on surprise logouts.
+  private readonly intentionalLogouts = new Set<string>();
   private shuttingDown = false;
 
   constructor(
@@ -396,6 +399,19 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         lastConnectedAt: new Date(),
       });
       await this.dispatchStatus(sessionId, 'CONNECTED', { phoneNumber });
+      // Close the outage loop: if we alerted about this session being down,
+      // tell the same people it recovered.
+      const alerted = await this.prisma.waSession.findUnique({
+        where: { id: sessionId },
+        select: { alertedDisconnectAt: true },
+      });
+      if (alerted?.alertedDisconnectAt) {
+        await this.prisma.waSession.update({
+          where: { id: sessionId },
+          data: { alertedDisconnectAt: null },
+        });
+        void this.alertSession(sessionId, 'sessionRestored');
+      }
     }
 
     if (connection === 'close') {
@@ -409,6 +425,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
           qr: null,
         });
         await this.dispatchStatus(sessionId, 'LOGGED_OUT');
+        // Unlinking never self-heals — alert immediately (once per outage),
+        // unless the logout was requested from the dashboard/API.
+        if (!this.intentionalLogouts.has(sessionId)) {
+          void this.markAlertedAndNotify(sessionId, 'sessionLoggedOut');
+        }
         return;
       }
 
@@ -430,6 +451,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
             `Session ${sessionId} reconnect attempt ${attempts}; ` +
               `waiting ${Math.round(delay / 1000)}s`,
           );
+        }
+        // ~1 minute of continuous failure (2+4+8+16+32s) → alert the team.
+        // Deploy blips never reach this; the flag makes it once per outage.
+        if (attempts === 5) {
+          void this.markAlertedAndNotify(sessionId, 'sessionDown');
         }
         setTimeout(() => {
           this.start(sessionId).catch((e) =>
@@ -856,6 +882,74 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  /**
+   * Stamp the once-per-outage flag and send a down/unlinked alert. Skips
+   * silently when an alert for the current outage already went out (flag
+   * survives restarts, so deploys don't re-send).
+   */
+  private async markAlertedAndNotify(
+    sessionId: string,
+    kind: 'sessionDown' | 'sessionLoggedOut',
+  ): Promise<void> {
+    try {
+      const { count } = await this.prisma.waSession.updateMany({
+        where: { id: sessionId, alertedDisconnectAt: null },
+        data: { alertedDisconnectAt: new Date() },
+      });
+      if (count === 0) return; // already alerted for this outage
+      await this.alertSession(sessionId, kind);
+    } catch (e) {
+      this.log.warn(`Session alert failed for ${sessionId}: ${e}`);
+    }
+  }
+
+  /**
+   * Email the people who work this session (owner/admins + members with
+   * access) about a session outage or recovery.
+   */
+  private async alertSession(
+    sessionId: string,
+    kind: 'sessionDown' | 'sessionLoggedOut' | 'sessionRestored',
+  ): Promise<void> {
+    try {
+      const session = await this.prisma.waSession.findUnique({
+        where: { id: sessionId },
+        select: { label: true, phoneNumber: true, organizationId: true },
+      });
+      if (!session) return;
+      const memberships = await this.prisma.membership.findMany({
+        where: { organizationId: session.organizationId },
+        include: { user: { select: { email: true, locale: true } } },
+        take: 20,
+      });
+      const recipients = memberships.filter(
+        (m) =>
+          m.role !== 'MEMBER' ||
+          m.sessionIds.length === 0 ||
+          m.sessionIds.includes(sessionId),
+      );
+      const base = this.config
+        .get<string>('WEB_ORIGIN', 'http://localhost:3000')
+        .split(',')[0]
+        .trim();
+      await Promise.all(
+        recipients.map((m) =>
+          this.mail.sendSessionAlert({
+            to: m.user.email,
+            locale: m.user.locale,
+            kind,
+            label: session.label,
+            phone: session.phoneNumber ?? '',
+            sessionUrl: `${base}/dashboard/sessions/${sessionId}`,
+          }),
+        ),
+      );
+      this.log.log(`Session ${sessionId} alert sent: ${kind}`);
+    } catch (e) {
+      this.log.warn(`Session alert failed for ${sessionId}: ${e}`);
+    }
+  }
+
   /** The agent's notify_owner tool: email the organization owner. */
   private async notifyOwner(
     organizationId: string,
@@ -1116,6 +1210,10 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
 
   /** Log out and remove the socket + persisted auth. */
   async logout(sessionId: string): Promise<void> {
+    this.intentionalLogouts.add(sessionId);
+    // Self-clean: the close event fires within seconds; the grace window
+    // just needs to outlive it.
+    setTimeout(() => this.intentionalLogouts.delete(sessionId), 30_000);
     const live = this.sessions.get(sessionId);
     if (live) {
       try {

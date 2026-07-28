@@ -101,6 +101,28 @@ export class MailService {
     });
   }
 
+  /** A session went down / got unlinked / recovered — alert the team. */
+  async sendSessionAlert(email: {
+    to: string;
+    locale?: string | null;
+    kind: 'sessionDown' | 'sessionLoggedOut' | 'sessionRestored';
+    label: string;
+    phone: string;
+    sessionUrl: string;
+  }): Promise<boolean> {
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale][email.kind];
+    return this.send(email.to, {
+      locale,
+      subject: M.subject(email.label),
+      preheader: M.preheader,
+      heading: M.heading,
+      paragraphs: [M.body1(email.label, email.phone), M.body2],
+      cta: { label: M.cta, url: email.sessionUrl },
+      ...(M.footnote ? { footnote: M.footnote } : {}),
+    });
+  }
+
   /** The agent called notify_owner — email the account owner. */
   async sendAgentNotify(email: {
     to: string;

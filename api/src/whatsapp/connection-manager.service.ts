@@ -17,6 +17,7 @@ import makeWASocket, {
   DisconnectReason,
   downloadMediaMessage,
   fetchLatestBaileysVersion,
+  fetchLatestWaWebVersion,
   jidNormalizedUser,
   makeCacheableSignalKeyStore,
   proto,
@@ -218,9 +219,18 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       this.prisma,
       sessionId,
     );
-    const { version } = await fetchLatestBaileysVersion().catch(() => ({
-      version: undefined as unknown as [number, number, number],
-    }));
+    // Ask WhatsApp itself for the current web version — logging in with an
+    // older build number gets refused with failure 405 once WA bumps the
+    // minimum (happened 2026-07-28; Baileys' baked list lags). Fall back to
+    // Baileys' list, then to the library default.
+    const { version } = await fetchLatestWaWebVersion({})
+      .catch(() => fetchLatestBaileysVersion())
+      .catch(() => ({
+        version: undefined as unknown as [number, number, number],
+      }));
+    this.log.log(
+      `Starting ${sessionId} with WA web version ${version?.join('.') ?? 'default'}`,
+    );
 
     // Tag Baileys' own logs (decrypt failures, stream errors) with the session
     // so prod incidents are attributable to a number without DB access.

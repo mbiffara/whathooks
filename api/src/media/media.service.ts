@@ -31,6 +31,11 @@ export class MediaService {
   private readonly publicApiUrl: string;
   private readonly secret: string;
   private readonly ttlSeconds = 3600;
+  // viewUrl memoization: stable URLs across polls (see viewUrl docs).
+  private readonly urlCache = new Map<
+    string,
+    { url: string; freshUntil: number }
+  >();
 
   constructor(private readonly config: ConfigService) {
     this.bucket = this.config.get<string>('MEDIA_BUCKET') || undefined;
@@ -77,8 +82,30 @@ export class MediaService {
     return { key, size: body.length };
   }
 
-  /** A URL the browser can load directly (presigned S3 or signed local proxy). */
+  /**
+   * A URL the browser can load directly (presigned S3 or signed local proxy).
+   * URLs are cached and reused for 75% of their TTL so repeated fetches (the
+   * inbox polls every few seconds) return the SAME url — otherwise React sees
+   * a new `src` each poll and reloads `<audio>`/`<video>` mid-playback.
+   */
   async viewUrl(
+    key: string,
+    contentType?: string,
+    fileName?: string,
+  ): Promise<string> {
+    const cacheKey = `${key}|${contentType ?? ''}|${fileName ?? ''}`;
+    const hit = this.urlCache.get(cacheKey);
+    if (hit && hit.freshUntil > Date.now()) return hit.url;
+    const url = await this.buildViewUrl(key, contentType, fileName);
+    if (this.urlCache.size > 5_000) this.urlCache.clear();
+    this.urlCache.set(cacheKey, {
+      url,
+      freshUntil: Date.now() + this.ttlSeconds * 750, // 75% of ttl, in ms
+    });
+    return url;
+  }
+
+  private async buildViewUrl(
     key: string,
     contentType?: string,
     fileName?: string,

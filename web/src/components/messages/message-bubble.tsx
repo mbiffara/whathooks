@@ -69,6 +69,11 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
             {senderLabel(message, t)}
           </div>
         )}
+        {!outbound && message.senderName && (
+          <div className="mb-0.5 text-[10px] font-semibold text-[var(--color-muted)]">
+            {message.senderName}
+          </div>
+        )}
         <MessageBody message={message} />
         <div className="mt-1 flex items-center justify-end gap-2">
           {(message.reactions?.length ?? 0) > 0 && (

@@ -34,6 +34,8 @@ export interface ChatMessage {
   source?: MessageSource;
   agentName?: string | null;
   sentByName?: string | null;
+  /** WhatsApp pushName of the sender (inbound group messages). */
+  senderName?: string | null;
   /** WhatsApp reactions on this message. */
   reactions?: { emoji: string; by: string }[];
   type: ChatMessageType;

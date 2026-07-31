@@ -885,7 +885,6 @@
     "trustedBy": "Equipos que ya responden en whathooks"
   },
   "connect": {
-    "title": "Conecta \"{label}\" a WhatsApp",
     "step1": "Abre WhatsApp en el teléfono del número a conectar.",
     "step2": "Ve a Configuración → Dispositivos vinculados → Vincular un dispositivo.",
     "step3": "Apunta la cámara a este código QR.",
@@ -895,6 +894,9 @@
     "connectedTitle": "¡Conectado!",
     "connectedBody": "\"{label}\" ya está vinculado. Puedes cerrar esta página.",
     "expiredTitle": "Este enlace no es válido o expiró",
-    "expiredBody": "Pídele a quien te lo envió que genere un enlace nuevo."
+    "expiredBody": "Pídele a quien te lo envió que genere un enlace nuevo.",
+    "invitedTitle": "{org} te invita a conectar tu WhatsApp en whathooks",
+    "sessionLine": "Número a conectar: “{label}”",
+    "loadingTitle": "Conecta tu WhatsApp"
   }
 }

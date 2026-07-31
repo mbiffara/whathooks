@@ -885,7 +885,6 @@
     "trustedBy": "Teams already answering on whathooks"
   },
   "connect": {
-    "title": "Connect \"{label}\" to WhatsApp",
     "step1": "Open WhatsApp on the phone with the number to connect.",
     "step2": "Go to Settings → Linked devices → Link a device.",
     "step3": "Point the camera at this QR code.",
@@ -895,6 +894,9 @@
     "connectedTitle": "Connected!",
     "connectedBody": "\"{label}\" is now linked. You can close this page.",
     "expiredTitle": "This link is invalid or has expired",
-    "expiredBody": "Ask the person who sent it to generate a new link."
+    "expiredBody": "Ask the person who sent it to generate a new link.",
+    "invitedTitle": "{org} is inviting you to connect your WhatsApp on whathooks",
+    "sessionLine": "Number to connect: “{label}”",
+    "loadingTitle": "Connect your WhatsApp"
   }
 }

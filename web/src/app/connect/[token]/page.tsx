@@ -8,6 +8,7 @@ import { use } from "react";
 
 interface ShareView {
   label: string;
+  organization: string;
   status: string;
   qrDataUrl: string | null;
 }
@@ -76,8 +77,15 @@ export default function ConnectPage({
         ) : (
           <>
             <h1 className="text-xl font-semibold">
-              {t("title", { label: view?.label ?? "…" })}
+              {view
+                ? t("invitedTitle", { org: view.organization })
+                : t("loadingTitle")}
             </h1>
+            {view && (
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                {t("sessionLine", { label: view.label })}
+              </p>
+            )}
             <ol className="mx-auto mt-3 max-w-xs list-decimal space-y-1 pl-5 text-left text-sm text-[var(--color-muted)]">
               <li>{t("step1")}</li>
               <li>{t("step2")}</li>

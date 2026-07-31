@@ -80,6 +80,7 @@ export class WhatsappService {
   async getByShareToken(token: string) {
     const session = await this.prisma.waSession.findUnique({
       where: { shareToken: token },
+      include: { organization: { select: { name: true } } },
     });
     if (
       !session ||
@@ -94,7 +95,12 @@ export class WhatsappService {
     const qrDataUrl = session.qr
       ? await QRCode.toDataURL(session.qr, { margin: 1, width: 320 })
       : null;
-    return { label: session.label, status: session.status, qrDataUrl };
+    return {
+      label: session.label,
+      organization: session.organization.name,
+      status: session.status,
+      qrDataUrl,
+    };
   }
 
   async rename(organizationId: string, id: string, label: string) {

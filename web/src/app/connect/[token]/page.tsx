@@ -29,6 +29,16 @@ export default function ConnectPage({
   const [invalid, setInvalid] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Public visitors have no saved theme — default this page to light (it's
+  // mostly a white QR code; dark chrome around it looks broken). An explicit
+  // THEME choice from a logged-in whathooks user is respected.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (root.getAttribute("data-theme")) return;
+    root.setAttribute("data-theme", "light");
+    return () => root.removeAttribute("data-theme");
+  }, []);
+
   useEffect(() => {
     let active = true;
     const tick = async () => {

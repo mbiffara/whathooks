@@ -26,6 +26,8 @@ export interface PlanLimits {
    * active-subscription requirement.
    */
   priceEnv?: string;
+  /** Env var for the annual price (10 months for the price of 12). */
+  annualPriceEnv?: string;
 }
 
 export const PLANS: Record<Plan, PlanLimits> = {
@@ -37,6 +39,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     teamMembers: 2,
     webhooks: 1,
     priceEnv: 'STRIPE_PRICE_STARTER',
+    annualPriceEnv: 'STRIPE_PRICE_STARTER_YEAR',
   },
   PRO: {
     label: 'Pro',
@@ -46,6 +49,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     teamMembers: 10,
     webhooks: null,
     priceEnv: 'STRIPE_PRICE_PRO',
+    annualPriceEnv: 'STRIPE_PRICE_PRO_YEAR',
   },
   BUSINESS: {
     label: 'Business',
@@ -55,6 +59,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     teamMembers: null,
     webhooks: null,
     priceEnv: 'STRIPE_PRICE_BUSINESS',
+    annualPriceEnv: 'STRIPE_PRICE_BUSINESS_YEAR',
   },
   SPONSORED: {
     label: 'Sponsored',
@@ -96,8 +101,9 @@ export function planForPriceId(
 ): Plan | null {
   if (!priceId) return null;
   for (const plan of Object.keys(PLANS) as Plan[]) {
-    const priceEnv = PLANS[plan].priceEnv;
+    const { priceEnv, annualPriceEnv } = PLANS[plan];
     if (priceEnv && env[priceEnv] === priceId) return plan;
+    if (annualPriceEnv && env[annualPriceEnv] === priceId) return plan;
   }
   return null;
 }

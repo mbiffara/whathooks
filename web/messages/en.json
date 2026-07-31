@@ -268,7 +268,12 @@
         ]
       },
       "trialEnds": "free trial ends {date}",
-      "startTrial": "Start free trial"
+      "startTrial": "Start free trial",
+      "intervalMonthly": "Monthly",
+      "intervalAnnual": "Annual",
+      "annualBadge": "2 months free",
+      "perYear": "/year",
+      "annualSavings": "Pay 10 months, get 12."
     },
     "webhooks": {
       "title": "Webhooks",
@@ -647,7 +652,8 @@
     "pricingFootnote": "Message limits count both inbound and outbound messages. Need more? <link>Talk to us</link>.",
     "ctaTitle": "Turn your WhatsApp number into a webhook today",
     "ctaDesc": "Scan a QR, point us at your endpoint, and start handling conversations in code. No Business API approval required.",
-    "trialNote": "7-day free trial"
+    "trialNote": "7-day free trial",
+    "annualNote": "or {price}/year — 2 months free"
   },
   "docs": {
     "nav": {

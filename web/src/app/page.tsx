@@ -35,9 +35,27 @@ const FEATURE_ICONS = ["📷", "🔐", "✉️", "📱", "🔁", "⚡"];
 
 /** Plan names and prices are shared across locales; copy lives in messages. */
 const PLAN_META = [
-  { key: "starter", name: "Starter", price: "$8.99", highlighted: false },
-  { key: "pro", name: "Pro", price: "$24.99", highlighted: true },
-  { key: "business", name: "Business", price: "$79.99", highlighted: false },
+  {
+    key: "starter",
+    name: "Starter",
+    price: "$8.99",
+    annualPrice: "$89.90",
+    highlighted: false,
+  },
+  {
+    key: "pro",
+    name: "Pro",
+    price: "$24.99",
+    annualPrice: "$249.90",
+    highlighted: true,
+  },
+  {
+    key: "business",
+    name: "Business",
+    price: "$79.99",
+    annualPrice: "$799.90",
+    highlighted: false,
+  },
 ];
 
 export default function Home() {
@@ -417,6 +435,9 @@ twq('config','re0yu');`}
                     {t("perMonth")}
                   </span>
                 </div>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  {t("annualNote", { price: plan.annualPrice })}
+                </p>
                 <p className="mt-1.5 text-xs font-medium text-[var(--color-brand)]">
                   {t("trialNote")}
                 </p>

@@ -47,12 +47,13 @@ export class BillingService {
     return this.stripe;
   }
 
-  private priceIdFor(plan: Plan): string {
-    const priceEnv = PLANS[plan].priceEnv;
-    if (!priceEnv) {
+  private priceIdFor(plan: Plan, interval: 'month' | 'year' = 'month'): string {
+    const { priceEnv, annualPriceEnv } = PLANS[plan];
+    const env = interval === 'year' ? annualPriceEnv : priceEnv;
+    if (!env) {
       throw new BadRequestException(`${plan} is not a purchasable plan`);
     }
-    const id = this.config.get<string>(priceEnv);
+    const id = this.config.get<string>(env);
     if (!id) {
       throw new BadRequestException(`No Stripe price configured for ${plan}`);
     }
@@ -124,6 +125,7 @@ export class BillingService {
   async createCheckoutSession(
     organizationId: string,
     plan: Plan,
+    interval: 'month' | 'year' = 'month',
   ): Promise<{ url: string }> {
     const customerId = await this.ensureCustomer(organizationId);
     const base = this.webBase();
@@ -138,7 +140,7 @@ export class BillingService {
     const session = await this.client().checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
-      line_items: [{ price: this.priceIdFor(plan), quantity: 1 }],
+      line_items: [{ price: this.priceIdFor(plan, interval), quantity: 1 }],
       success_url: `${base}/dashboard/billing?checkout=success`,
       cancel_url: `${base}/dashboard/billing?checkout=cancel`,
       client_reference_id: organizationId,

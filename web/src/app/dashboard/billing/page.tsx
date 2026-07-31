@@ -43,6 +43,10 @@ function BillingContent() {
     void load();
   }, [load]);
 
+  const [billingInterval, setBillingInterval] = useState<"month" | "year">(
+    "month",
+  );
+
   async function redirectTo(path: string, body?: unknown) {
     if (!token) return;
     setBusy(path);
@@ -183,7 +187,33 @@ function BillingContent() {
               {t("ownerOnly")}
             </p>
           ) : (
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <>
+            <div className="mt-6 flex items-center gap-2">
+              <button
+                onClick={() => setBillingInterval("month")}
+                className={`badge border px-3 py-1 ${
+                  billingInterval === "month"
+                    ? "border-[var(--color-brand)] bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
+                    : "border-[var(--color-border)] text-[var(--color-muted)]"
+                }`}
+              >
+                {t("intervalMonthly")}
+              </button>
+              <button
+                onClick={() => setBillingInterval("year")}
+                className={`badge border px-3 py-1 ${
+                  billingInterval === "year"
+                    ? "border-[var(--color-brand)] bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
+                    : "border-[var(--color-border)] text-[var(--color-muted)]"
+                }`}
+              >
+                {t("intervalAnnual")}
+                <span className="ml-1.5 text-[10px] font-semibold">
+                  {t("annualBadge")}
+                </span>
+              </button>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
               {PLAN_ORDER.map((plan) => {
                 const current = sub.subscribed && plan === sub.plan;
                 return (
@@ -206,18 +236,32 @@ function BillingContent() {
                       )}
                     </div>
                     <div className="mt-1 text-2xl font-bold">
-                      {PLAN_PRICING[plan].price}
+                      {billingInterval === "year"
+                        ? PLAN_PRICING[plan].annualPrice
+                        : PLAN_PRICING[plan].price}
                       <span className="text-sm font-normal text-[var(--color-muted)]">
-                        {t("perMonth")}
+                        {billingInterval === "year"
+                          ? t("perYear")
+                          : t("perMonth")}
                       </span>
                     </div>
+                    {billingInterval === "year" && (
+                      <p className="mt-0.5 text-xs text-[var(--color-brand)]">
+                        {t("annualSavings")}
+                      </p>
+                    )}
                     <ul className="mt-4 flex-1 space-y-2 text-sm text-[var(--color-muted)]">
                       {(t.raw(`features.${plan}`) as string[]).map((f) => (
                         <li key={f}>· {f}</li>
                       ))}
                     </ul>
                     <button
-                      onClick={() => redirectTo("/billing/checkout", { plan })}
+                      onClick={() =>
+                        redirectTo("/billing/checkout", {
+                          plan,
+                          interval: billingInterval,
+                        })
+                      }
                       disabled={current || busy !== null}
                       className={`mt-4 w-full ${
                         current ? "btn-ghost" : "btn-primary"
@@ -235,6 +279,7 @@ function BillingContent() {
                 );
               })}
             </div>
+            </>
           )}
         </>
       )}

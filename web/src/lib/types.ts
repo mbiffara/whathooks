@@ -285,9 +285,12 @@ export interface Subscription {
   usage: { used: number; limit: number | null };
 }
 
-export const PLAN_PRICING: Record<Plan, { label: string; price: string }> = {
-  STARTER: { label: "Starter", price: "$8.99" },
-  PRO: { label: "Pro", price: "$24.99" },
-  BUSINESS: { label: "Business", price: "$79.99" },
-  SPONSORED: { label: "Sponsored", price: "—" },
+export const PLAN_PRICING: Record<
+  Plan,
+  { label: string; price: string; annualPrice: string }
+> = {
+  STARTER: { label: "Starter", price: "$8.99", annualPrice: "$89.90" },
+  PRO: { label: "Pro", price: "$24.99", annualPrice: "$249.90" },
+  BUSINESS: { label: "Business", price: "$79.99", annualPrice: "$799.90" },
+  SPONSORED: { label: "Sponsored", price: "—", annualPrice: "—" },
 };

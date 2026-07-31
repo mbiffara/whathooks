@@ -35,7 +35,11 @@ export class BillingController {
   @OrgRoles('OWNER')
   @Post('checkout')
   checkout(@CurrentUser() user: AuthUser, @Body() dto: CreateCheckoutDto) {
-    return this.billing.createCheckoutSession(this.orgOf(user), dto.plan);
+    return this.billing.createCheckoutSession(
+      this.orgOf(user),
+      dto.plan,
+      dto.interval ?? 'month',
+    );
   }
 
   /** Open the Stripe customer portal. Owner-only. */

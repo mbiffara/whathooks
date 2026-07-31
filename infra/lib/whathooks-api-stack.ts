@@ -215,6 +215,10 @@ export class WhathooksApiStack extends cdk.Stack {
         STRIPE_PRICE_STARTER: 'price_1TwMjhHVX3hp29uYiSlPH9jn',
         STRIPE_PRICE_PRO: 'price_1TwMjiHVX3hp29uYoJQOBCbJ',
         STRIPE_PRICE_BUSINESS: 'price_1TwMjjHVX3hp29uYWw5myxJR',
+        // Annual prices: 10 months for the price of 12 (created 2026-07-31).
+        STRIPE_PRICE_STARTER_YEAR: 'price_1TzHO0HVX3hp29uY2vW72tUc',
+        STRIPE_PRICE_PRO_YEAR: 'price_1TzHO0HVX3hp29uYIxWEwrFo',
+        STRIPE_PRICE_BUSINESS_YEAR: 'price_1TzHO1HVX3hp29uYG2Kbk37F',
         // API-created portal configuration (not the Dashboard default).
         STRIPE_PORTAL_CONFIG: 'bpc_1TtBhkHVX3hp29uYjDbNpayS',
         // Sender for transactional email (Resend). notify.logicalminds.co is

@@ -297,7 +297,7 @@
       "upgradeAction": "Agregar un webhook",
       "deliveries": "Entregas",
       "noDeliveries": "Todavía no hay entregas. Si esperabas una, verifica que el webhook esté habilitado, suscrito a los eventos correctos y que no esté limitado a otra sesión.",
-      "deliveriesHint": "Últimos 50 intentos de entrega, primero los más recientes.",
+      "deliveriesHint": "Intentos de entrega, primero los más recientes — 50 por página, hasta 500 hacia atrás.",
       "refresh": "Actualizar",
       "deliveryTime": "Hora",
       "deliveryEvent": "Evento",
@@ -306,7 +306,8 @@
       "deliveryPayload": "Payload",
       "deliveryFailed": "falló",
       "deliveryPending": "pendiente",
-      "deliveryFrom": "De"
+      "deliveryFrom": "De",
+      "loadMore": "Cargar entregas anteriores"
     },
     "team": {
       "title": "Equipo",

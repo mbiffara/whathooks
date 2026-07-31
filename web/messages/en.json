@@ -297,7 +297,7 @@
       "upgradeAction": "Adding a webhook",
       "deliveries": "Deliveries",
       "noDeliveries": "No deliveries yet. If you expected one, check the webhook is enabled, subscribes to the right events, and isn't scoped to a different session.",
-      "deliveriesHint": "Last 50 delivery attempts, newest first.",
+      "deliveriesHint": "Delivery attempts, newest first — 50 per page, up to 500 back.",
       "refresh": "Refresh",
       "deliveryTime": "Time",
       "deliveryEvent": "Event",
@@ -306,7 +306,8 @@
       "deliveryPayload": "Payload",
       "deliveryFailed": "failed",
       "deliveryPending": "pending",
-      "deliveryFrom": "From"
+      "deliveryFrom": "From",
+      "loadMore": "Load older deliveries"
     },
     "team": {
       "title": "Team",

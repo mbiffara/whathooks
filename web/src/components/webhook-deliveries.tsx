@@ -6,6 +6,12 @@ import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 
+interface DeliveriesPage {
+  items: WebhookDelivery[];
+  hasMore: boolean;
+  nextBefore: string | null;
+}
+
 function StatusBadge({ d }: { d: WebhookDelivery }) {
   const t = useTranslations("dash.webhooks");
   if (d.deliveredAt) {
@@ -71,21 +77,42 @@ export function WebhookDeliveries({ webhookId }: { webhookId: string }) {
   const [deliveries, setDeliveries] = useState<WebhookDelivery[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [nextBefore, setNextBefore] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
     setError(null);
     try {
-      setDeliveries(
-        await apiClient<WebhookDelivery[]>(
-          `/webhooks/${webhookId}/deliveries`,
-          token,
-        ),
+      const page = await apiClient<DeliveriesPage>(
+        `/webhooks/${webhookId}/deliveries`,
+        token,
       );
+      setDeliveries(page.items);
+      setNextBefore(page.hasMore ? page.nextBefore : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : tc("failedToLoad"));
     }
   }, [token, webhookId, tc]);
+
+  async function loadMore() {
+    if (!token || !nextBefore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await apiClient<DeliveriesPage>(
+        `/webhooks/${webhookId}/deliveries?before=${encodeURIComponent(nextBefore)}`,
+        token,
+      );
+      setDeliveries((prev) => [...(prev ?? []), ...page.items]);
+      // Cap the in-page history at 500 entries (10 pages).
+      const total = (deliveries?.length ?? 0) + page.items.length;
+      setNextBefore(page.hasMore && total < 500 ? page.nextBefore : null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tc("failedToLoad"));
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     load();
@@ -164,6 +191,15 @@ export function WebhookDeliveries({ webhookId }: { webhookId: string }) {
           </tbody>
         </table>
       </div>
+      {nextBefore && (
+        <button
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="btn-ghost self-center text-xs"
+        >
+          {loadingMore ? tc("loading") : t("loadMore")}
+        </button>
+      )}
     </div>
   );
 }

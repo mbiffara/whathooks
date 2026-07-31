@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -56,7 +57,15 @@ export class WebhooksController {
   }
 
   @Get(':id/deliveries')
-  deliveries(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.webhooks.deliveries(this.orgOf(user), id);
+  deliveries(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query('before') before?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.webhooks.deliveries(this.orgOf(user), id, {
+      before,
+      limit: limit ? Number(limit) : undefined,
+    });
   }
 }

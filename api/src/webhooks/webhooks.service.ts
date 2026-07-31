@@ -73,13 +73,30 @@ export class WebhooksService {
     return { ok: true };
   }
 
-  async deliveries(organizationId: string, id: string) {
+  async deliveries(
+    organizationId: string,
+    id: string,
+    opts: { before?: string; limit?: number } = {},
+  ) {
     await this.require(organizationId, id);
-    return this.prisma.webhookDelivery.findMany({
-      where: { webhookId: id },
+    const limit = Math.min(opts.limit ?? 50, 50);
+    // Fetch one extra row to know whether older history exists.
+    const rows = await this.prisma.webhookDelivery.findMany({
+      where: {
+        webhookId: id,
+        ...(opts.before ? { createdAt: { lt: new Date(opts.before) } } : {}),
+      },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: limit + 1,
     });
+    const items = rows.slice(0, limit);
+    return {
+      items,
+      hasMore: rows.length > limit,
+      nextBefore: rows.length > limit
+        ? items[items.length - 1].createdAt.toISOString()
+        : null,
+    };
   }
 
   private async require(organizationId: string, id: string): Promise<Webhook> {

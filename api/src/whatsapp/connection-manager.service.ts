@@ -63,6 +63,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private readonly groupNames = new Map<string, string>(); // jid -> subject
   // Consecutive reconnect failures per session (drives backoff; reset on open).
   private readonly reconnectAttempts = new Map<string, number>();
+  // Mirror-link config per session, cached briefly (looked up per message).
+  private readonly mirrorLinkCache = new Map<
+    string,
+    { link: { id: string; repNumber: string } | null; expires: number }
+  >();
   // Sessions being logged out on purpose (dashboard/API) — suppresses the
   // "unlinked" alert email that fires on surprise logouts.
   private readonly intentionalLogouts = new Set<string>();
@@ -615,6 +620,18 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
+    // Mirror link (platform-admin experiment): relay DMs into a per-lead
+    // group with a sales rep, and the rep's group replies back to the lead.
+    void this.maybeMirror(sessionId, {
+      remoteJid,
+      isGroup,
+      senderJid,
+      pushName: msg.pushName ?? null,
+      type: described.type,
+      text: described.text,
+      media,
+    });
+
     // Auto-reply if an enabled agent is assigned. In 1:1 the agent always
     // considers replying; in a group it only replies when the bot is @mentioned.
     if (!isGroup) {
@@ -627,6 +644,147 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         });
       }
     }
+  }
+
+  /**
+   * Mirror-link relay. DM from a lead → forward into the lead's mirror group
+   * (created on first contact, subject "🔒 Lead #N", containing the rep).
+   * Message from the rep inside a mirror group → forward to the lead as a
+   * normal DM. Everything we send is fromMe, which onMessages skips — no
+   * relay loops. Failures only log; mirroring must never break inbound flow.
+   */
+  private async maybeMirror(
+    sessionId: string,
+    m: {
+      remoteJid: string;
+      isGroup: boolean;
+      senderJid?: string;
+      pushName: string | null;
+      type: MessageType;
+      text: string | null;
+      media?: { buffer: Buffer; mimeType: string; fileName?: string | null };
+    },
+  ): Promise<void> {
+    try {
+      const link = await this.mirrorLinkFor(sessionId);
+      if (!link) return;
+
+      if (!m.isGroup) {
+        // Lead → group. Find or create the lead's mirror thread.
+        let thread = await this.prisma.mirrorThread.findUnique({
+          where: { linkId_leadJid: { linkId: link.id, leadJid: m.remoteJid } },
+        });
+        if (!thread) {
+          const seq =
+            (await this.prisma.mirrorThread.count({
+              where: { linkId: link.id },
+            })) + 1;
+          const group = await this.createGroup(sessionId, `🔒 Lead #${seq}`, [
+            link.repNumber,
+          ]);
+          thread = await this.prisma.mirrorThread.create({
+            data: {
+              linkId: link.id,
+              leadJid: m.remoteJid,
+              groupJid: group.id,
+              seq,
+            },
+          });
+          this.log.log(
+            `Mirror ${link.id}: created ${group.id} (Lead #${seq}) on ${sessionId}`,
+          );
+        }
+        const prefix = m.pushName ? `${m.pushName}: ` : '';
+        await this.relayMirrorMessage(sessionId, thread.groupJid, m, prefix);
+        return;
+      }
+
+      // Group → lead, only for messages written by the rep.
+      const thread = await this.prisma.mirrorThread.findUnique({
+        where: { linkId_groupJid: { linkId: link.id, groupJid: m.remoteJid } },
+      });
+      if (!thread) return;
+      const senderNumber = m.senderJid?.split(':')[0]?.split('@')[0];
+      if (senderNumber !== link.repNumber) return;
+      await this.relayMirrorMessage(sessionId, thread.leadJid, m, '');
+    } catch (e) {
+      this.log.warn(`Mirror relay failed on ${sessionId}: ${e}`);
+    }
+  }
+
+  /** Send a mirrored message: media re-uploaded, text prefixed, rest stubbed. */
+  private async relayMirrorMessage(
+    sessionId: string,
+    to: string,
+    m: {
+      type: MessageType;
+      text: string | null;
+      media?: { buffer: Buffer; mimeType: string; fileName?: string | null };
+    },
+    prefix: string,
+  ): Promise<void> {
+    if (m.media) {
+      await this.sendMedia(
+        sessionId,
+        to,
+        {
+          buffer: m.media.buffer,
+          mimeType: m.media.mimeType,
+          fileName: m.media.fileName ?? undefined,
+        },
+        m.text ? `${prefix}${m.text}` : prefix || undefined,
+        { source: MessageSource.API },
+      );
+      return;
+    }
+    if (m.text) {
+      await this.sendText(sessionId, to, `${prefix}${m.text}`, {
+        source: MessageSource.API,
+      });
+      return;
+    }
+    // Location/contact/unknown without a downloadable payload.
+    await this.sendText(
+      sessionId,
+      to,
+      `${prefix}[${m.type.toLowerCase()}]`,
+      { source: MessageSource.API },
+    );
+  }
+
+  /** Enabled mirror link for a session, cached briefly (checked per message). */
+  private async mirrorLinkFor(
+    sessionId: string,
+  ): Promise<{ id: string; repNumber: string } | null> {
+    const cached = this.mirrorLinkCache.get(sessionId);
+    if (cached && cached.expires > Date.now()) return cached.link;
+    const link = await this.prisma.mirrorLink.findUnique({
+      where: { sessionId },
+      select: { id: true, repNumber: true, enabled: true },
+    });
+    const value = link?.enabled
+      ? { id: link.id, repNumber: link.repNumber }
+      : null;
+    this.mirrorLinkCache.set(sessionId, {
+      link: value,
+      expires: Date.now() + 30_000,
+    });
+    return value;
+  }
+
+  /** Create a WhatsApp group with the given participant numbers. */
+  async createGroup(
+    sessionId: string,
+    subject: string,
+    numbers: string[],
+  ): Promise<{ id: string }> {
+    const live = this.sessions.get(sessionId);
+    if (!live) throw new Error('Session is not connected');
+    const meta = await live.sock.groupCreate(
+      subject,
+      numbers.map((n) => toJid(n)),
+    );
+    return { id: meta.id };
   }
 
   /**

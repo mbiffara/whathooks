@@ -1,6 +1,9 @@
 import {
+  BadRequestException,
   Body,
+  ConflictException,
   Controller,
+  Delete,
   Patch,
   Get,
   NotFoundException,
@@ -8,7 +11,16 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { IsIn, IsInt, IsOptional, Min, ValidateIf } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { readFileSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -34,6 +46,22 @@ export class WelcomeEmailDto {
   locale?: string;
 }
 
+export class CreateMirrorLinkDto {
+  @IsString()
+  sessionId!: string;
+
+  // Rep phone: digits with country code, no +.
+  @Matches(/^\d{7,15}$/, {
+    message: 'repNumber must be digits with country code, no +',
+  })
+  repNumber!: string;
+}
+
+export class UpdateMirrorLinkDto {
+  @IsBoolean()
+  enabled!: boolean;
+}
+
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('admin')
@@ -43,6 +71,106 @@ export class AdminController {
     private readonly manager: ConnectionManagerService,
     private readonly mail: MailService,
   ) {}
+
+  // ---- Mirror links (experimental lead-protection relay) ----
+
+  @Get('mirror-links')
+  async mirrorLinks() {
+    const [links, sessions] = await Promise.all([
+      this.prisma.mirrorLink.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          session: {
+            select: {
+              id: true,
+              label: true,
+              phoneNumber: true,
+              status: true,
+              organization: { select: { name: true } },
+            },
+          },
+          _count: { select: { threads: true } },
+        },
+      }),
+      this.prisma.waSession.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          label: true,
+          phoneNumber: true,
+          status: true,
+          organization: { select: { name: true } },
+        },
+      }),
+    ]);
+    return {
+      links: links.map((l) => ({
+        id: l.id,
+        enabled: l.enabled,
+        repNumber: l.repNumber,
+        createdAt: l.createdAt,
+        threads: l._count.threads,
+        session: {
+          id: l.session.id,
+          label: l.session.label,
+          phoneNumber: l.session.phoneNumber,
+          status: l.session.status,
+        },
+        organization: l.session.organization.name,
+      })),
+      sessions: sessions.map((s) => ({
+        id: s.id,
+        label: s.label,
+        phoneNumber: s.phoneNumber,
+        status: s.status,
+        organization: s.organization.name,
+      })),
+    };
+  }
+
+  @Post('mirror-links')
+  async createMirrorLink(@Body() dto: CreateMirrorLinkDto) {
+    const session = await this.prisma.waSession.findUnique({
+      where: { id: dto.sessionId },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+    const existing = await this.prisma.mirrorLink.findUnique({
+      where: { sessionId: dto.sessionId },
+    });
+    if (existing) {
+      throw new ConflictException('This session already has a mirror link');
+    }
+    if (session.phoneNumber === dto.repNumber) {
+      throw new BadRequestException(
+        'The rep number cannot be the session number itself',
+      );
+    }
+    return this.prisma.mirrorLink.create({
+      data: { sessionId: dto.sessionId, repNumber: dto.repNumber },
+    });
+  }
+
+  @Patch('mirror-links/:id')
+  async updateMirrorLink(
+    @Param('id') id: string,
+    @Body() dto: UpdateMirrorLinkDto,
+  ) {
+    const link = await this.prisma.mirrorLink.findUnique({ where: { id } });
+    if (!link) throw new NotFoundException('Mirror link not found');
+    return this.prisma.mirrorLink.update({
+      where: { id },
+      data: { enabled: dto.enabled },
+    });
+  }
+
+  @Delete('mirror-links/:id')
+  async deleteMirrorLink(@Param('id') id: string) {
+    const { count } = await this.prisma.mirrorLink.deleteMany({
+      where: { id },
+    });
+    if (!count) throw new NotFoundException('Mirror link not found');
+    return { ok: true };
+  }
 
   /** Set/clear a manual monthly message cap for one org. */
   @Patch('organizations/:id/limits')

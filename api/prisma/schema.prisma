@@ -188,6 +188,7 @@ model WaSession {
   conversations Conversation[]
   messages      Message[]
   webhooks      Webhook[]
+  mirrorLink    MirrorLink?
 
   @@index([organizationId])
   @@index([agentId])
@@ -281,6 +282,33 @@ model WaSignalKey {
 // ---------------------------------------------------------------------------
 // Webhooks & API keys
 // ---------------------------------------------------------------------------
+
+// "Mirror link" (platform-admin experiment): DMs to a session are relayed
+// into a per-lead WhatsApp group containing a sales rep; the rep's group
+// replies are relayed back to the lead. The rep never sees the lead's number.
+model MirrorLink {
+  id        String    @id @default(cuid())
+  sessionId String    @unique // one mirror per session (v1)
+  session   WaSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  repNumber String // digits with country code, no +
+  enabled   Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  threads MirrorThread[]
+}
+
+model MirrorThread {
+  id        String     @id @default(cuid())
+  linkId    String
+  link      MirrorLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  leadJid   String // original DM sender
+  groupJid  String // the mirror group
+  seq       Int // "Lead #<seq>" in the group subject
+  createdAt DateTime   @default(now())
+
+  @@unique([linkId, leadJid])
+  @@unique([linkId, groupJid])
+}
 
 model Webhook {
   id             String       @id @default(cuid())

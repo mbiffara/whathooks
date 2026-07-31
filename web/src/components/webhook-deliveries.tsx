@@ -104,9 +104,9 @@ export function WebhookDeliveries({ webhookId }: { webhookId: string }) {
         token,
       );
       setDeliveries((prev) => [...(prev ?? []), ...page.items]);
-      // Cap the in-page history at 500 entries (10 pages).
+      // Cap the in-page history at 1000 entries (20 pages).
       const total = (deliveries?.length ?? 0) + page.items.length;
-      setNextBefore(page.hasMore && total < 500 ? page.nextBefore : null);
+      setNextBefore(page.hasMore && total < 1000 ? page.nextBefore : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {

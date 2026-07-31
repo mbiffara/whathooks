@@ -29,6 +29,11 @@ export class WebhooksService {
     return hooks.map((h) => this.toPublic(h));
   }
 
+  async get(organizationId: string, id: string) {
+    const hook = await this.require(organizationId, id);
+    return this.toPublic(hook);
+  }
+
   async create(organizationId: string, dto: CreateWebhookDto) {
     await this.quota.assertCanAddWebhook(organizationId);
     if (dto.sessionId) {

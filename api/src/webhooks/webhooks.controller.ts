@@ -56,6 +56,11 @@ export class WebhooksController {
     return this.webhooks.remove(this.orgOf(user), id);
   }
 
+  @Get(':id')
+  get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.webhooks.get(this.orgOf(user), id);
+  }
+
   @Get(':id/deliveries')
   deliveries(
     @CurrentUser() user: AuthUser,

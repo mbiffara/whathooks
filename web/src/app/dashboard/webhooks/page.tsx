@@ -1,169 +1,19 @@
 "use client";
 
 import { UpgradeModal } from "@/components/upgrade-modal";
-import { WebhookDeliveries } from "@/components/webhook-deliveries";
+import {
+  MappingEditor,
+  RuleRow,
+  WEBHOOK_EVENTS,
+  emptyRow,
+  rowsToRules,
+} from "@/components/webhook-mapping-editor";
 import { apiClient, isSubscriptionRequired } from "@/lib/client-api";
+import Link from "next/link";
 import type { MappingRule, WaSession, Webhook } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
-
-const EVENTS = ["message.received", "session.status", "session.qr"];
-
-/** Source paths offered in the editor (free text is also allowed). */
-const SOURCE_SUGGESTIONS = [
-  "data.id",
-  "data.from",
-  "data.pushName",
-  "data.type",
-  "data.text",
-  "data.media.url",
-  "data.media.mimeType",
-  "data.media.fileName",
-  "data.waMessageId",
-  "data.timestamp",
-  "data.conversationId",
-  "event",
-  "sessionId",
-  "timestamp",
-];
-
-/** Editable row: a MappingRule plus which kind the user picked. */
-interface RuleRow {
-  target: string;
-  kind: "field" | "fixed";
-  source: string;
-  value: string;
-  dateFormat: string;
-}
-
-const emptyRow = (): RuleRow => ({
-  target: "",
-  kind: "field",
-  source: "",
-  value: "",
-  dateFormat: "",
-});
-
-function rowsToRules(rows: RuleRow[]): MappingRule[] {
-  return rows
-    .filter((r) => r.target.trim())
-    .map((r) =>
-      r.kind === "fixed"
-        ? { target: r.target.trim(), value: r.value }
-        : {
-            target: r.target.trim(),
-            source: r.source.trim(),
-            ...(r.dateFormat.trim() ? { dateFormat: r.dateFormat.trim() } : {}),
-          },
-    )
-    .filter((r) => ("source" in r ? Boolean(r.source) : true));
-}
-
-function rulesToRows(rules: MappingRule[] | null): RuleRow[] {
-  if (!rules?.length) return [];
-  return rules.map((r) => ({
-    target: r.target,
-    kind: r.source !== undefined ? "field" : "fixed",
-    source: r.source ?? "",
-    value: r.value == null ? "" : String(r.value),
-    dateFormat: r.dateFormat ?? "",
-  }));
-}
-
-function MappingEditor({
-  rows,
-  onChange,
-}: {
-  rows: RuleRow[];
-  onChange: (rows: RuleRow[]) => void;
-}) {
-  const t = useTranslations("dash.webhooks");
-  function patch(i: number, changes: Partial<RuleRow>) {
-    onChange(rows.map((row, j) => (j === i ? { ...row, ...changes } : row)));
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <datalist id="wh-source-paths">
-        {SOURCE_SUGGESTIONS.map((p) => (
-          <option key={p} value={p} />
-        ))}
-      </datalist>
-      {rows.map((row, i) => (
-        <div
-          key={i}
-          className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2"
-        >
-          <input
-            className="input h-9 w-36 flex-none text-xs"
-            placeholder="output_field"
-            value={row.target}
-            onChange={(e) => patch(i, { target: e.target.value })}
-          />
-          <span className="text-xs text-[var(--color-muted)]">←</span>
-          <select
-            className="input h-9 w-28 flex-none text-xs"
-            value={row.kind}
-            onChange={(e) =>
-              patch(i, { kind: e.target.value as RuleRow["kind"] })
-            }
-          >
-            <option value="field">{t("kindField")}</option>
-            <option value="fixed">{t("kindFixed")}</option>
-          </select>
-          {row.kind === "field" ? (
-            <>
-              <input
-                className="input h-9 min-w-36 flex-1 text-xs"
-                placeholder="data.from"
-                list="wh-source-paths"
-                value={row.source}
-                onChange={(e) => patch(i, { source: e.target.value })}
-              />
-              <input
-                className="input h-9 w-40 flex-none text-xs"
-                placeholder={t("dateFormatPlaceholder")}
-                title={t("dateFormatTitle")}
-                value={row.dateFormat}
-                onChange={(e) => patch(i, { dateFormat: e.target.value })}
-              />
-            </>
-          ) : (
-            <input
-              className="input h-9 min-w-36 flex-1 text-xs"
-              placeholder={t("valuePlaceholder")}
-              value={row.value}
-              onChange={(e) => patch(i, { value: e.target.value })}
-            />
-          )}
-          <button
-            type="button"
-            onClick={() => onChange(rows.filter((_, j) => j !== i))}
-            className="btn-ghost h-9 px-2 text-xs"
-            aria-label={t("removeField")}
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => onChange([...rows, emptyRow()])}
-          className="btn-ghost self-start text-xs"
-        >
-          {t("addField")}
-        </button>
-        {rows.length > 0 && (
-          <p className="text-xs text-[var(--color-muted)]">
-            {t.rich("mappingHint", { code: (c) => <code>{c}</code> })}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function WebhooksPage() {
   const t = useTranslations("dash.webhooks");
@@ -181,12 +31,6 @@ export default function WebhooksPage() {
   const [error, setError] = useState<string | null>(null);
   const [newSecret, setNewSecret] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  // Per-hook mapping editor (id of the hook being edited + its draft rows).
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editRows, setEditRows] = useState<RuleRow[]>([]);
-  const [savingEdit, setSavingEdit] = useState(false);
-  // Which hook's delivery log is expanded.
-  const [deliveriesId, setDeliveriesId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -259,31 +103,6 @@ export default function WebhooksPage() {
     load();
   }
 
-  function startEditMapping(h: Webhook) {
-    setEditingId(h.id);
-    setEditRows(rulesToRows(h.payloadMapping));
-    setError(null);
-  }
-
-  async function saveMapping(id: string) {
-    if (!token) return;
-    setSavingEdit(true);
-    setError(null);
-    try {
-      await apiClient(`/webhooks/${id}`, token, {
-        method: "PATCH",
-        // An empty list clears the mapping (back to the default payload).
-        body: JSON.stringify({ payloadMapping: rowsToRules(editRows) }),
-      });
-      setEditingId(null);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("failedToSaveMapping"));
-    } finally {
-      setSavingEdit(false);
-    }
-  }
-
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -305,7 +124,7 @@ export default function WebhooksPage() {
         <div>
           <label className="label">{t("events")}</label>
           <div className="flex flex-wrap gap-2">
-            {EVENTS.map((ev) => (
+            {WEBHOOK_EVENTS.map((ev) => (
               <button
                 type="button"
                 key={ev}
@@ -391,8 +210,18 @@ export default function WebhooksPage() {
             <div key={h.id} className="card flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="truncate font-mono text-sm">{h.url}</div>
+                  <Link
+                    href={`/dashboard/webhooks/${h.id}`}
+                    className="block truncate font-mono text-sm hover:text-[var(--color-brand)]"
+                  >
+                    {h.url}
+                  </Link>
                   <div className="mt-1 flex flex-wrap gap-1.5">
+                    {!h.active && (
+                      <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
+                        {tc("disabled")}
+                      </span>
+                    )}
                     {h.events.map((ev) => (
                       <span key={ev} className="pill">
                         {ev}
@@ -411,57 +240,20 @@ export default function WebhooksPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    onClick={() =>
-                      setDeliveriesId((v) => (v === h.id ? null : h.id))
-                    }
-                    className="btn-ghost"
-                  >
-                    {deliveriesId === h.id ? tc("close") : t("deliveries")}
-                  </button>
-                  <button
-                    onClick={() =>
-                      editingId === h.id
-                        ? setEditingId(null)
-                        : startEditMapping(h)
-                    }
-                    className="btn-ghost"
-                  >
-                    {editingId === h.id ? tc("close") : t("mapping")}
-                  </button>
                   <button onClick={() => toggleActive(h)} className="btn-ghost">
                     {h.active ? tc("disable") : tc("enable")}
                   </button>
                   <button onClick={() => remove(h.id)} className="btn-danger">
                     {tc("delete")}
                   </button>
+                  <Link
+                    href={`/dashboard/webhooks/${h.id}`}
+                    className="text-sm text-[var(--color-brand)]"
+                  >
+                    {t("view")} →
+                  </Link>
                 </div>
               </div>
-              {deliveriesId === h.id && (
-                <div className="border-t border-[var(--color-border)] pt-3">
-                  <WebhookDeliveries webhookId={h.id} />
-                </div>
-              )}
-              {editingId === h.id && (
-                <div className="border-t border-[var(--color-border)] pt-3">
-                  <MappingEditor rows={editRows} onChange={setEditRows} />
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => saveMapping(h.id)}
-                      disabled={savingEdit}
-                      className="btn-primary text-xs"
-                    >
-                      {savingEdit ? tc("saving") : t("saveMapping")}
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className="btn-ghost text-xs"
-                    >
-                      {tc("cancel")}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>

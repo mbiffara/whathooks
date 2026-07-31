@@ -50,11 +50,39 @@ export class CreateMirrorLinkDto {
   @IsString()
   sessionId!: string;
 
-  // Rep phone: digits with country code, no +.
+  // Sales rep from the directory (preferred).
+  @IsOptional()
+  @IsString()
+  repId?: string;
+
+  // Raw rep phone (digits with country code, no +) — legacy alternative.
+  @IsOptional()
   @Matches(/^\d{7,15}$/, {
     message: 'repNumber must be digits with country code, no +',
   })
-  repNumber!: string;
+  repNumber?: string;
+}
+
+export class SalesRepDto {
+  @IsString()
+  name!: string;
+
+  @Matches(/^\d{7,15}$/, {
+    message: 'phoneNumber must be digits with country code, no +',
+  })
+  phoneNumber!: string;
+}
+
+export class UpdateSalesRepDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @Matches(/^\d{7,15}$/, {
+    message: 'phoneNumber must be digits with country code, no +',
+  })
+  phoneNumber?: string;
 }
 
 export class UpdateMirrorLinkDto {
@@ -71,6 +99,77 @@ export class AdminController {
     private readonly manager: ConnectionManagerService,
     private readonly mail: MailService,
   ) {}
+
+  // ---- Sales reps (directory for the mirror-link panel) ----
+
+  @Get('sales-reps')
+  async salesReps() {
+    const reps = await this.prisma.salesRep.findMany({
+      orderBy: { name: 'asc' },
+      include: { _count: { select: { mirrorLinks: true } } },
+    });
+    return reps.map((r) => ({
+      id: r.id,
+      name: r.name,
+      phoneNumber: r.phoneNumber,
+      links: r._count.mirrorLinks,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  @Post('sales-reps')
+  async createSalesRep(@Body() dto: SalesRepDto) {
+    const existing = await this.prisma.salesRep.findUnique({
+      where: { phoneNumber: dto.phoneNumber },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `That number already belongs to "${existing.name}"`,
+      );
+    }
+    return this.prisma.salesRep.create({
+      data: { name: dto.name.trim(), phoneNumber: dto.phoneNumber },
+    });
+  }
+
+  @Patch('sales-reps/:id')
+  async updateSalesRep(
+    @Param('id') id: string,
+    @Body() dto: UpdateSalesRepDto,
+  ) {
+    const rep = await this.prisma.salesRep.findUnique({ where: { id } });
+    if (!rep) throw new NotFoundException('Sales rep not found');
+    const updated = await this.prisma.salesRep.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.phoneNumber !== undefined
+          ? { phoneNumber: dto.phoneNumber }
+          : {}),
+      },
+    });
+    // The relay reads the denormalized repNumber — keep links in sync.
+    if (dto.phoneNumber && dto.phoneNumber !== rep.phoneNumber) {
+      await this.prisma.mirrorLink.updateMany({
+        where: { repId: id },
+        data: { repNumber: dto.phoneNumber },
+      });
+    }
+    return updated;
+  }
+
+  @Delete('sales-reps/:id')
+  async deleteSalesRep(@Param('id') id: string) {
+    const links = await this.prisma.mirrorLink.count({ where: { repId: id } });
+    if (links > 0) {
+      throw new ConflictException(
+        'This rep is used by a mirror link — delete the link first',
+      );
+    }
+    const { count } = await this.prisma.salesRep.deleteMany({ where: { id } });
+    if (!count) throw new NotFoundException('Sales rep not found');
+    return { ok: true };
+  }
 
   // ---- Mirror links (experimental lead-protection relay) ----
 
@@ -89,6 +188,7 @@ export class AdminController {
               organization: { select: { name: true } },
             },
           },
+          rep: { select: { id: true, name: true } },
           _count: { select: { threads: true } },
         },
       }),
@@ -108,6 +208,7 @@ export class AdminController {
         id: l.id,
         enabled: l.enabled,
         repNumber: l.repNumber,
+        repName: l.rep?.name ?? null,
         createdAt: l.createdAt,
         threads: l._count.threads,
         session: {
@@ -140,13 +241,27 @@ export class AdminController {
     if (existing) {
       throw new ConflictException('This session already has a mirror link');
     }
-    if (session.phoneNumber === dto.repNumber) {
+
+    let repId: string | null = null;
+    let repNumber = dto.repNumber ?? null;
+    if (dto.repId) {
+      const rep = await this.prisma.salesRep.findUnique({
+        where: { id: dto.repId },
+      });
+      if (!rep) throw new NotFoundException('Sales rep not found');
+      repId = rep.id;
+      repNumber = rep.phoneNumber;
+    }
+    if (!repNumber) {
+      throw new BadRequestException('Provide repId or repNumber');
+    }
+    if (session.phoneNumber === repNumber) {
       throw new BadRequestException(
         'The rep number cannot be the session number itself',
       );
     }
     return this.prisma.mirrorLink.create({
-      data: { sessionId: dto.sessionId, repNumber: dto.repNumber },
+      data: { sessionId: dto.sessionId, repNumber, repId },
     });
   }
 

@@ -283,6 +283,16 @@ model WaSignalKey {
 // Webhooks & API keys
 // ---------------------------------------------------------------------------
 
+// Sales reps (platform-admin directory) — pickable in the Mirror Link panel.
+model SalesRep {
+  id          String   @id @default(cuid())
+  name        String
+  phoneNumber String   @unique // digits with country code, no +
+  createdAt   DateTime @default(now())
+
+  mirrorLinks MirrorLink[]
+}
+
 // "Mirror link" (platform-admin experiment): DMs to a session are relayed
 // into a per-lead WhatsApp group containing a sales rep; the rep's group
 // replies are relayed back to the lead. The rep never sees the lead's number.
@@ -290,7 +300,11 @@ model MirrorLink {
   id        String    @id @default(cuid())
   sessionId String    @unique // one mirror per session (v1)
   session   WaSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // repNumber stays denormalized (the relay reads it); repId is the directory
+  // reference for display. Rep number edits propagate to their links.
   repNumber String // digits with country code, no +
+  repId     String?
+  rep       SalesRep? @relation(fields: [repId], references: [id], onDelete: SetNull)
   enabled   Boolean   @default(true)
   createdAt DateTime  @default(now())
 

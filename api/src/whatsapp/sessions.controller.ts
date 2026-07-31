@@ -92,6 +92,18 @@ export class SessionsController {
   }
 
   @OrgRoles('ADMIN')
+  @Post(':id/share')
+  share(@ApiOrg() org: string | undefined, @Param('id') id: string) {
+    return this.whatsapp.createShareLink(this.orgOf(org), id);
+  }
+
+  @OrgRoles('ADMIN')
+  @Delete(':id/share')
+  unshare(@ApiOrg() org: string | undefined, @Param('id') id: string) {
+    return this.whatsapp.revokeShareLink(this.orgOf(org), id);
+  }
+
+  @OrgRoles('ADMIN')
   @Post(':id/connect')
   connect(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.whatsapp.connect(this.orgOf(org), id);

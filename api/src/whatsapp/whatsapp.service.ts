@@ -4,10 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { WaSession } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import * as QRCode from 'qrcode';
 import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from './connection-manager.service';
+
+// Public QR-share links stay valid for 24h; regenerating rotates the token.
+const SHARE_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class WhatsappService {
@@ -41,6 +45,56 @@ export class WhatsappService {
       ? await QRCode.toDataURL(session.qr, { margin: 1, width: 320 })
       : null;
     return { ...this.toPublic(session), qr: session.qr, qrDataUrl };
+  }
+
+  /** Create (or rotate) the public QR-share link for a session. */
+  async createShareLink(organizationId: string, id: string) {
+    await this.requireSession(organizationId, id);
+    const token = randomBytes(24).toString('base64url');
+    const createdAt = new Date();
+    await this.prisma.waSession.update({
+      where: { id },
+      data: { shareToken: token, shareTokenCreatedAt: createdAt },
+    });
+    return {
+      token,
+      expiresAt: new Date(createdAt.getTime() + SHARE_TOKEN_TTL_MS),
+    };
+  }
+
+  /** Revoke the public QR-share link. */
+  async revokeShareLink(organizationId: string, id: string) {
+    await this.requireSession(organizationId, id);
+    await this.prisma.waSession.update({
+      where: { id },
+      data: { shareToken: null, shareTokenCreatedAt: null },
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Public (unauthenticated) view for the QR-share page: label, status and the
+   * current QR. Wakes the socket when it isn't running so the QR regenerates
+   * even if the visitor opens the link hours after it was created.
+   */
+  async getByShareToken(token: string) {
+    const session = await this.prisma.waSession.findUnique({
+      where: { shareToken: token },
+    });
+    if (
+      !session ||
+      !session.shareTokenCreatedAt ||
+      Date.now() - session.shareTokenCreatedAt.getTime() > SHARE_TOKEN_TTL_MS
+    ) {
+      throw new NotFoundException('This link is invalid or has expired');
+    }
+    if (session.status !== 'CONNECTED' && !this.manager.isLive(session.id)) {
+      await this.manager.start(session.id).catch(() => undefined);
+    }
+    const qrDataUrl = session.qr
+      ? await QRCode.toDataURL(session.qr, { margin: 1, width: 320 })
+      : null;
+    return { label: session.label, status: session.status, qrDataUrl };
   }
 
   async rename(organizationId: string, id: string, label: string) {

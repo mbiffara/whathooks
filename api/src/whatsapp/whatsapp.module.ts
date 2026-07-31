@@ -6,6 +6,7 @@ import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { BillingModule } from '../billing/billing.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { ConnectionManagerService } from './connection-manager.service';
+import { PublicConnectController } from './public-connect.controller';
 import { SessionsController } from './sessions.controller';
 import { WhatsappService } from './whatsapp.service';
 
@@ -18,7 +19,7 @@ import { WhatsappService } from './whatsapp.service';
     BillingModule,
     ApiKeysModule,
   ],
-  controllers: [SessionsController],
+  controllers: [SessionsController, PublicConnectController],
   providers: [ConnectionManagerService, WhatsappService],
   exports: [ConnectionManagerService, WhatsappService],
 })

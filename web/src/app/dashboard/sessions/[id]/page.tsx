@@ -26,6 +26,8 @@ export default function SessionDetailPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [renaming, setRenaming] = useState(false);
   const [labelDraft, setLabelDraft] = useState("");
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -79,6 +81,37 @@ export default function SessionDetailPage() {
     try {
       await apiClient(`/sessions/${id}${path}`, token, { method });
       await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("actionFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createShare() {
+    if (!token) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await apiClient<{ token: string }>(
+        `/sessions/${id}/share`,
+        token,
+        { method: "POST" },
+      );
+      setShareUrl(`${window.location.origin}/connect/${res.token}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("actionFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revokeShare() {
+    if (!token) return;
+    setBusy(true);
+    try {
+      await apiClient(`/sessions/${id}/share`, token, { method: "DELETE" });
+      setShareUrl(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("actionFailed"));
     } finally {
@@ -284,6 +317,48 @@ export default function SessionDetailPage() {
             {t("establishing")}
           </div>
         )}
+
+      {!isConnected && (
+        <div className="card">
+          <h2 className="mb-1 font-semibold">{t("shareTitle")}</h2>
+          <p className="mb-3 text-sm text-[var(--color-muted)]">
+            {t("shareHint")}
+          </p>
+          {shareUrl ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="min-w-0 flex-1 truncate rounded-lg bg-[var(--color-surface-2)] px-3 py-2 font-mono text-xs">
+                  {shareUrl}
+                </code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(shareUrl);
+                    setShareCopied(true);
+                    setTimeout(() => setShareCopied(false), 2000);
+                  }}
+                  className="btn-primary text-xs"
+                >
+                  {shareCopied ? t("shareCopied") : t("shareCopy")}
+                </button>
+                <button onClick={revokeShare} className="btn-ghost text-xs">
+                  {t("shareRevoke")}
+                </button>
+              </div>
+              <p className="text-xs text-[var(--color-muted)]">
+                {t("shareExpires")}
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={createShare}
+              disabled={busy}
+              className="btn-ghost self-start"
+            >
+              {t("shareCreate")}
+            </button>
+          )}
+        </div>
+      )}
 
       {isConnected && (
         <div className="card">

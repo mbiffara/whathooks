@@ -171,6 +171,11 @@ model WaSession {
   // Set when a "session down / unlinked" alert email went out for the current
   // outage; cleared (with a recovery email) when the session reconnects.
   alertedDisconnectAt DateTime?
+  // Public QR-sharing link: lets someone without a whathooks account open
+  // /connect/<token> and scan the QR. Valid 24h from creation; regenerating
+  // replaces the token, clearing revokes it.
+  shareToken          String?   @unique
+  shareTokenCreatedAt DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 

@@ -622,10 +622,15 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
 
     // Mirror link (platform-admin experiment): relay DMs into a per-lead
     // group with a sales rep, and the rep's group replies back to the lead.
+    // In LID-addressed groups `participant` is the sender's LID; the phone
+    // number rides in `participantAlt` — pass both for rep matching.
     void this.maybeMirror(sessionId, {
       remoteJid,
       isGroup,
       senderJid,
+      senderAltJid:
+        (msg.key as { participantAlt?: string | null }).participantAlt ??
+        undefined,
       pushName: msg.pushName ?? null,
       type: described.type,
       text: described.text,
@@ -659,6 +664,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       remoteJid: string;
       isGroup: boolean;
       senderJid?: string;
+      senderAltJid?: string;
       pushName: string | null;
       type: MessageType;
       text: string | null;
@@ -699,13 +705,23 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // Group → lead, only for messages written by the rep.
+      // Group → lead, only for messages written by the rep. The sender may be
+      // addressed by LID (senderJid) with the phone number in senderAltJid —
+      // accept a match on either.
       const thread = await this.prisma.mirrorThread.findUnique({
         where: { linkId_groupJid: { linkId: link.id, groupJid: m.remoteJid } },
       });
       if (!thread) return;
-      const senderNumber = m.senderJid?.split(':')[0]?.split('@')[0];
-      if (senderNumber !== link.repNumber) return;
+      const senderNumbers = [m.senderJid, m.senderAltJid]
+        .filter((j): j is string => Boolean(j))
+        .map((j) => j.split(':')[0]?.split('@')[0]);
+      if (!senderNumbers.includes(link.repNumber)) {
+        this.log.log(
+          `Mirror ${link.id}: ignoring group message from ` +
+            `${senderNumbers.join('/') || 'unknown'} (rep is ${link.repNumber})`,
+        );
+        return;
+      }
       await this.relayMirrorMessage(sessionId, thread.leadJid, m, '');
     } catch (e) {
       this.log.warn(`Mirror relay failed on ${sessionId}: ${e}`);

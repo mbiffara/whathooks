@@ -95,9 +95,17 @@ export class WhatsappService {
     const qrDataUrl = session.qr
       ? await QRCode.toDataURL(session.qr, { margin: 1, width: 320 })
       : null;
+    // The page renders in the account's language (org owner's locale) — the
+    // visitor is the org's customer, so that's a better guess than their
+    // browser language.
+    const owner = await this.prisma.membership.findFirst({
+      where: { organizationId: session.organizationId, role: 'OWNER' },
+      select: { user: { select: { locale: true } } },
+    });
     return {
       label: session.label,
       organization: session.organization.name,
+      locale: owner?.user.locale ?? 'en',
       status: session.status,
       qrDataUrl,
     };

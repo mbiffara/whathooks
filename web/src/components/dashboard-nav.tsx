@@ -21,6 +21,7 @@ type IconName =
   | "settings"
   | "admin"
   | "mirror"
+  | "humanAgents"
   | "signOut";
 
 /** Minimal stroke icons (24 viewBox), sized by the parent via width/height. */
@@ -53,6 +54,13 @@ function NavIcon({ name }: { name: IconName }) {
     mirror: (
       <>
         <path d="M7 8h13l-3-3M17 16H4l3 3" />
+      </>
+    ),
+    humanAgents: (
+      <>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+        <path d="M16 4.5c1.8.6 3 2 3 3.9 0 1.4-.7 2.6-1.8 3.4M17.5 14.5c2.1.9 3.5 2.9 3.5 5.5" />
       </>
     ),
     apiKeys: (
@@ -125,6 +133,7 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
     key: "automation",
     links: [
       { href: "/dashboard/agents", key: "agents" },
+      { href: "/dashboard/human-agents", key: "humanAgents" },
       { href: "/dashboard/webhooks", key: "webhooks" },
       { href: "/dashboard/mirror", key: "mirror" },
     ],

@@ -9,7 +9,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { IsBoolean, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { ApiOrg } from '../common/decorators/org.decorator';
@@ -19,7 +25,7 @@ import { MirrorService } from './mirror.service';
 const PHONE_RULE = /^\d{7,15}$/;
 const PHONE_MSG = 'phoneNumber must be digits with country code, no +';
 
-class CreateRepDto {
+class CreateAgentDto {
   @IsString()
   name!: string;
 
@@ -27,7 +33,7 @@ class CreateRepDto {
   phoneNumber!: string;
 }
 
-class UpdateRepDto {
+class UpdateAgentDto {
   @IsOptional()
   @IsString()
   name?: string;
@@ -42,7 +48,13 @@ class CreateLinkDto {
   sessionId!: string;
 
   @IsString()
-  repId!: string;
+  humanAgentId!: string;
+
+  // Mirror groups are named "<groupPrefix> #<seq>"; default "🔒 Lead".
+  @IsOptional()
+  @IsString()
+  @Length(1, 40)
+  groupPrefix?: string;
 }
 
 class UpdateLinkDto {
@@ -61,33 +73,33 @@ export class MirrorController {
     return organizationId;
   }
 
-  // ---- sales reps ----
+  // ---- human agents ----
 
-  @Get('sales-reps')
-  listReps(@ApiOrg() org: string | undefined) {
-    return this.mirror.listReps(this.orgOf(org));
+  @Get('human-agents')
+  listAgents(@ApiOrg() org: string | undefined) {
+    return this.mirror.listAgents(this.orgOf(org));
   }
 
   @OrgRoles('ADMIN')
-  @Post('sales-reps')
-  createRep(@ApiOrg() org: string | undefined, @Body() dto: CreateRepDto) {
-    return this.mirror.createRep(this.orgOf(org), dto);
+  @Post('human-agents')
+  createAgent(@ApiOrg() org: string | undefined, @Body() dto: CreateAgentDto) {
+    return this.mirror.createAgent(this.orgOf(org), dto);
   }
 
   @OrgRoles('ADMIN')
-  @Patch('sales-reps/:id')
-  updateRep(
+  @Patch('human-agents/:id')
+  updateAgent(
     @ApiOrg() org: string | undefined,
     @Param('id') id: string,
-    @Body() dto: UpdateRepDto,
+    @Body() dto: UpdateAgentDto,
   ) {
-    return this.mirror.updateRep(this.orgOf(org), id, dto);
+    return this.mirror.updateAgent(this.orgOf(org), id, dto);
   }
 
   @OrgRoles('ADMIN')
-  @Delete('sales-reps/:id')
-  deleteRep(@ApiOrg() org: string | undefined, @Param('id') id: string) {
-    return this.mirror.deleteRep(this.orgOf(org), id);
+  @Delete('human-agents/:id')
+  deleteAgent(@ApiOrg() org: string | undefined, @Param('id') id: string) {
+    return this.mirror.deleteAgent(this.orgOf(org), id);
   }
 
   // ---- mirror links ----

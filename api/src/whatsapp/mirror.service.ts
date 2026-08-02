@@ -8,17 +8,17 @@ import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Org-scoped management for Mirror Links (lead-protection relay) and the
- * sales-rep directory they draw from. The relay itself runs in
+ * human-agent directory they draw from. The relay itself runs in
  * ConnectionManagerService (maybeMirror); this service only manages config.
  */
 @Injectable()
 export class MirrorService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // ---- sales reps ----
+  // ---- human agents ----
 
-  async listReps(organizationId: string) {
-    const reps = await this.prisma.salesRep.findMany({
+  async listAgents(organizationId: string) {
+    const reps = await this.prisma.humanAgent.findMany({
       where: { organizationId },
       orderBy: { name: 'asc' },
       include: { _count: { select: { mirrorLinks: true } } },
@@ -32,11 +32,11 @@ export class MirrorService {
     }));
   }
 
-  async createRep(
+  async createAgent(
     organizationId: string,
     dto: { name: string; phoneNumber: string },
   ) {
-    const existing = await this.prisma.salesRep.findFirst({
+    const existing = await this.prisma.humanAgent.findFirst({
       where: { organizationId, phoneNumber: dto.phoneNumber },
     });
     if (existing) {
@@ -44,7 +44,7 @@ export class MirrorService {
         `That number already belongs to "${existing.name}"`,
       );
     }
-    return this.prisma.salesRep.create({
+    return this.prisma.humanAgent.create({
       data: {
         organizationId,
         name: dto.name.trim(),
@@ -53,16 +53,16 @@ export class MirrorService {
     });
   }
 
-  async updateRep(
+  async updateAgent(
     organizationId: string,
     id: string,
     dto: { name?: string; phoneNumber?: string },
   ) {
-    const rep = await this.prisma.salesRep.findFirst({
+    const agent = await this.prisma.humanAgent.findFirst({
       where: { id, organizationId },
     });
-    if (!rep) throw new NotFoundException('Sales rep not found');
-    const updated = await this.prisma.salesRep.update({
+    if (!agent) throw new NotFoundException('Human agent not found');
+    const updated = await this.prisma.humanAgent.update({
       where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
@@ -71,28 +71,28 @@ export class MirrorService {
           : {}),
       },
     });
-    // The relay reads the denormalized repNumber — keep links in sync.
-    if (dto.phoneNumber && dto.phoneNumber !== rep.phoneNumber) {
+    // The relay reads the denormalized agentNumber — keep links in sync.
+    if (dto.phoneNumber && dto.phoneNumber !== agent.phoneNumber) {
       await this.prisma.mirrorLink.updateMany({
-        where: { repId: id },
-        data: { repNumber: dto.phoneNumber },
+        where: { humanAgentId: id },
+        data: { agentNumber: dto.phoneNumber },
       });
     }
     return updated;
   }
 
-  async deleteRep(organizationId: string, id: string) {
-    const rep = await this.prisma.salesRep.findFirst({
+  async deleteAgent(organizationId: string, id: string) {
+    const agent = await this.prisma.humanAgent.findFirst({
       where: { id, organizationId },
     });
-    if (!rep) throw new NotFoundException('Sales rep not found');
-    const links = await this.prisma.mirrorLink.count({ where: { repId: id } });
+    if (!agent) throw new NotFoundException('Human agent not found');
+    const links = await this.prisma.mirrorLink.count({ where: { humanAgentId: id } });
     if (links > 0) {
       throw new ConflictException(
-        'This rep is used by a mirror link — delete the link first',
+        'This human agent is used by a mirror link — delete the link first',
       );
     }
-    await this.prisma.salesRep.delete({ where: { id } });
+    await this.prisma.humanAgent.delete({ where: { id } });
     return { ok: true };
   }
 
@@ -106,16 +106,17 @@ export class MirrorService {
         session: {
           select: { id: true, label: true, phoneNumber: true, status: true },
         },
-        rep: { select: { id: true, name: true } },
+        humanAgent: { select: { id: true, name: true } },
         _count: { select: { threads: true } },
       },
     });
     return links.map((l) => ({
       id: l.id,
       enabled: l.enabled,
-      repNumber: l.repNumber,
-      repId: l.rep?.id ?? null,
-      repName: l.rep?.name ?? null,
+      agentNumber: l.agentNumber,
+      humanAgentId: l.humanAgent?.id ?? null,
+      humanAgentName: l.humanAgent?.name ?? null,
+      groupPrefix: l.groupPrefix,
       threads: l._count.threads,
       session: l.session,
       createdAt: l.createdAt,
@@ -124,32 +125,35 @@ export class MirrorService {
 
   async createLink(
     organizationId: string,
-    dto: { sessionId: string; repId: string },
+    dto: { sessionId: string; humanAgentId: string; groupPrefix?: string },
   ) {
     const session = await this.prisma.waSession.findFirst({
       where: { id: dto.sessionId, organizationId },
     });
     if (!session) throw new NotFoundException('Session not found');
-    const rep = await this.prisma.salesRep.findFirst({
-      where: { id: dto.repId, organizationId },
+    const agent = await this.prisma.humanAgent.findFirst({
+      where: { id: dto.humanAgentId, organizationId },
     });
-    if (!rep) throw new NotFoundException('Sales rep not found');
+    if (!agent) throw new NotFoundException('Human agent not found');
     const existing = await this.prisma.mirrorLink.findUnique({
       where: { sessionId: dto.sessionId },
     });
     if (existing) {
       throw new ConflictException('This session already has a mirror link');
     }
-    if (session.phoneNumber === rep.phoneNumber) {
+    if (session.phoneNumber === agent.phoneNumber) {
       throw new BadRequestException(
-        'The rep number cannot be the session number itself',
+        'The human agent number cannot be the session number itself',
       );
     }
     return this.prisma.mirrorLink.create({
       data: {
         sessionId: dto.sessionId,
-        repNumber: rep.phoneNumber,
-        repId: rep.id,
+        agentNumber: agent.phoneNumber,
+        humanAgentId: agent.id,
+        ...(dto.groupPrefix?.trim()
+          ? { groupPrefix: dto.groupPrefix.trim() }
+          : {}),
       },
     });
   }

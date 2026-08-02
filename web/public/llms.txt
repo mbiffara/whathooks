@@ -192,36 +192,41 @@ curl -X POST https://api.whathooks.app/v1/messages \
 
 Mirror Link hides your leads' phone numbers from the people who answer them.
 When a lead DMs a mirrored session, whathooks creates a private WhatsApp
-group named `🔒 Lead #N` containing only your sales rep, and forwards the
-lead's messages there prefixed with the lead's display name. When the rep
-replies in the group, the reply is relayed to the lead as a normal chat from
-the session's number. Media relays in both directions. The mapping is by
-group id (renaming groups is safe); relayed messages count toward the
-monthly message quota.
+group containing only your **human agent** and forwards the lead's messages
+there, prefixed with the lead's display name. When the human agent replies
+in the group, the reply is relayed to the lead as a normal chat from the
+session's number. Media relays in both directions. Groups are named
+`<groupPrefix> #N` (default prefix `🔒 Lead`); the mapping is by group id,
+so renaming groups is safe. Relayed messages count toward the monthly
+message quota.
 
-Reps live in an org-level directory; a mirror link ties one session to one
-rep. Managing either requires an admin role (or an API key).
+Human agents are your org's directory of people who answer chats (as
+opposed to AI agents). A mirror link ties one session to one human agent.
+Managing either requires an admin role (or an API key).
 
 ```bash
-# 1. Create a rep
-curl -X POST https://api.whathooks.app/v1/sales-reps \
+# 1. Create a human agent
+curl -X POST https://api.whathooks.app/v1/human-agents \
   -H "X-API-Key: wh_live_..." -H "Content-Type: application/json" \
   -d '{ "name": "Juan Pérez", "phoneNumber": "5491155551234" }'
-# → { "id": "rep_...", ... }
+# → { "id": "ha_...", ... }
+# Also: GET /v1/human-agents · PATCH /v1/human-agents/:id (renumbering
+# propagates to that agent's links) · DELETE /v1/human-agents/:id
 
-# 2. Mirror a session to that rep
+# 2. Mirror a session to that human agent
 curl -X POST https://api.whathooks.app/v1/mirror-links \
   -H "X-API-Key: wh_live_..." -H "Content-Type: application/json" \
-  -d '{ "sessionId": "sess_...", "repId": "rep_..." }'
+  -d '{ "sessionId": "sess_...", "humanAgentId": "ha_...", "groupPrefix": "ConsultasWeb" }'
+# groupPrefix optional (1-40 chars) → groups "ConsultasWeb #1", "ConsultasWeb #2", …
 
 # Pause / resume:  PATCH /v1/mirror-links/:id   { "enabled": false }
 # Lead ↔ group map: GET  /v1/mirror-links/:id/threads
 #   → [{ "seq": 1, "leadJid": "549...@s.whatsapp.net", "groupJid": "1203...@g.us", ... }]
 ```
 
-Constraints: one mirror link per session; the rep must allow being added to
-groups (WhatsApp privacy setting); deleting a link keeps the WhatsApp groups
-but stops all relaying.
+Constraints: one mirror link per session; the human agent must allow being
+added to groups (WhatsApp privacy setting); deleting a link keeps the
+WhatsApp groups but stops all relaying.
 
 ## Endpoint reference
 
@@ -237,8 +242,8 @@ but stops all relaying.
 | POST   | /v1/webhooks              | JWT / API key |
 | POST   | /v1/messages              | API key       |
 | GET    | /v1/messages              | JWT / API key |
-| GET    | /v1/sales-reps            | JWT / API key |
-| POST   | /v1/sales-reps            | JWT / API key |
+| GET    | /v1/human-agents          | JWT / API key |
+| POST   | /v1/human-agents          | JWT / API key |
 | GET    | /v1/mirror-links          | JWT / API key |
 | POST   | /v1/mirror-links          | JWT / API key |
 

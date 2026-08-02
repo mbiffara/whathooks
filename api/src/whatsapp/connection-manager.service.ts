@@ -66,7 +66,10 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   // Mirror-link config per session, cached briefly (looked up per message).
   private readonly mirrorLinkCache = new Map<
     string,
-    { link: { id: string; repNumber: string } | null; expires: number }
+    {
+      link: { id: string; agentNumber: string; groupPrefix: string } | null;
+      expires: number;
+    }
   >();
   // Sessions being logged out on purpose (dashboard/API) — suppresses the
   // "unlinked" alert email that fires on surprise logouts.
@@ -685,9 +688,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
             (await this.prisma.mirrorThread.count({
               where: { linkId: link.id },
             })) + 1;
-          const group = await this.createGroup(sessionId, `🔒 Lead #${seq}`, [
-            link.repNumber,
-          ]);
+          const group = await this.createGroup(
+            sessionId,
+            `${link.groupPrefix} #${seq}`,
+            [link.agentNumber],
+          );
           thread = await this.prisma.mirrorThread.create({
             data: {
               linkId: link.id,
@@ -715,10 +720,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       const senderNumbers = [m.senderJid, m.senderAltJid]
         .filter((j): j is string => Boolean(j))
         .map((j) => j.split(':')[0]?.split('@')[0]);
-      if (!senderNumbers.includes(link.repNumber)) {
+      if (!senderNumbers.includes(link.agentNumber)) {
         this.log.log(
           `Mirror ${link.id}: ignoring group message from ` +
-            `${senderNumbers.join('/') || 'unknown'} (rep is ${link.repNumber})`,
+            `${senderNumbers.join('/') || 'unknown'} ` +
+            `(human agent is ${link.agentNumber})`,
         );
         return;
       }
@@ -771,15 +777,24 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   /** Enabled mirror link for a session, cached briefly (checked per message). */
   private async mirrorLinkFor(
     sessionId: string,
-  ): Promise<{ id: string; repNumber: string } | null> {
+  ): Promise<{ id: string; agentNumber: string; groupPrefix: string } | null> {
     const cached = this.mirrorLinkCache.get(sessionId);
     if (cached && cached.expires > Date.now()) return cached.link;
     const link = await this.prisma.mirrorLink.findUnique({
       where: { sessionId },
-      select: { id: true, repNumber: true, enabled: true },
+      select: {
+        id: true,
+        agentNumber: true,
+        groupPrefix: true,
+        enabled: true,
+      },
     });
     const value = link?.enabled
-      ? { id: link.id, repNumber: link.repNumber }
+      ? {
+          id: link.id,
+          agentNumber: link.agentNumber,
+          groupPrefix: link.groupPrefix,
+        }
       : null;
     this.mirrorLinkCache.set(sessionId, {
       link: value,

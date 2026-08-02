@@ -104,7 +104,8 @@
         "developer": "Developer",
         "organization": "Organization"
       },
-      "mirror": "Mirror"
+      "mirror": "Mirror",
+      "humanAgents": "Human agents"
     },
     "settings": {
       "title": "Settings",
@@ -529,24 +530,30 @@
     },
     "mirror": {
       "title": "Mirror Link",
-      "subtitle": "Protect your leads: DMs to a mirrored number are relayed into a private group (\"🔒 Lead #N\") with your sales rep. The rep replies in the group and the lead gets it as a normal chat — without ever seeing the lead's number. Changes take up to 30 seconds to apply.",
-      "repsTitle": "Sales reps",
-      "repsHint": "The people who answer leads. A rep is added to each lead's mirror group.",
-      "repName": "Name",
-      "repPhone": "WhatsApp number (digits, no +)",
-      "addRep": "Add rep",
-      "repInUse": "{count, plural, one {# link} other {# links}}",
+      "subtitle": "Protect your leads: DMs to a mirrored number are relayed into a private group with one of your human agents. The agent replies in the group and the lead receives it as a normal chat — the agent never sees the lead's number. Changes take up to 30 seconds to apply.",
       "sessionLabel": "Session",
       "selectSession": "Select a session…",
-      "repLabel": "Sales rep",
-      "selectRep": "Select a rep…",
+      "agentLabel": "Human agent",
+      "selectAgent": "Select a human agent…",
+      "prefixLabel": "Group name prefix",
+      "prefixHint": "Groups are named \"<prefix> #1\", \"<prefix> #2\"… — e.g. \"ConsultasWeb\" creates \"ConsultasWeb #1\". Default: \"🔒 Lead\".",
+      "addAgentFirst": "Add a human agent first →",
       "createLink": "Create mirror link",
-      "addRepFirst": "Add a sales rep above first.",
       "noLinks": "No mirror links yet. Create one to start protecting your leads.",
       "colSession": "Session",
-      "colRep": "Rep",
+      "colAgent": "Human agent",
+      "colPrefix": "Group names",
       "colLeads": "Leads",
       "colStatus": "Status"
+    },
+    "humanAgents": {
+      "title": "Human agents",
+      "subtitle": "The people on your team who answer chats from their own WhatsApp — used by <mirror>Mirror Link</mirror> to route leads without revealing their numbers.",
+      "name": "Name",
+      "phone": "WhatsApp number (digits, no +)",
+      "add": "Add human agent",
+      "empty": "No human agents yet. Add the people who will answer your leads.",
+      "inUse": "{count, plural, one {used by # mirror link} other {used by # mirror links}}"
     }
   },
   "landing": {

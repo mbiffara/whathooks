@@ -352,6 +352,7 @@ export default function FlowEditorPage() {
                 onPaneClick={() => setSelectedId(null)}
                 nodeTypes={nodeTypes}
                 fitView
+                fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
                 proOptions={{ hideAttribution: true }}
               >
                 <Background gap={18} />

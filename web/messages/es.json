@@ -103,7 +103,8 @@
         "automation": "Automatización",
         "developer": "Desarrollador",
         "organization": "Organización"
-      }
+      },
+      "mirror": "Mirror"
     },
     "settings": {
       "title": "Configuración",
@@ -525,6 +526,27 @@
       "newConvStart": "Iniciar conversación",
       "newConvNoSessions": "Necesitas un número de WhatsApp conectado para iniciar una conversación. Conecta uno en Sesiones primero.",
       "newConvColdWarning": "WhatsApp restringe enviar mensajes a números que nunca te escribieron: el primer mensaje a un desconocido puede no entregarse. Funciona de forma confiable con personas que ya escribieron a este número, o cuyo chat existe en el teléfono."
+    },
+    "mirror": {
+      "title": "Mirror Link",
+      "subtitle": "Protege tus leads: los mensajes directos a un número espejado se reenvían a un grupo privado (\"🔒 Lead #N\") con tu vendedor. El vendedor responde en el grupo y el lead lo recibe como un chat normal — sin ver nunca el número del lead. Los cambios tardan hasta 30 segundos en aplicarse.",
+      "repsTitle": "Vendedores",
+      "repsHint": "Las personas que atienden a los leads. El vendedor se agrega al grupo espejo de cada lead.",
+      "repName": "Nombre",
+      "repPhone": "Número de WhatsApp (solo dígitos, sin +)",
+      "addRep": "Agregar vendedor",
+      "repInUse": "{count, plural, one {# enlace} other {# enlaces}}",
+      "sessionLabel": "Sesión",
+      "selectSession": "Selecciona una sesión…",
+      "repLabel": "Vendedor",
+      "selectRep": "Selecciona un vendedor…",
+      "createLink": "Crear mirror link",
+      "addRepFirst": "Primero agrega un vendedor arriba.",
+      "noLinks": "Todavía no hay mirror links. Crea uno para empezar a proteger tus leads.",
+      "colSession": "Sesión",
+      "colRep": "Vendedor",
+      "colLeads": "Leads",
+      "colStatus": "Estado"
     }
   },
   "landing": {

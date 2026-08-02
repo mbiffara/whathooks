@@ -1,7 +1,6 @@
 import { AdminOrgTable } from "@/components/admin-org-table";
 import { apiServer } from "@/lib/api";
 import type { AdminOrg, AdminOverview } from "@/lib/types";
-import Link from "next/link";
 
 export default async function AdminPage() {
   const [overview, orgs] = await Promise.all([
@@ -41,25 +40,6 @@ export default async function AdminPage() {
       </div>
 
       {overview?.system && <SystemHealth system={overview.system} />}
-
-      <Link
-        href="/admin/mirror"
-        className="card flex items-center justify-between hover:border-[var(--color-brand)]/40"
-      >
-        <div>
-          <div className="font-semibold">
-            Mirror links{" "}
-            <span className="badge bg-[var(--color-warning-bg)] text-[var(--color-warning)] text-xs">
-              experimental
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Lead-protection relay: DMs mirrored into per-lead groups with a
-            sales rep.
-          </p>
-        </div>
-        <span className="text-[var(--color-brand)]">→</span>
-      </Link>
 
       <AdminOrgTable orgs={orgs} />
     </div>

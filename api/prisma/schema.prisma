@@ -66,6 +66,7 @@ model Organization {
   conversations Conversation[]
   messages      Message[]
   tags Tag[]
+  salesReps SalesRep[]
 }
 
 model User {
@@ -283,14 +284,21 @@ model WaSignalKey {
 // Webhooks & API keys
 // ---------------------------------------------------------------------------
 
-// Sales reps (platform-admin directory) — pickable in the Mirror Link panel.
+// Sales reps — org directory, pickable in the Mirror Link panel.
 model SalesRep {
-  id          String   @id @default(cuid())
-  name        String
-  phoneNumber String   @unique // digits with country code, no +
-  createdAt   DateTime @default(now())
+  id             String        @id @default(cuid())
+  // Nullable only for legacy rows created before org scoping; the app treats
+  // reps as org-owned.
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  phoneNumber    String // digits with country code, no +
+  createdAt      DateTime      @default(now())
 
   mirrorLinks MirrorLink[]
+
+  @@unique([organizationId, phoneNumber])
+  @@index([organizationId])
 }
 
 // "Mirror link" (platform-admin experiment): DMs to a session are relayed

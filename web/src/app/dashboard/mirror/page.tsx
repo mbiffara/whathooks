@@ -2,28 +2,25 @@
 
 import { StatusBadge } from "@/components/status-badge";
 import { apiClient } from "@/lib/client-api";
-import type { WaStatus } from "@/lib/types";
+import type { WaSession, WaStatus } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-
-interface MirrorSession {
-  id: string;
-  label: string;
-  phoneNumber: string | null;
-  status: WaStatus;
-  organization: string;
-}
 
 interface MirrorLink {
   id: string;
   enabled: boolean;
   repNumber: string;
+  repId: string | null;
   repName: string | null;
-  createdAt: string;
   threads: number;
-  session: Omit<MirrorSession, "organization">;
-  organization: string;
+  session: {
+    id: string;
+    label: string;
+    phoneNumber: string | null;
+    status: WaStatus;
+  };
+  createdAt: string;
 }
 
 interface SalesRep {
@@ -33,15 +30,14 @@ interface SalesRep {
   links: number;
 }
 
-/**
- * Platform-admin experiment: relay DMs on a session into per-lead groups with
- * a sales rep, hiding the lead's number. English-only (admin console).
- */
-export default function MirrorLinksPage() {
+/** Mirror Link: relay DMs into per-lead groups with a rep (number hidden). */
+export default function MirrorPage() {
+  const t = useTranslations("dash.mirror");
+  const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const [links, setLinks] = useState<MirrorLink[]>([]);
-  const [sessions, setSessions] = useState<MirrorSession[]>([]);
+  const [sessions, setSessions] = useState<WaSession[]>([]);
   const [reps, setReps] = useState<SalesRep[]>([]);
   const [sessionId, setSessionId] = useState("");
   const [repId, setRepId] = useState("");
@@ -54,22 +50,20 @@ export default function MirrorLinksPage() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const [data, repList] = await Promise.all([
-        apiClient<{ links: MirrorLink[]; sessions: MirrorSession[] }>(
-          "/admin/mirror-links",
-          token,
-        ),
-        apiClient<SalesRep[]>("/admin/sales-reps", token),
+      const [linkList, sessionList, repList] = await Promise.all([
+        apiClient<MirrorLink[]>("/mirror-links", token),
+        apiClient<WaSession[]>("/sessions", token),
+        apiClient<SalesRep[]>("/sales-reps", token),
       ]);
-      setLinks(data.links);
-      setSessions(data.sessions);
+      setLinks(linkList);
+      setSessions(sessionList);
       setReps(repList);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, tc]);
 
   useEffect(() => {
     load();
@@ -83,7 +77,7 @@ export default function MirrorLinksPage() {
       await fn();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     } finally {
       setBusy(false);
     }
@@ -92,7 +86,7 @@ export default function MirrorLinksPage() {
   function addRep(e: React.FormEvent) {
     e.preventDefault();
     void run(async () => {
-      await apiClient("/admin/sales-reps", token, {
+      await apiClient("/sales-reps", token, {
         method: "POST",
         body: JSON.stringify({
           name: repName.trim(),
@@ -107,7 +101,7 @@ export default function MirrorLinksPage() {
   function createLink(e: React.FormEvent) {
     e.preventDefault();
     void run(async () => {
-      await apiClient("/admin/mirror-links", token, {
+      await apiClient("/mirror-links", token, {
         method: "POST",
         body: JSON.stringify({ sessionId, repId }),
       });
@@ -116,33 +110,25 @@ export default function MirrorLinksPage() {
     });
   }
 
+  // Sessions that don't already have a mirror link.
+  const availableSessions = sessions.filter(
+    (s) => !links.some((l) => l.session.id === s.id),
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link
-          href="/admin"
-          className="mb-2 block text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
-        >
-          ← Admin
-        </Link>
-        <h1 className="text-2xl font-bold">
-          Mirror links{" "}
-          <span className="badge bg-[var(--color-warning-bg)] text-[var(--color-warning)] align-middle text-xs">
-            experimental
-          </span>
-        </h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="mt-1 text-sm text-[var(--color-muted)]">
-          DMs to a mirrored session are relayed into a per-lead group
-          (&quot;🔒 Lead #N&quot;) containing the rep; the rep&apos;s replies
-          in that group go back to the lead. The rep never sees the
-          lead&apos;s number. Config changes take up to 30s to apply.
+          {t("subtitle")}
         </p>
       </div>
 
       {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
       <section className="card flex flex-col gap-3">
-        <h2 className="font-semibold">Sales reps</h2>
+        <h2 className="font-semibold">{t("repsTitle")}</h2>
+        <p className="text-xs text-[var(--color-muted)]">{t("repsHint")}</p>
         {reps.length > 0 && (
           <ul className="flex flex-col gap-1">
             {reps.map((r) => (
@@ -156,13 +142,13 @@ export default function MirrorLinksPage() {
                 </span>
                 {r.links > 0 && (
                   <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)] text-[10px]">
-                    {r.links} link{r.links === 1 ? "" : "s"}
+                    {t("repInUse", { count: r.links })}
                   </span>
                 )}
                 <button
                   onClick={() =>
                     void run(() =>
-                      apiClient(`/admin/sales-reps/${r.id}`, token, {
+                      apiClient(`/sales-reps/${r.id}`, token, {
                         method: "DELETE",
                       }),
                     )
@@ -170,7 +156,7 @@ export default function MirrorLinksPage() {
                   disabled={busy}
                   className="ml-auto text-xs text-[var(--color-muted)] hover:text-[var(--color-danger)]"
                 >
-                  Delete
+                  {tc("delete")}
                 </button>
               </li>
             ))}
@@ -178,7 +164,7 @@ export default function MirrorLinksPage() {
         )}
         <form onSubmit={addRep} className="flex flex-wrap items-end gap-3">
           <div className="min-w-44">
-            <label className="label">Name</label>
+            <label className="label">{t("repName")}</label>
             <input
               className="input"
               placeholder="Juan Pérez"
@@ -188,7 +174,7 @@ export default function MirrorLinksPage() {
             />
           </div>
           <div className="min-w-52">
-            <label className="label">Phone (digits, no +)</label>
+            <label className="label">{t("repPhone")}</label>
             <input
               className="input"
               placeholder="5491155551234"
@@ -199,38 +185,41 @@ export default function MirrorLinksPage() {
             />
           </div>
           <button type="submit" disabled={busy} className="btn-ghost">
-            + Add rep
+            + {t("addRep")}
           </button>
         </form>
       </section>
 
-      <form onSubmit={createLink} className="card flex flex-wrap items-end gap-3">
+      <form
+        onSubmit={createLink}
+        className="card flex flex-wrap items-end gap-3"
+      >
         <div className="min-w-64 flex-1">
-          <label className="label">Session</label>
+          <label className="label">{t("sessionLabel")}</label>
           <select
             className="input"
             value={sessionId}
             onChange={(e) => setSessionId(e.target.value)}
             required
           >
-            <option value="">Select a session…</option>
-            {sessions.map((s) => (
+            <option value="">{t("selectSession")}</option>
+            {availableSessions.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.organization} — {s.label}
-                {s.phoneNumber ? ` (+${s.phoneNumber})` : ""} · {s.status}
+                {s.label}
+                {s.phoneNumber ? ` (+${s.phoneNumber})` : ""}
               </option>
             ))}
           </select>
         </div>
         <div className="min-w-56">
-          <label className="label">Sales rep</label>
+          <label className="label">{t("repLabel")}</label>
           <select
             className="input"
             value={repId}
             onChange={(e) => setRepId(e.target.value)}
             required
           >
-            <option value="">Select a rep…</option>
+            <option value="">{t("selectRep")}</option>
             {reps.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name} (+{r.phoneNumber})
@@ -239,31 +228,30 @@ export default function MirrorLinksPage() {
           </select>
         </div>
         <button type="submit" disabled={busy} className="btn-primary">
-          Create mirror link
+          {t("createLink")}
         </button>
         {reps.length === 0 && (
           <p className="w-full text-xs text-[var(--color-muted)]">
-            Add a sales rep above first.
+            {t("addRepFirst")}
           </p>
         )}
       </form>
 
       {loading ? (
-        <p className="text-sm text-[var(--color-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
       ) : links.length === 0 ? (
         <div className="card text-sm text-[var(--color-muted)]">
-          No mirror links yet.
+          {t("noLinks")}
         </div>
       ) : (
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
-                <th className="px-4 py-3 font-medium">Session</th>
-                <th className="px-4 py-3 font-medium">Organization</th>
-                <th className="px-4 py-3 font-medium">Rep</th>
-                <th className="px-4 py-3 font-medium">Leads</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">{t("colSession")}</th>
+                <th className="px-4 py-3 font-medium">{t("colRep")}</th>
+                <th className="px-4 py-3 font-medium">{t("colLeads")}</th>
+                <th className="px-4 py-3 font-medium">{t("colStatus")}</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -280,7 +268,6 @@ export default function MirrorLinksPage() {
                       <StatusBadge status={l.session.status} />
                     </div>
                   </td>
-                  <td className="px-4 py-3">{l.organization}</td>
                   <td className="px-4 py-3">
                     <div>{l.repName ?? "—"}</div>
                     <div className="font-mono text-xs text-[var(--color-muted)]">
@@ -292,7 +279,7 @@ export default function MirrorLinksPage() {
                     <button
                       onClick={() =>
                         void run(() =>
-                          apiClient(`/admin/mirror-links/${l.id}`, token, {
+                          apiClient(`/mirror-links/${l.id}`, token, {
                             method: "PATCH",
                             body: JSON.stringify({ enabled: !l.enabled }),
                           }),
@@ -305,14 +292,14 @@ export default function MirrorLinksPage() {
                           : "bg-[var(--color-chip)] text-[var(--color-muted)]"
                       }`}
                     >
-                      {l.enabled ? "enabled" : "disabled"}
+                      {l.enabled ? tc("enabled") : tc("disabled")}
                     </button>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() =>
                         void run(() =>
-                          apiClient(`/admin/mirror-links/${l.id}`, token, {
+                          apiClient(`/mirror-links/${l.id}`, token, {
                             method: "DELETE",
                           }),
                         )
@@ -320,7 +307,7 @@ export default function MirrorLinksPage() {
                       disabled={busy}
                       className="btn-danger text-xs"
                     >
-                      Delete
+                      {tc("delete")}
                     </button>
                   </td>
                 </tr>

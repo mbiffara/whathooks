@@ -103,7 +103,8 @@
         "automation": "Automation",
         "developer": "Developer",
         "organization": "Organization"
-      }
+      },
+      "mirror": "Mirror"
     },
     "settings": {
       "title": "Settings",
@@ -525,6 +526,27 @@
       "newConvStart": "Start conversation",
       "newConvNoSessions": "You need a connected WhatsApp number to start a conversation. Connect one in Sessions first.",
       "newConvColdWarning": "WhatsApp restricts messaging numbers that never wrote to you: the first message to a complete stranger may not be delivered. It works reliably with people who already texted this number, or whose chat exists on the phone."
+    },
+    "mirror": {
+      "title": "Mirror Link",
+      "subtitle": "Protect your leads: DMs to a mirrored number are relayed into a private group (\"🔒 Lead #N\") with your sales rep. The rep replies in the group and the lead gets it as a normal chat — without ever seeing the lead's number. Changes take up to 30 seconds to apply.",
+      "repsTitle": "Sales reps",
+      "repsHint": "The people who answer leads. A rep is added to each lead's mirror group.",
+      "repName": "Name",
+      "repPhone": "WhatsApp number (digits, no +)",
+      "addRep": "Add rep",
+      "repInUse": "{count, plural, one {# link} other {# links}}",
+      "sessionLabel": "Session",
+      "selectSession": "Select a session…",
+      "repLabel": "Sales rep",
+      "selectRep": "Select a rep…",
+      "createLink": "Create mirror link",
+      "addRepFirst": "Add a sales rep above first.",
+      "noLinks": "No mirror links yet. Create one to start protecting your leads.",
+      "colSession": "Session",
+      "colRep": "Rep",
+      "colLeads": "Leads",
+      "colStatus": "Status"
     }
   },
   "landing": {

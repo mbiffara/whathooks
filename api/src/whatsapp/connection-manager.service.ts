@@ -67,7 +67,12 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private readonly mirrorLinkCache = new Map<
     string,
     {
-      link: { id: string; agentNumber: string; groupPrefix: string } | null;
+      link: {
+        id: string;
+        agentNumber: string;
+        groupPrefix: string;
+        showLeadName: boolean;
+      } | null;
       expires: number;
     }
   >();
@@ -706,7 +711,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
           );
         }
         // *…* renders bold on WhatsApp — makes the lead's name stand out.
-        const prefix = m.pushName ? `*${m.pushName}:* ` : '';
+        const prefix =
+          link.showLeadName && m.pushName ? `*${m.pushName}:* ` : '';
         await this.relayMirrorMessage(sessionId, thread.groupJid, m, prefix);
         return;
       }
@@ -778,7 +784,12 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   /** Enabled mirror link for a session, cached briefly (checked per message). */
   private async mirrorLinkFor(
     sessionId: string,
-  ): Promise<{ id: string; agentNumber: string; groupPrefix: string } | null> {
+  ): Promise<{
+    id: string;
+    agentNumber: string;
+    groupPrefix: string;
+    showLeadName: boolean;
+  } | null> {
     const cached = this.mirrorLinkCache.get(sessionId);
     if (cached && cached.expires > Date.now()) return cached.link;
     const link = await this.prisma.mirrorLink.findUnique({
@@ -787,6 +798,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         id: true,
         agentNumber: true,
         groupPrefix: true,
+        showLeadName: true,
         enabled: true,
       },
     });
@@ -795,6 +807,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
           id: link.id,
           agentNumber: link.agentNumber,
           groupPrefix: link.groupPrefix,
+          showLeadName: link.showLeadName,
         }
       : null;
     this.mirrorLinkCache.set(sessionId, {

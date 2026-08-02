@@ -318,6 +318,8 @@ model MirrorLink {
   humanAgent   HumanAgent? @relation(fields: [humanAgentId], references: [id], onDelete: SetNull)
   // Mirror groups are named "<groupPrefix> #<seq>".
   groupPrefix String   @default("🔒 Lead")
+  // Prefix relayed messages with the lead's WhatsApp display name (bold).
+  showLeadName Boolean @default(true)
   enabled     Boolean  @default(true)
   createdAt   DateTime @default(now())
 

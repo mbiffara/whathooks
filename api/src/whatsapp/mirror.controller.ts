@@ -55,11 +55,21 @@ class CreateLinkDto {
   @IsString()
   @Length(1, 40)
   groupPrefix?: string;
+
+  // Prefix relayed messages with the lead's display name (default true).
+  @IsOptional()
+  @IsBoolean()
+  showLeadName?: boolean;
 }
 
 class UpdateLinkDto {
+  @IsOptional()
   @IsBoolean()
-  enabled!: boolean;
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  showLeadName?: boolean;
 }
 
 @UseGuards(JwtOrApiKeyGuard, OrgRolesGuard)
@@ -122,7 +132,7 @@ export class MirrorController {
     @Param('id') id: string,
     @Body() dto: UpdateLinkDto,
   ) {
-    return this.mirror.updateLink(this.orgOf(org), id, dto.enabled);
+    return this.mirror.updateLink(this.orgOf(org), id, dto);
   }
 
   @OrgRoles('ADMIN')

@@ -117,6 +117,7 @@ export class MirrorService {
       humanAgentId: l.humanAgent?.id ?? null,
       humanAgentName: l.humanAgent?.name ?? null,
       groupPrefix: l.groupPrefix,
+      showLeadName: l.showLeadName,
       threads: l._count.threads,
       session: l.session,
       createdAt: l.createdAt,
@@ -125,7 +126,12 @@ export class MirrorService {
 
   async createLink(
     organizationId: string,
-    dto: { sessionId: string; humanAgentId: string; groupPrefix?: string },
+    dto: {
+      sessionId: string;
+      humanAgentId: string;
+      groupPrefix?: string;
+      showLeadName?: boolean;
+    },
   ) {
     const session = await this.prisma.waSession.findFirst({
       where: { id: dto.sessionId, organizationId },
@@ -154,13 +160,28 @@ export class MirrorService {
         ...(dto.groupPrefix?.trim()
           ? { groupPrefix: dto.groupPrefix.trim() }
           : {}),
+        ...(dto.showLeadName !== undefined
+          ? { showLeadName: dto.showLeadName }
+          : {}),
       },
     });
   }
 
-  async updateLink(organizationId: string, id: string, enabled: boolean) {
+  async updateLink(
+    organizationId: string,
+    id: string,
+    patch: { enabled?: boolean; showLeadName?: boolean },
+  ) {
     await this.requireLink(organizationId, id);
-    return this.prisma.mirrorLink.update({ where: { id }, data: { enabled } });
+    return this.prisma.mirrorLink.update({
+      where: { id },
+      data: {
+        ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
+        ...(patch.showLeadName !== undefined
+          ? { showLeadName: patch.showLeadName }
+          : {}),
+      },
+    });
   }
 
   async deleteLink(organizationId: string, id: string) {

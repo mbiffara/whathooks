@@ -544,7 +544,10 @@
       "colAgent": "Human agent",
       "colPrefix": "Group names",
       "colLeads": "Leads",
-      "colStatus": "Status"
+      "colStatus": "Status",
+      "showLeadName": "Show the lead's name in the group",
+      "nameShown": "lead name: shown",
+      "nameHidden": "lead name: hidden"
     },
     "humanAgents": {
       "title": "Human agents",

@@ -545,7 +545,7 @@
       "colPrefix": "Group names",
       "colLeads": "Leads",
       "colStatus": "Status",
-      "showLeadName": "Show the lead's name in the group",
+      "showLeadName": "Show the lead's name in the group (otherwise messages are prefixed \"Lead:\")",
       "nameShown": "lead name: shown",
       "nameHidden": "lead name: hidden"
     },

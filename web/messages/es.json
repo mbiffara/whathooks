@@ -545,7 +545,7 @@
       "colPrefix": "Nombre de grupos",
       "colLeads": "Leads",
       "colStatus": "Estado",
-      "showLeadName": "Mostrar el nombre del lead en el grupo",
+      "showLeadName": "Mostrar el nombre del lead en el grupo (si no, los mensajes llevan el prefijo \"Lead:\")",
       "nameShown": "nombre del lead: visible",
       "nameHidden": "nombre del lead: oculto"
     },

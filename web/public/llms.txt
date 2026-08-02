@@ -219,7 +219,7 @@ curl -X POST https://api.whathooks.app/v1/mirror-links \
   -d '{ "sessionId": "sess_...", "humanAgentId": "ha_...", "groupPrefix": "ConsultasWeb" }'
 # groupPrefix optional (1-40 chars) → groups "ConsultasWeb #1", "ConsultasWeb #2", …
 # showLeadName optional (default true) → prefix relayed messages with the
-#   lead's display name in bold; false relays fully anonymous
+#   lead's display name in bold; false uses a generic bold "Lead:" prefix
 # Both also patchable: PATCH /v1/mirror-links/:id { "showLeadName": false }
 
 # Pause / resume:  PATCH /v1/mirror-links/:id   { "enabled": false }

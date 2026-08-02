@@ -710,9 +710,14 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
             `Mirror ${link.id}: created ${group.id} (Lead #${seq}) on ${sessionId}`,
           );
         }
-        // *…* renders bold on WhatsApp — makes the lead's name stand out.
+        // *…* renders bold on WhatsApp. Every relayed lead message carries a
+        // speaker prefix — the display name, or a generic "Lead:" when the
+        // name is hidden (or missing). Keeps transcripts unambiguous once
+        // other actors (AI agents) join mirror groups.
         const prefix =
-          link.showLeadName && m.pushName ? `*${m.pushName}:* ` : '';
+          link.showLeadName && m.pushName
+            ? `*${m.pushName}:* `
+            : `*Lead:* `;
         await this.relayMirrorMessage(sessionId, thread.groupJid, m, prefix);
         return;
       }

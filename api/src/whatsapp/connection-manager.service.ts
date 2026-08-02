@@ -705,7 +705,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
             `Mirror ${link.id}: created ${group.id} (Lead #${seq}) on ${sessionId}`,
           );
         }
-        const prefix = m.pushName ? `${m.pushName}: ` : '';
+        // *…* renders bold on WhatsApp — makes the lead's name stand out.
+        const prefix = m.pushName ? `*${m.pushName}:* ` : '';
         await this.relayMirrorMessage(sessionId, thread.groupJid, m, prefix);
         return;
       }

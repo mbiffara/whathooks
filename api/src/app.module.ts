@@ -15,6 +15,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { TagsModule } from './tags/tags.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { FlowsModule } from './flows/flows.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 
 @Module({
@@ -28,6 +29,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     BillingModule,
     WebhooksModule,
     WhatsappModule,
+    FlowsModule,
     ApiKeysModule,
     MessagesModule,
     ConversationsModule,

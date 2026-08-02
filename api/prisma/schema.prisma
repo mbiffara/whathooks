@@ -67,6 +67,7 @@ model Organization {
   messages      Message[]
   tags Tag[]
   humanAgents HumanAgent[]
+  flows Flow[]
 }
 
 model User {
@@ -190,6 +191,8 @@ model WaSession {
   messages      Message[]
   webhooks      Webhook[]
   mirrorLink    MirrorLink?
+  mirrorThreads MirrorThread[]
+  flow          Flow?
 
   @@index([organizationId])
   @@index([agentId])
@@ -296,7 +299,8 @@ model HumanAgent {
   phoneNumber    String // digits with country code, no +
   createdAt      DateTime      @default(now())
 
-  mirrorLinks MirrorLink[]
+  mirrorLinks   MirrorLink[]
+  mirrorThreads MirrorThread[]
 
   @@unique([organizationId, phoneNumber])
   @@index([organizationId])
@@ -326,17 +330,72 @@ model MirrorLink {
   threads MirrorThread[]
 }
 
+// One lead ↔ one WhatsApp group with one human agent. Session-scoped: threads
+// are created either by a static MirrorLink or by a Flow assignHuman node —
+// the relay engine only reads threads, never the link.
 model MirrorThread {
-  id        String     @id @default(cuid())
-  linkId    String
-  link      MirrorLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
-  leadJid   String // original DM sender
-  groupJid  String // the mirror group
-  seq       Int // "Lead #<seq>" in the group subject
-  createdAt DateTime   @default(now())
+  id           String      @id @default(cuid())
+  sessionId    String
+  session      WaSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  linkId       String? // set when created by a static MirrorLink
+  link         MirrorLink? @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  humanAgentId String?
+  humanAgent   HumanAgent? @relation(fields: [humanAgentId], references: [id], onDelete: SetNull)
+  agentNumber  String // denormalized: the relay's sender check reads this
+  showLeadName Boolean     @default(true)
+  leadJid      String // original DM sender
+  groupJid     String // the mirror group
+  seq          Int // "<prefix> #<seq>" in the group subject
+  createdAt    DateTime    @default(now())
 
-  @@unique([linkId, leadJid])
-  @@unique([linkId, groupJid])
+  @@unique([sessionId, leadJid])
+  @@unique([sessionId, groupJid])
+  @@index([linkId])
+}
+
+// ---------------------------------------------------------------------------
+// Flows (platform-admin experiment): per-session visual routing graphs.
+// The graph is stored exactly as the ReactFlow editor produces it.
+// ---------------------------------------------------------------------------
+
+model Flow {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sessionId      String       @unique // one flow per session (v1)
+  session        WaSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name           String
+  graph          Json // ReactFlow { nodes, edges }
+  enabled        Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  conversationStates FlowConversationState[]
+
+  @@index([organizationId])
+}
+
+// Per-conversation routing memory: once HANDED_OFF, the flow no longer runs
+// (the mirror thread relay owns the conversation).
+model FlowConversationState {
+  id             String   @id @default(cuid())
+  flowId         String
+  flow           Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  conversationId String   @unique
+  status         String // ACTIVE | HANDED_OFF
+  humanAgentId   String?
+  updatedAt      DateTime @updatedAt
+
+  @@index([flowId])
+}
+
+// Round-robin cursors, one per (flow, node).
+model FlowCounter {
+  flowId String
+  nodeId String
+  value  Int    @default(0)
+
+  @@id([flowId, nodeId])
 }
 
 model Webhook {

@@ -22,6 +22,7 @@ type IconName =
   | "admin"
   | "mirror"
   | "humanAgents"
+  | "flows"
   | "signOut";
 
 /** Minimal stroke icons (24 viewBox), sized by the parent via width/height. */
@@ -54,6 +55,14 @@ function NavIcon({ name }: { name: IconName }) {
     mirror: (
       <>
         <path d="M7 8h13l-3-3M17 16H4l3 3" />
+      </>
+    ),
+    flows: (
+      <>
+        <circle cx="5" cy="12" r="2.5" />
+        <circle cx="19" cy="6" r="2.5" />
+        <circle cx="19" cy="18" r="2.5" />
+        <path d="M7.5 12h4m0 0c3 0 2-6 5-6m-5 6c3 0 2 6 5 6" />
       </>
     ),
     humanAgents: (
@@ -117,6 +126,8 @@ interface NavLink {
   href: string;
   key: IconName;
   exact?: boolean;
+  /** Render only for platform admins (like the Admin console link). */
+  adminOnly?: boolean;
 }
 
 /** Grouped nav: first group has no header. Group keys map to dash.nav.groups. */
@@ -136,6 +147,7 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
       { href: "/dashboard/human-agents", key: "humanAgents" },
       { href: "/dashboard/webhooks", key: "webhooks" },
       { href: "/dashboard/mirror", key: "mirror" },
+      { href: "/dashboard/flows", key: "flows", adminOnly: true },
     ],
   },
   {
@@ -162,6 +174,10 @@ export function DashboardNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
+  const visibleGroups = GROUPS.map((g) => ({
+    ...g,
+    links: g.links.filter((l) => !l.adminOnly || isAdmin),
+  }));
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -221,7 +237,7 @@ export function DashboardNav() {
         </svg>
       </button>
       <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
-        {GROUPS.map((group, gi) => (
+        {visibleGroups.map((group, gi) => (
           <div
             key={group.key ?? "main"}
             className={`flex flex-col items-center gap-1 ${
@@ -286,7 +302,7 @@ export function DashboardNav() {
       </div>
       <OrgSwitcher />
       <nav className="mt-4 flex flex-1 flex-col gap-1 overflow-y-auto">
-        {GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.key ?? "main"} className="flex flex-col gap-1">
             {group.key && (
               <div className="mt-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">

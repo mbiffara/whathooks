@@ -129,6 +129,72 @@ export class AgentRunnerService {
     }
   }
 
+  /**
+   * Classify the conversation's latest messages into one of the given intent
+   * keys, using the agent's own credentials/model. Returns the key, or null
+   * on any error / no confident match (callers treat null as "fallback").
+   */
+  async classify(
+    agent: Agent,
+    conversationId: string,
+    intents: Array<{ key: string; label: string; description?: string }>,
+  ): Promise<string | null> {
+    if (!this.encryption.isConfigured() || intents.length === 0) return null;
+    let apiKey: string;
+    try {
+      apiKey = this.encryption.decrypt(agent.apiKeyCiphertext);
+    } catch {
+      return null;
+    }
+    const turns = await this.loadHistory(conversationId, false);
+    if (!turns.length) return null;
+
+    const keys = intents.map((i) => i.key);
+    const system = [
+      'You are an intent classifier for a WhatsApp conversation.',
+      'Read the conversation and decide which ONE intent best matches the',
+      "customer's CURRENT need. The intents:",
+      ...intents.map(
+        (i) =>
+          `- ${i.key}: ${i.label}${i.description ? ` — ${i.description}` : ''}`,
+      ),
+      '',
+      `Respond with ONLY the intent key (one of: ${keys.join(', ')}), or`,
+      '"none" if nothing fits. No other text.',
+    ].join('\n');
+
+    try {
+      let raw: string;
+      if (agent.provider === 'OPENAI') {
+        const client = new OpenAI({ apiKey });
+        const res = await client.chat.completions.create({
+          model: agent.model,
+          messages: [
+            { role: 'system', content: system },
+            ...turns.map((t) => ({ role: t.role, content: t.text }) as const),
+          ],
+        });
+        raw = res.choices[0]?.message?.content ?? '';
+      } else {
+        const client = new Anthropic({ apiKey });
+        const res = await client.messages.create({
+          model: agent.model,
+          max_tokens: 16,
+          system,
+          messages: turns.map((t) => ({ role: t.role, content: t.text })),
+        });
+        raw = res.content
+          .map((b) => (b.type === 'text' ? b.text : ''))
+          .join('');
+      }
+      const answer = raw.trim().toLowerCase().split(/\s+/)[0] ?? '';
+      return keys.find((k) => k.toLowerCase() === answer) ?? null;
+    } catch (e) {
+      this.log.warn(`Intent classify failed for agent "${agent.name}": ${e}`);
+      return null;
+    }
+  }
+
   /** Recent messages, chronological, starting from the first inbound turn. */
   private async loadHistory(
     conversationId: string,

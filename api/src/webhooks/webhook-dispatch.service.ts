@@ -36,6 +36,28 @@ export class WebhookDispatchService {
     );
   }
 
+  /**
+   * Deliver a one-off event to a specific webhook, bypassing the
+   * event-subscription filter (Flow webhook nodes target a hook directly).
+   */
+  async dispatchTo(
+    webhookId: string,
+    event: string,
+    payload: Record<string, unknown>,
+    sessionId?: string | null,
+  ): Promise<void> {
+    const hook = await this.prisma.webhook.findUnique({
+      where: { id: webhookId },
+    });
+    if (!hook || !hook.active) return;
+    await this.deliver(hook, {
+      organizationId: hook.organizationId,
+      sessionId: sessionId ?? null,
+      event,
+      payload,
+    });
+  }
+
   private async deliver(hook: Webhook, params: DispatchParams): Promise<void> {
     const envelope = {
       event: params.event,

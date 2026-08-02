@@ -41,6 +41,7 @@ import { randomUUID } from 'crypto';
 import { REDIS_PUB } from '../common/redis/redis.module';
 import { MailService } from '../mail/mail.service';
 import { agentActiveNow } from './agent-schedule';
+import { FlowEngineService } from './flow-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { usePrismaAuthState } from './baileys-auth-state';
@@ -54,6 +55,20 @@ interface LiveSession {
   saveCreds: () => Promise<void>;
   clearAuth: () => Promise<void>;
   starting: boolean;
+}
+
+/** Inbound-message context shared by the automation layers (mirror, flows). */
+export interface InboundAutomationCtx {
+  conversationId: string;
+  remoteJid: string;
+  isGroup: boolean;
+  senderJid?: string;
+  senderAltJid?: string;
+  mentionedMe: boolean;
+  pushName: string | null;
+  type: MessageType;
+  text: string | null;
+  media?: { buffer: Buffer; mimeType: string; fileName?: string | null };
 }
 
 @Injectable()
@@ -72,6 +87,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         agentNumber: string;
         groupPrefix: string;
         showLeadName: boolean;
+        humanAgentId: string | null;
       } | null;
       expires: number;
     }
@@ -89,6 +105,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     private readonly quota: QuotaService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly flowEngine: FlowEngineService,
     @Inject(REDIS_PUB) private readonly redis: Redis,
   ) {}
 
@@ -628,126 +645,170 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
-    // Mirror link (platform-admin experiment): relay DMs into a per-lead
-    // group with a sales rep, and the rep's group replies back to the lead.
+    // Everything that reacts to an inbound message (mirror relay, flows,
+    // agent auto-replies) runs through one composition point.
     // In LID-addressed groups `participant` is the sender's LID; the phone
-    // number rides in `participantAlt` — pass both for rep matching.
-    void this.maybeMirror(sessionId, {
+    // number rides in `participantAlt` — pass both for sender matching.
+    void this.runAutomation(sessionId, {
+      conversationId: result.conversationId,
       remoteJid,
       isGroup,
       senderJid,
       senderAltJid:
         (msg.key as { participantAlt?: string | null }).participantAlt ??
         undefined,
+      mentionedMe,
       pushName: msg.pushName ?? null,
       type: described.type,
       text: described.text,
       media,
     });
-
-    // Auto-reply if an enabled agent is assigned. In 1:1 the agent always
-    // considers replying; in a group it only replies when the bot is @mentioned.
-    if (!isGroup) {
-      void this.maybeAgentReply(sessionId, remoteJid, result.conversationId);
-    } else {
-      if (mentionedMe && senderJid) {
-        void this.maybeAgentReply(sessionId, remoteJid, result.conversationId, {
-          jid: senderJid,
-          number: senderJid.split('@')[0],
-        });
-      }
-    }
   }
 
   /**
-   * Mirror-link relay. DM from a lead → forward into the lead's mirror group
-   * (created on first contact, subject "🔒 Lead #N", containing the rep).
-   * Message from the rep inside a mirror group → forward to the lead as a
-   * normal DM. Everything we send is fromMe, which onMessages skips — no
-   * relay loops. Failures only log; mirroring must never break inbound flow.
+   * Post-webhook automation for one inbound message.
+   * Groups: mirror-thread relay (rep → lead), then @mention agent replies.
+   * DMs, in priority order: an existing mirror thread owns the conversation
+   * (relay only); an enabled Flow takes over the session; a static MirrorLink
+   * creates the thread on first contact; otherwise the session's assigned
+   * agent may auto-reply.
    */
-  private async maybeMirror(
+  private async runAutomation(
     sessionId: string,
-    m: {
-      remoteJid: string;
-      isGroup: boolean;
-      senderJid?: string;
-      senderAltJid?: string;
-      pushName: string | null;
-      type: MessageType;
-      text: string | null;
-      media?: { buffer: Buffer; mimeType: string; fileName?: string | null };
-    },
+    ctx: InboundAutomationCtx,
   ): Promise<void> {
     try {
-      const link = await this.mirrorLinkFor(sessionId);
-      if (!link) return;
-
-      if (!m.isGroup) {
-        // Lead → group. Find or create the lead's mirror thread.
-        let thread = await this.prisma.mirrorThread.findUnique({
-          where: { linkId_leadJid: { linkId: link.id, leadJid: m.remoteJid } },
-        });
-        if (!thread) {
-          const seq =
-            (await this.prisma.mirrorThread.count({
-              where: { linkId: link.id },
-            })) + 1;
-          const group = await this.createGroup(
+      if (ctx.isGroup) {
+        await this.mirrorGroupRelay(sessionId, ctx);
+        if (ctx.mentionedMe && ctx.senderJid) {
+          void this.maybeAgentReply(
             sessionId,
-            `${link.groupPrefix} #${seq}`,
-            [link.agentNumber],
-          );
-          thread = await this.prisma.mirrorThread.create({
-            data: {
-              linkId: link.id,
-              leadJid: m.remoteJid,
-              groupJid: group.id,
-              seq,
-            },
-          });
-          this.log.log(
-            `Mirror ${link.id}: created ${group.id} (Lead #${seq}) on ${sessionId}`,
+            ctx.remoteJid,
+            ctx.conversationId,
+            { jid: ctx.senderJid, number: ctx.senderJid.split('@')[0] },
           );
         }
-        // *…* renders bold on WhatsApp. Every relayed lead message carries a
-        // speaker prefix — the display name, or a generic "Lead:" when the
-        // name is hidden (or missing). Keeps transcripts unambiguous once
-        // other actors (AI agents) join mirror groups.
-        const prefix =
-          link.showLeadName && m.pushName
-            ? `*${m.pushName}:* `
-            : `*Lead:* `;
-        await this.relayMirrorMessage(sessionId, thread.groupJid, m, prefix);
         return;
       }
 
-      // Group → lead, only for messages written by the rep. The sender may be
-      // addressed by LID (senderJid) with the phone number in senderAltJid —
-      // accept a match on either.
+      // A mirrored conversation is owned by its human agent — relay and stop.
       const thread = await this.prisma.mirrorThread.findUnique({
-        where: { linkId_groupJid: { linkId: link.id, groupJid: m.remoteJid } },
+        where: { sessionId_leadJid: { sessionId, leadJid: ctx.remoteJid } },
       });
-      if (!thread) return;
-      const senderNumbers = [m.senderJid, m.senderAltJid]
-        .filter((j): j is string => Boolean(j))
-        .map((j) => j.split(':')[0]?.split('@')[0]);
-      if (!senderNumbers.includes(link.agentNumber)) {
-        this.log.log(
-          `Mirror ${link.id}: ignoring group message from ` +
-            `${senderNumbers.join('/') || 'unknown'} ` +
-            `(human agent is ${link.agentNumber})`,
-        );
+      if (thread) {
+        await this.forwardLeadToGroup(sessionId, thread, ctx);
         return;
       }
-      await this.relayMirrorMessage(sessionId, thread.leadJid, m, '');
+
+      // An enabled flow takes over the session's automation.
+      const flow = await this.flowEngine.enabledFlowFor(sessionId);
+      if (flow) {
+        await this.flowEngine.run(flow, sessionId, ctx, this);
+        return;
+      }
+
+      // Legacy: a static mirror link creates the thread on first contact…
+      const link = await this.mirrorLinkFor(sessionId);
+      if (link) {
+        const created = await this.createMirrorThread(
+          sessionId,
+          ctx.remoteJid,
+          { id: link.humanAgentId, number: link.agentNumber },
+          {
+            prefix: link.groupPrefix,
+            showLeadName: link.showLeadName,
+            linkId: link.id,
+          },
+        );
+        await this.forwardLeadToGroup(sessionId, created, ctx);
+        return;
+      }
+
+      // …otherwise the session's assigned agent may reply.
+      void this.maybeAgentReply(sessionId, ctx.remoteJid, ctx.conversationId);
     } catch (e) {
-      this.log.warn(`Mirror relay failed on ${sessionId}: ${e}`);
+      this.log.warn(`Automation failed on ${sessionId}: ${e}`);
     }
   }
 
+  /** Rep → lead: relay a mirror-group message written by the human agent. */
+  private async mirrorGroupRelay(
+    sessionId: string,
+    ctx: InboundAutomationCtx,
+  ): Promise<void> {
+    const thread = await this.prisma.mirrorThread.findUnique({
+      where: { sessionId_groupJid: { sessionId, groupJid: ctx.remoteJid } },
+    });
+    if (!thread) return;
+    // The sender may be addressed by LID with the phone in senderAltJid —
+    // accept a match on either identity.
+    const senderNumbers = [ctx.senderJid, ctx.senderAltJid]
+      .filter((j): j is string => Boolean(j))
+      .map((j) => j.split(':')[0]?.split('@')[0]);
+    if (!senderNumbers.includes(thread.agentNumber)) {
+      this.log.log(
+        `Mirror thread ${thread.id}: ignoring group message from ` +
+          `${senderNumbers.join('/') || 'unknown'} ` +
+          `(human agent is ${thread.agentNumber})`,
+      );
+      return;
+    }
+    await this.relayMirrorMessage(sessionId, thread.leadJid, ctx, '');
+  }
+
+  /** Lead → group: forward a lead's DM into their mirror group. */
+  async forwardLeadToGroup(
+    sessionId: string,
+    thread: { groupJid: string; showLeadName: boolean },
+    ctx: InboundAutomationCtx,
+  ): Promise<void> {
+    // *…* renders bold on WhatsApp. Every relayed lead message carries a
+    // speaker prefix — the display name, or a generic "Lead:" when the name
+    // is hidden (or missing). Keeps transcripts unambiguous once other
+    // actors (AI agents) join mirror groups.
+    const prefix =
+      thread.showLeadName && ctx.pushName
+        ? `*${ctx.pushName}:* `
+        : `*Lead:* `;
+    await this.relayMirrorMessage(sessionId, thread.groupJid, ctx, prefix);
+  }
+
+  /**
+   * Create the WhatsApp group + thread row binding a lead to a human agent.
+   * Shared by the static MirrorLink path and Flow assign nodes.
+   */
+  async createMirrorThread(
+    sessionId: string,
+    leadJid: string,
+    agent: { id?: string | null; number: string },
+    opts: { prefix: string; showLeadName: boolean; linkId?: string | null },
+  ) {
+    const seq =
+      (await this.prisma.mirrorThread.count({ where: { sessionId } })) + 1;
+    const group = await this.createGroup(sessionId, `${opts.prefix} #${seq}`, [
+      agent.number,
+    ]);
+    const thread = await this.prisma.mirrorThread.create({
+      data: {
+        sessionId,
+        linkId: opts.linkId ?? null,
+        humanAgentId: agent.id ?? null,
+        agentNumber: agent.number,
+        showLeadName: opts.showLeadName,
+        leadJid,
+        groupJid: group.id,
+        seq,
+      },
+    });
+    this.log.log(
+      `Mirror thread ${thread.id}: created group ${group.id} ` +
+        `("${opts.prefix} #${seq}") on ${sessionId}`,
+    );
+    return thread;
+  }
+
   /** Send a mirrored message: media re-uploaded, text prefixed, rest stubbed. */
-  private async relayMirrorMessage(
+  async relayMirrorMessage(
     sessionId: string,
     to: string,
     m: {
@@ -794,6 +855,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     agentNumber: string;
     groupPrefix: string;
     showLeadName: boolean;
+    humanAgentId: string | null;
   } | null> {
     const cached = this.mirrorLinkCache.get(sessionId);
     if (cached && cached.expires > Date.now()) return cached.link;
@@ -804,6 +866,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         agentNumber: true,
         groupPrefix: true,
         showLeadName: true,
+        humanAgentId: true,
         enabled: true,
       },
     });
@@ -813,6 +876,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
           agentNumber: link.agentNumber,
           groupPrefix: link.groupPrefix,
           showLeadName: link.showLeadName,
+          humanAgentId: link.humanAgentId,
         }
       : null;
     this.mirrorLinkCache.set(sessionId, {
@@ -914,6 +978,82 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
    * If the session has an enabled agent, generate and send a reply. When
    * `mention` is set (group reply), the reply tags that sender.
    */
+  /**
+   * One AI reply on behalf of a Flow agentReply node (explicit agent, not the
+   * session's). Returns what happened so the flow can branch on handoff.
+   * `pauseOnHandoff` applies the legacy side effects (agentPaused + email)
+   * only when the flow has no onHandoff edge to continue into.
+   */
+  async runAgentReply(
+    sessionId: string,
+    conversationId: string,
+    remoteJid: string,
+    agentId: string,
+    opts: { pauseOnHandoff: boolean },
+  ): Promise<'replied' | 'handoff' | 'skipped'> {
+    if (!this.agentRunner.isConfigured()) return 'skipped';
+    const agent = await this.prisma.agent.findUnique({
+      where: { id: agentId },
+    });
+    if (!agent || !agent.enabled) return 'skipped';
+    if (!agentActiveNow(agent)) return 'skipped';
+    try {
+      await this.quota.assertCanSend(agent.organizationId);
+    } catch {
+      this.log.warn(
+        `Flow agent reply skipped for org ${agent.organizationId}: over quota`,
+      );
+      return 'skipped';
+    }
+    const convo = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { agentPaused: true },
+    });
+    if (convo?.agentPaused) return 'skipped';
+
+    const reply = await this.agentRunner.generateReply(agent, conversationId);
+    if (!reply) return 'skipped';
+    if (!this.sessions.has(sessionId)) return 'skipped';
+
+    if (reply.text) {
+      const delayMs = randomDelayMs(agent);
+      if (delayMs > 0) await this.typeAndWait(sessionId, remoteJid, delayMs);
+      await this.sendText(sessionId, remoteJid, reply.text, {
+        source: MessageSource.AGENT,
+        agentId: agent.id,
+      });
+    }
+    if (reply.notify) {
+      void this.notifyOwner(
+        agent.organizationId,
+        conversationId,
+        agent.name,
+        reply.notify,
+      );
+    }
+    if (reply.handoff) {
+      const reason =
+        reply.reason?.trim() || 'The agent wasn’t sure how to respond.';
+      if (opts.pauseOnHandoff) {
+        await this.prisma.conversation.update({
+          where: { id: conversationId },
+          data: { agentPaused: true, agentPausedReason: reason },
+        });
+        if (agent.notifyOnHandoff) {
+          void this.notifyHandoff(
+            agent.organizationId,
+            sessionId,
+            conversationId,
+            agent.name,
+            reason,
+          );
+        }
+      }
+      return 'handoff';
+    }
+    return 'replied';
+  }
+
   private async maybeAgentReply(
     sessionId: string,
     remoteJid: string,

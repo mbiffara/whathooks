@@ -196,12 +196,16 @@ export class MirrorService {
     const threads = await this.prisma.mirrorThread.findMany({
       where: { linkId: id },
       orderBy: { seq: 'asc' },
+      include: { humanAgent: { select: { id: true, name: true } } },
     });
     return threads.map((t) => ({
       id: t.id,
       seq: t.seq,
       leadJid: t.leadJid,
       groupJid: t.groupJid,
+      humanAgentId: t.humanAgent?.id ?? null,
+      humanAgentName: t.humanAgent?.name ?? null,
+      agentNumber: t.agentNumber,
       createdAt: t.createdAt,
     }));
   }

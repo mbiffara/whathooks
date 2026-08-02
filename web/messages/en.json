@@ -105,7 +105,8 @@
         "organization": "Organization"
       },
       "mirror": "Mirror",
-      "humanAgents": "Human agents"
+      "humanAgents": "Human agents",
+      "flows": "Flows"
     },
     "settings": {
       "title": "Settings",

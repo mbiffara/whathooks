@@ -1,5 +1,6 @@
 "use client";
 
+import { Glyph } from "@/components/glyphs";
 import { Logo } from "@/components/logo";
 import { OrgSwitcher } from "@/components/org-switcher";
 import { useTranslations } from "next-intl";
@@ -216,7 +217,7 @@ export function DashboardNav() {
         title={t("expand")}
         className="mt-2 hidden h-8 w-8 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)] md:grid"
       >
-        »
+        <Glyph name="panelExpand" />
       </button>
       <button
         onClick={() => setDrawerOpen(true)}
@@ -297,7 +298,7 @@ export function DashboardNav() {
           title={t("collapse")}
           className="grid h-7 w-7 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
         >
-          «
+          <Glyph name="panelCollapse" />
         </button>
       </div>
       <OrgSwitcher />

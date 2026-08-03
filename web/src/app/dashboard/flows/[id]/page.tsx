@@ -15,6 +15,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { Glyph } from "@/components/glyphs";
 import { ApiError, apiClient } from "@/lib/client-api";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
@@ -406,9 +407,10 @@ export default function FlowEditorPage() {
         <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
           <button
             onClick={() => router.push("/dashboard/flows")}
-            className="text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+            className="inline-flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
           >
-            ← {t("backToFlows")}
+            <Glyph name="chevronLeft" size={14} />
+            {t("backToFlows")}
           </button>
           <div className="font-semibold">{flowName}</div>
           <select
@@ -450,6 +452,16 @@ export default function FlowEditorPage() {
             >
               {busy ? "…" : tc("save")}
             </button>
+            <span
+              className={`badge inline-flex items-center gap-1.5 ${
+                enabled
+                  ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
+                  : "bg-[var(--color-chip)] text-[var(--color-muted)]"
+              }`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-current" />
+              {enabled ? tc("enabled") : tc("disabled")}
+            </span>
             <button
               onClick={toggleEnabled}
               disabled={busy || dirty || (!enabled && !sessionId)}
@@ -460,13 +472,11 @@ export default function FlowEditorPage() {
                     ? t("enableNeedsSession")
                     : undefined
               }
-              className={`badge ${
-                enabled
-                  ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                  : "bg-[var(--color-chip)] text-[var(--color-muted)]"
-              } disabled:opacity-50`}
+              className={`${
+                enabled ? "btn-ghost" : "btn-primary"
+              } text-xs disabled:opacity-50`}
             >
-              {enabled ? tc("enabled") : tc("disabled")}
+              {enabled ? tc("disable") : tc("enable")}
             </button>
             <button
               onClick={removeFlow}

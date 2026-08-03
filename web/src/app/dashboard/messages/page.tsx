@@ -12,6 +12,7 @@ import { UpgradeModal } from "@/components/upgrade-modal";
 import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { TeamMember, WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
+import { Glyph } from "@/components/glyphs";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -773,7 +774,7 @@ function MessagesInbox() {
                 className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] md:hidden"
                 aria-label={t("title")}
               >
-                ←
+                <Glyph name="chevronLeft" size={18} />
               </button>
               <div className="flex min-w-0 items-center gap-2.5">
                 {selectedConv.avatarUrl ? (

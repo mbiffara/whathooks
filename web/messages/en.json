@@ -194,7 +194,7 @@
       "notLinked": "Not linked yet"
     },
     "sessionDetail": {
-      "back": "← Sessions",
+      "back": "Sessions",
       "failedToAssign": "Failed to assign agent",
       "actionFailed": "Action failed",
       "deleteFailed": "Delete failed",
@@ -540,7 +540,7 @@
       "selectAgent": "Select a human agent…",
       "prefixLabel": "Group name prefix",
       "prefixHint": "Groups are named \"<prefix> #1\", \"<prefix> #2\"… — e.g. \"ConsultasWeb\" creates \"ConsultasWeb #1\". Default: \"🔒 Lead\".",
-      "addAgentFirst": "Add a human agent first →",
+      "addAgentFirst": "Add a human agent first",
       "createLink": "Create mirror link",
       "noLinks": "No mirror links yet. Create one to start protecting your leads.",
       "colSession": "Session",

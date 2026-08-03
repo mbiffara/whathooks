@@ -194,7 +194,7 @@
       "notLinked": "Aún sin vincular"
     },
     "sessionDetail": {
-      "back": "← Sesiones",
+      "back": "Sesiones",
       "failedToAssign": "No se pudo asignar el agente",
       "actionFailed": "La acción falló",
       "deleteFailed": "No se pudo eliminar",
@@ -540,7 +540,7 @@
       "selectAgent": "Selecciona un agente humano…",
       "prefixLabel": "Prefijo del grupo",
       "prefixHint": "Los grupos se llaman \"<prefijo> #1\", \"<prefijo> #2\"… — ej. \"ConsultasWeb\" crea \"ConsultasWeb #1\". Por defecto: \"🔒 Lead\".",
-      "addAgentFirst": "Agrega un agente humano primero →",
+      "addAgentFirst": "Agrega un agente humano primero",
       "createLink": "Crear mirror link",
       "noLinks": "Todavía no hay mirror links. Crea uno para empezar a proteger tus leads.",
       "colSession": "Sesión",

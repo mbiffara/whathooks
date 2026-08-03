@@ -1,5 +1,6 @@
 "use client";
 
+import { Glyph } from "@/components/glyphs";
 import { WebhookDeliveries } from "@/components/webhook-deliveries";
 import {
   MappingEditor,
@@ -110,9 +111,10 @@ export default function WebhookDetailPage() {
         <div className="min-w-0">
           <button
             onClick={() => router.push("/dashboard/webhooks")}
-            className="mb-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+            className="mb-2 inline-flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
           >
-            ← {t("title")}
+            <Glyph name="chevronLeft" size={14} />
+            {t("title")}
           </button>
           <h1 className="truncate font-mono text-xl font-bold">{hook.url}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">

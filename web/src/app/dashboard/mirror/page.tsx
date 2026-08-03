@@ -1,5 +1,6 @@
 "use client";
 
+import { Glyph } from "@/components/glyphs";
 import { StatusBadge } from "@/components/status-badge";
 import { apiClient } from "@/lib/client-api";
 import type { WaSession, WaStatus } from "@/lib/types";
@@ -182,9 +183,10 @@ export default function MirrorPage() {
           {agents.length === 0 && (
             <Link
               href="/dashboard/human-agents"
-              className="text-[var(--color-brand)] hover:underline"
+              className="inline-flex items-center gap-0.5 text-[var(--color-brand)] hover:underline"
             >
               {t("addAgentFirst")}
+              <Glyph name="chevronRight" size={12} />
             </Link>
           )}
         </p>

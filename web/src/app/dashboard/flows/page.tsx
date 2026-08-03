@@ -1,5 +1,6 @@
 "use client";
 
+import { Glyph } from "@/components/glyphs";
 import { StatusBadge } from "@/components/status-badge";
 import { apiClient } from "@/lib/client-api";
 import type { WaSession, WaStatus } from "@/lib/types";
@@ -174,7 +175,10 @@ export default function FlowsPage() {
               >
                 {f.enabled ? tc("enabled") : tc("disabled")}
               </span>
-              <span className="text-[var(--color-brand)]">→</span>
+              <Glyph
+                name="chevronRight"
+                className="text-[var(--color-muted)]"
+              />
             </Link>
           ))}
         </div>

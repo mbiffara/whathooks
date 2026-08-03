@@ -1,4 +1,5 @@
 import { AdminMessageCap } from "@/components/admin-message-cap";
+import { Glyph } from "@/components/glyphs";
 import { AdminOrgSwitch } from "@/components/admin-org-switch";
 import { AdminWelcomeEmail } from "@/components/admin-welcome-email";
 import { StatusBadge } from "@/components/status-badge";
@@ -32,9 +33,10 @@ export default async function AdminOrgPage({
       <div>
         <Link
           href="/admin"
-          className="mb-2 inline-block text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+          className="mb-2 inline-flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
         >
-          ← Admin Console
+          <Glyph name="chevronLeft" size={14} />
+          Admin Console
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">{org.name}</h1>

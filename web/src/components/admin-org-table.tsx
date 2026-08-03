@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminWelcomeEmail } from "@/components/admin-welcome-email";
+import { Glyph } from "@/components/glyphs";
 import type { AdminOrg, Plan } from "@/lib/types";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -149,9 +150,10 @@ export function AdminOrgTable({ orgs }: { orgs: AdminOrg[] }) {
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/admin/organizations/${o.id}`}
-                    className="text-sm text-[var(--color-brand)]"
+                    className="inline-flex items-center gap-0.5 text-sm text-[var(--color-brand)]"
                   >
-                    View →
+                    View
+                    <Glyph name="chevronRight" size={14} />
                   </Link>
                 </td>
               </tr>

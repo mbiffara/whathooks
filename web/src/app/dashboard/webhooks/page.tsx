@@ -1,5 +1,6 @@
 "use client";
 
+import { Glyph } from "@/components/glyphs";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import {
   MappingEditor,
@@ -248,9 +249,10 @@ export default function WebhooksPage() {
                   </button>
                   <Link
                     href={`/dashboard/webhooks/${h.id}`}
-                    className="text-sm text-[var(--color-brand)]"
+                    className="inline-flex items-center gap-0.5 text-sm text-[var(--color-brand)]"
                   >
-                    {t("view")} →
+                    {t("view")}
+                    <Glyph name="chevronRight" size={14} />
                   </Link>
                 </div>
               </div>

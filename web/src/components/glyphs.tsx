@@ -1,0 +1,46 @@
+import type { ReactNode } from "react";
+
+/**
+ * Small stroke glyphs for navigation affordances (chevrons, panel toggles),
+ * drawn in the same style as the sidebar icons (currentColor, 1.8 stroke).
+ * Use these instead of text arrows ("→", "«") in app chrome.
+ */
+export type GlyphName =
+  | "chevronRight"
+  | "chevronLeft"
+  | "panelCollapse"
+  | "panelExpand";
+
+const PATHS: Record<GlyphName, ReactNode> = {
+  chevronRight: <path d="M9 6l6 6-6 6" />,
+  chevronLeft: <path d="M15 6l-6 6 6 6" />,
+  panelCollapse: <path d="M11 7l-5 5 5 5M18 7l-5 5 5 5" />,
+  panelExpand: <path d="M13 7l5 5-5 5M6 7l5 5-5 5" />,
+};
+
+export function Glyph({
+  name,
+  size = 16,
+  className,
+}: {
+  name: GlyphName;
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={className}
+    >
+      {PATHS[name]}
+    </svg>
+  );
+}

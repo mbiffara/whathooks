@@ -1,5 +1,6 @@
 "use client";
 
+import { Glyph } from "@/components/glyphs";
 import { StatusBadge } from "@/components/status-badge";
 import { apiClient } from "@/lib/client-api";
 import type { Agent, WaSessionDetail } from "@/lib/types";
@@ -182,8 +183,9 @@ export default function SessionDetailPage() {
         <div>
           <button
             onClick={() => router.push("/dashboard/sessions")}
-            className="mb-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+            className="mb-2 inline-flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
           >
+            <Glyph name="chevronLeft" size={14} />
             {t("back")}
           </button>
           {renaming ? (

@@ -49,6 +49,7 @@ function MessagesInbox() {
   const tStatus = useTranslations("dash.status");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
+  const isPlatformAdmin = auth?.user?.role === "ADMIN";
 
   const [sessions, setSessions] = useState<WaSession[]>([]);
   const [sessionFilter, setSessionFilter] = useState<string>("");
@@ -441,6 +442,23 @@ function MessagesInbox() {
     }
   }
 
+  // Platform-admin testing tool: the API also clears flow/mirror state so
+  // the next inbound message starts the automation from scratch.
+  async function deleteConversation() {
+    if (!token || !selectedConv || updatingConv) return;
+    if (!confirm(t("confirmDelete"))) return;
+    setUpdatingConv(true);
+    try {
+      await apiClient(`/conversations/${selectedConv.id}`, token, {
+        method: "DELETE",
+      });
+      setConversations((prev) => prev.filter((c) => c.id !== selectedConv.id));
+      setSelectedId(null);
+    } finally {
+      setUpdatingConv(false);
+    }
+  }
+
   function openNewConversation() {
     const connected = sessions.filter((s) => s.status === "CONNECTED");
     setNewConvSession(
@@ -826,6 +844,15 @@ function MessagesInbox() {
                     ? t("reopen")
                     : t("resolve")}
                 </button>
+                {isPlatformAdmin && (
+                  <button
+                    onClick={deleteConversation}
+                    disabled={updatingConv}
+                    className="btn-danger text-xs disabled:opacity-50"
+                  >
+                    {t("deleteConversation")}
+                  </button>
+                )}
               </div>
 
               {selectedConv.agent && (

@@ -206,6 +206,36 @@ export class ConversationsService {
     return { ok: true, agentPaused: paused };
   }
 
+  /**
+   * Platform-admin testing tool: drop the thread plus everything that gives
+   * it routing memory (flow state, mirror relay), so the next inbound
+   * message starts from scratch. FlowRun rows are kept as audit history;
+   * the mirror WhatsApp group and the chat on the phone are untouched.
+   */
+  async remove(organizationId: string, id: string) {
+    const c = await this.requireConversation(organizationId, id);
+    // Storage objects don't cascade — collect keys first, delete after.
+    const assets = await this.prisma.mediaAsset.findMany({
+      where: { message: { conversationId: id } },
+      select: { storageKey: true },
+    });
+    await this.prisma.$transaction([
+      // Plain-string ref (no FK) — not covered by the cascade below.
+      this.prisma.flowConversationState.deleteMany({
+        where: { conversationId: id },
+      }),
+      // The relay owns a mirrored conversation before the flow even runs.
+      this.prisma.mirrorThread.deleteMany({
+        where: { sessionId: c.sessionId, leadJid: c.remoteJid },
+      }),
+      this.prisma.conversation.delete({ where: { id } }), // messages cascade
+    ]);
+    for (const a of assets) {
+      await this.media.delete(a.storageKey).catch(() => undefined);
+    }
+    return { ok: true };
+  }
+
   async messages(
     organizationId: string,
     id: string,

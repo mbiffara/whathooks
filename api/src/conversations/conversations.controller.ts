@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -25,9 +26,11 @@ import {
 } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
+import { RolesGuard } from '../auth/roles.guard';
 import { SessionAccessService } from '../auth/session-access.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
 import { ConversationsService } from './conversations.service';
 
 class SendDto {
@@ -206,6 +209,14 @@ export class ConversationsController {
         allowed,
       ),
     );
+  }
+
+  /** Platform-admin testing tool — resets flow/relay state with the thread. */
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.conversations.remove(this.orgOf(user), id);
   }
 
   @Post(':id/messages')

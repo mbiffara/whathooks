@@ -499,6 +499,7 @@
         "contact": "👤 Contact",
         "unsupported": "Unsupported message",
         "note": "Note",
+        "mirror": "Mirror",
         "notDelivered": "Not delivered"
       },
       "searchPlaceholder": "Search name, number, or text…",

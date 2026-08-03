@@ -499,6 +499,7 @@
         "contact": "👤 Contacto",
         "unsupported": "Mensaje no compatible",
         "note": "Nota",
+        "mirror": "Mirror",
         "notDelivered": "No entregado"
       },
       "searchPlaceholder": "Busca nombre, número o texto…",

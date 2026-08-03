@@ -36,6 +36,11 @@ function senderLabel(
       return `🤖 ${message.agentName ?? t("agent")}`;
     case "API":
       return "⚙ API";
+    case "MIRROR":
+      // Relayed by the human agent from their mirror group.
+      return message.senderName
+        ? `👥 ${message.senderName} · ${t("mirror")}`
+        : `👥 ${t("mirror")}`;
     case "HUMAN":
       // Attribution: which teammate replied (older rows predate tracking).
       return message.sentByName ?? null;

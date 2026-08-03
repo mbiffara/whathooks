@@ -753,7 +753,20 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       );
       return;
     }
-    await this.relayMirrorMessage(sessionId, thread.leadJid, ctx, '');
+    // Attribute the lead's stored copy to the human agent behind the group.
+    const human = thread.humanAgentId
+      ? await this.prisma.humanAgent.findUnique({
+          where: { id: thread.humanAgentId },
+          select: { name: true },
+        })
+      : null;
+    await this.relayMirrorMessage(
+      sessionId,
+      thread.leadJid,
+      ctx,
+      '',
+      human?.name ?? null,
+    );
   }
 
   /** Lead → group: forward a lead's DM into their mirror group. */
@@ -807,7 +820,11 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     return thread;
   }
 
-  /** Send a mirrored message: media re-uploaded, text prefixed, rest stubbed. */
+  /**
+   * Send a mirrored message: media re-uploaded, text prefixed, rest stubbed.
+   * `senderName` attributes the stored copy (e.g. the human agent's name on
+   * a rep → lead relay) so the inbox doesn't label it as a plain API send.
+   */
   async relayMirrorMessage(
     sessionId: string,
     to: string,
@@ -817,7 +834,9 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       media?: { buffer: Buffer; mimeType: string; fileName?: string | null };
     },
     prefix: string,
+    senderName?: string | null,
   ): Promise<void> {
+    const opts = { source: MessageSource.MIRROR, senderName };
     if (m.media) {
       await this.sendMedia(
         sessionId,
@@ -828,14 +847,12 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
           fileName: m.media.fileName ?? undefined,
         },
         m.text ? `${prefix}${m.text}` : prefix || undefined,
-        { source: MessageSource.API },
+        opts,
       );
       return;
     }
     if (m.text) {
-      await this.sendText(sessionId, to, `${prefix}${m.text}`, {
-        source: MessageSource.API,
-      });
+      await this.sendText(sessionId, to, `${prefix}${m.text}`, opts);
       return;
     }
     // Location/contact/unknown without a downloadable payload.
@@ -843,7 +860,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       sessionId,
       to,
       `${prefix}[${m.type.toLowerCase()}]`,
-      { source: MessageSource.API },
+      opts,
     );
   }
 
@@ -1159,6 +1176,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       source?: MessageSource;
       agentId?: string;
       sentByUserId?: string;
+      senderName?: string | null;
       mentions?: string[];
     } = {},
   ): Promise<{ waMessageId: string | null; messageId: string }> {
@@ -1181,6 +1199,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       source: opts.source ?? MessageSource.HUMAN,
       sentByUserId: opts.sentByUserId,
       agentId: opts.agentId,
+      senderName: opts.senderName ?? null,
       type: MessageType.TEXT,
       text,
       waMessageId: sent?.key?.id ?? null,
@@ -1201,6 +1220,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       sentByUserId?: string;
       source?: MessageSource;
       agentId?: string;
+      senderName?: string | null;
     } = {},
   ): Promise<{
     waMessageId: string | null;
@@ -1225,6 +1245,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       source: opts.source ?? MessageSource.HUMAN,
       sentByUserId: opts.sentByUserId,
       agentId: opts.agentId,
+      senderName: opts.senderName ?? null,
       type: kindToType(kind),
       text: caption ?? null,
       waMessageId: sent?.key?.id ?? null,

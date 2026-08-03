@@ -19,7 +19,13 @@ export interface ChatMedia {
   size: number | null;
 }
 
-export type MessageSource = "CONTACT" | "HUMAN" | "API" | "AGENT" | "NOTE";
+export type MessageSource =
+  | "CONTACT"
+  | "HUMAN"
+  | "API"
+  | "AGENT"
+  | "MIRROR"
+  | "NOTE";
 
 export interface ConversationTag {
   id: string;

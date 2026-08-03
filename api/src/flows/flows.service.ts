@@ -14,6 +14,22 @@ import {
   validateGraph,
 } from './flow-graph';
 import { FlowTemplate, buildTemplate } from './flow-templates';
+import type { GraphError } from './flow-graph';
+
+/**
+ * 400 whose body carries the structured findings (`graphErrors`) so the
+ * editor can render them in the user's language; `message` stays the
+ * joined English text for raw API consumers.
+ */
+function invalidGraph(errors: GraphError[], prefix = '') {
+  const shown = errors.slice(0, 8);
+  return new BadRequestException({
+    statusCode: 400,
+    error: 'Bad Request',
+    message: prefix + shown.map((e) => e.message).join('; '),
+    graphErrors: shown,
+  });
+}
 
 /** CRUD for Flows (platform-admin experiment). Org-scoped like the rest. */
 @Injectable()
@@ -104,9 +120,7 @@ export class FlowsService {
     });
     if (holder && holder.id !== id) {
       if (!force) {
-        throw new ConflictException(
-          `SESSION_TAKEN:${holder.name}`,
-        );
+        throw new ConflictException(`SESSION_TAKEN:${holder.name}`);
       }
       await this.prisma.flow.update({
         where: { id: holder.id },
@@ -141,7 +155,7 @@ export class FlowsService {
     const refs = await this.refsFor(organizationId);
     const errors = validateGraph(graph, refs);
     if (errors.length > 0) {
-      throw new BadRequestException(errors.slice(0, 8).join('; '));
+      throw invalidGraph(errors);
     }
     const updated = await this.prisma.flow.update({
       where: { id },
@@ -167,9 +181,7 @@ export class FlowsService {
         await this.refsFor(organizationId),
       );
       if (errors.length > 0) {
-        throw new BadRequestException(
-          `Fix the flow before enabling: ${errors.slice(0, 5).join('; ')}`,
-        );
+        throw invalidGraph(errors, 'Fix the flow before enabling: ');
       }
     }
     const updated = await this.prisma.flow.update({

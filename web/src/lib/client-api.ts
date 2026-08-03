@@ -8,6 +8,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    /** Parsed JSON error body, for endpoints that return structured details. */
+    public readonly body?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -40,15 +42,17 @@ export async function apiClient<T = unknown>(
   });
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
+    let body: unknown;
     try {
-      const body = await res.json();
-      message = body.message ?? message;
+      body = await res.json();
+      message = (body as { message?: string }).message ?? message;
     } catch {
       /* ignore */
     }
     throw new ApiError(
       Array.isArray(message) ? message.join(", ") : message,
       res.status,
+      body,
     );
   }
   if (res.status === 204) return undefined as T;

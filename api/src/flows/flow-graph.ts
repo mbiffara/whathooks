@@ -61,6 +61,23 @@ function isStr(v: unknown, max = 200): v is string {
   return typeof v === 'string' && v.length > 0 && v.length <= max;
 }
 
+/** Optional field: absent or empty means "use the default" — always valid. */
+function isOptStr(v: unknown, max: number): boolean {
+  return v === undefined || v === null || v === '' || isStr(v, max);
+}
+
+/**
+ * One validation finding. `code` + `params` let the web app render the
+ * error in the user's language; `message` is the English fallback shown
+ * to raw API consumers (and for codes a stale client doesn't know).
+ */
+export interface GraphError {
+  code: string;
+  nodeId?: string;
+  params?: Record<string, string | number>;
+  message: string;
+}
+
 /** A minimal default graph for newly created flows. */
 export function defaultGraph(): FlowGraph {
   return {
@@ -85,13 +102,19 @@ export function intentsOf(node: FlowNode): FlowIntent[] {
 
 /**
  * Validate a graph against structural rules and org-owned references.
- * Returns human-readable errors; empty array = valid.
+ * Empty array = valid.
  */
 export function validateGraph(
   graph: unknown,
   refs: FlowGraphRefs,
-): string[] {
-  const errors: string[] = [];
+): GraphError[] {
+  const errors: GraphError[] = [];
+  const push = (
+    code: string,
+    message: string,
+    nodeId?: string,
+    params?: Record<string, string | number>,
+  ) => errors.push({ code, message, nodeId, params });
   const g = graph as FlowGraph;
   if (
     !g ||
@@ -99,25 +122,39 @@ export function validateGraph(
     !Array.isArray(g.nodes) ||
     !Array.isArray(g.edges)
   ) {
-    return ['Graph must be an object with nodes[] and edges[]'];
+    push('graphShape', 'Graph must be an object with nodes[] and edges[]');
+    return errors;
   }
-  if (g.nodes.length === 0) return ['Graph has no nodes'];
+  if (g.nodes.length === 0) {
+    push('graphEmpty', 'Graph has no nodes');
+    return errors;
+  }
   if (g.nodes.length > MAX_NODES) {
-    return [`Graph exceeds ${MAX_NODES} nodes`];
+    push('graphTooBig', `Graph exceeds ${MAX_NODES} nodes`, undefined, {
+      max: MAX_NODES,
+    });
+    return errors;
   }
 
   const ids = new Set<string>();
   const byId = new Map<string, FlowNode>();
   for (const n of g.nodes) {
     if (!n || typeof n.id !== 'string' || !n.id) {
-      errors.push('Every node needs a string id');
+      push('nodeIdMissing', 'Every node needs a string id');
       continue;
     }
-    if (ids.has(n.id)) errors.push(`Duplicate node id "${n.id}"`);
+    if (ids.has(n.id)) {
+      push('nodeIdDupe', `Duplicate node id "${n.id}"`, n.id, { id: n.id });
+    }
     ids.add(n.id);
     byId.set(n.id, n);
     if (!FLOW_NODE_TYPES.includes(n.type)) {
-      errors.push(`Node "${n.id}": unknown type "${String(n.type)}"`);
+      push(
+        'nodeUnknownType',
+        `Node "${n.id}": unknown type "${String(n.type)}"`,
+        n.id,
+        { type: String(n.type) },
+      );
       continue;
     }
     if (
@@ -125,7 +162,7 @@ export function validateGraph(
       typeof n.position.x !== 'number' ||
       typeof n.position.y !== 'number'
     ) {
-      errors.push(`Node "${n.id}": missing position`);
+      push('nodePosition', `Node "${n.id}": missing position`, n.id);
     }
     const d = n.data ?? {};
     switch (n.type) {
@@ -139,13 +176,21 @@ export function validateGraph(
           kw.length > 20 ||
           !kw.every((k) => isStr(k, 80))
         ) {
-          errors.push(`Node "${n.id}": keywords must be 1–20 short strings`);
+          push(
+            'keywordList',
+            `Node "${n.id}": keywords must be 1–20 short strings`,
+            n.id,
+          );
         }
         break;
       }
       case 'intent': {
-        if (!isStr(d.agentId, 64) || !refs.agentIds.has(d.agentId as string)) {
-          errors.push(`Node "${n.id}": pick an AI agent for classification`);
+        if (!isStr(d.agentId, 64) || !refs.agentIds.has(d.agentId)) {
+          push(
+            'intentAgent',
+            `Node "${n.id}": pick an AI agent for classification`,
+            n.id,
+          );
         }
         const intents = d.intents;
         if (
@@ -153,39 +198,54 @@ export function validateGraph(
           intents.length === 0 ||
           intents.length > 8
         ) {
-          errors.push(`Node "${n.id}": define 1–8 intents`);
+          push('intentCount', `Node "${n.id}": define 1–8 intents`, n.id);
           break;
         }
         const keys = new Set<string>();
         for (const it of intents as FlowIntent[]) {
           if (!it || !INTENT_KEY.test(it.key ?? '')) {
-            errors.push(
+            push(
+              'intentKeySlug',
               `Node "${n.id}": intent keys must be short lowercase slugs`,
+              n.id,
             );
           } else if (keys.has(it.key)) {
-            errors.push(`Node "${n.id}": duplicate intent key "${it.key}"`);
+            push(
+              'intentKeyDupe',
+              `Node "${n.id}": duplicate intent key "${it.key}"`,
+              n.id,
+              { key: it.key },
+            );
           } else if (it.key === 'fallback') {
-            errors.push(`Node "${n.id}": "fallback" is a reserved intent key`);
+            push(
+              'intentKeyReserved',
+              `Node "${n.id}": "fallback" is a reserved intent key`,
+              n.id,
+            );
           } else {
             keys.add(it.key);
           }
           if (!isStr(it.label, 80)) {
-            errors.push(`Node "${n.id}": every intent needs a label`);
+            push(
+              'intentLabel',
+              `Node "${n.id}": every intent needs a label`,
+              n.id,
+            );
           }
         }
         break;
       }
       case 'agentReply':
-        if (!isStr(d.agentId, 64) || !refs.agentIds.has(d.agentId as string)) {
-          errors.push(`Node "${n.id}": pick an AI agent`);
+        if (!isStr(d.agentId, 64) || !refs.agentIds.has(d.agentId)) {
+          push('agentMissing', `Node "${n.id}": pick an AI agent`, n.id);
         }
         break;
       case 'assignHuman':
         if (
           !isStr(d.humanAgentId, 64) ||
-          !refs.humanAgentIds.has(d.humanAgentId as string)
+          !refs.humanAgentIds.has(d.humanAgentId)
         ) {
-          errors.push(`Node "${n.id}": pick a human agent`);
+          push('humanMissing', `Node "${n.id}": pick a human agent`, n.id);
         }
         break;
       case 'roundRobin': {
@@ -194,75 +254,109 @@ export function validateGraph(
           !Array.isArray(list) ||
           list.length === 0 ||
           list.length > 10 ||
-          !list.every(
-            (x) => typeof x === 'string' && refs.humanAgentIds.has(x),
-          )
+          !list.every((x) => typeof x === 'string' && refs.humanAgentIds.has(x))
         ) {
-          errors.push(`Node "${n.id}": pick 1–10 human agents`);
+          push(
+            'roundRobinAgents',
+            `Node "${n.id}": pick 1–10 human agents`,
+            n.id,
+          );
         }
         break;
       }
       case 'webhook':
-        if (
-          !isStr(d.webhookId, 64) ||
-          !refs.webhookIds.has(d.webhookId as string)
-        ) {
-          errors.push(`Node "${n.id}": pick a webhook`);
+        if (!isStr(d.webhookId, 64) || !refs.webhookIds.has(d.webhookId)) {
+          push('webhookMissing', `Node "${n.id}": pick a webhook`, n.id);
         }
         break;
       case 'tagConversation':
-        if (!isStr(d.tagId, 64) || !refs.tagIds.has(d.tagId as string)) {
-          errors.push(`Node "${n.id}": pick a tag`);
+        if (!isStr(d.tagId, 64) || !refs.tagIds.has(d.tagId)) {
+          push('tagMissing', `Node "${n.id}": pick a tag`, n.id);
         }
         break;
       case 'assignTeammate':
-        if (!isStr(d.userId, 64) || !refs.memberIds.has(d.userId as string)) {
-          errors.push(`Node "${n.id}": pick a team member`);
+        if (!isStr(d.userId, 64) || !refs.memberIds.has(d.userId)) {
+          push('teammateMissing', `Node "${n.id}": pick a team member`, n.id);
         }
         break;
     }
-    // Shared optional fields on assign nodes
+    // Shared optional fields on assign nodes: empty means "use the default".
     if (n.type === 'assignHuman' || n.type === 'roundRobin') {
-      if (d.groupPrefix !== undefined && !isStr(d.groupPrefix, 40)) {
-        errors.push(`Node "${n.id}": group prefix must be 1–40 characters`);
+      if (!isOptStr(d.groupPrefix, 40)) {
+        push(
+          'groupPrefixLength',
+          `Node "${n.id}": group prefix can have up to 40 characters`,
+          n.id,
+          { max: 40 },
+        );
       }
-      if (d.farewellText !== undefined && !isStr(d.farewellText, 500)) {
-        errors.push(`Node "${n.id}": farewell text too long (max 500)`);
+      if (!isOptStr(d.farewellText, 500)) {
+        push(
+          'farewellTooLong',
+          `Node "${n.id}": farewell text too long (max 500)`,
+          n.id,
+          { max: 500 },
+        );
       }
     }
   }
 
   const triggers = g.nodes.filter((n) => n.type === 'trigger');
   if (triggers.length !== 1) {
-    errors.push('The graph needs exactly one trigger node');
+    push('triggerCount', 'The graph needs exactly one trigger node');
   }
 
   const seenHandles = new Set<string>();
   for (const e of g.edges) {
     if (!e || typeof e.source !== 'string' || typeof e.target !== 'string') {
-      errors.push('Every edge needs source and target');
+      push('edgeShape', 'Every edge needs source and target');
       continue;
     }
     const src = byId.get(e.source);
-    if (!src) errors.push(`Edge from unknown node "${e.source}"`);
-    if (!byId.has(e.target)) errors.push(`Edge to unknown node "${e.target}"`);
+    if (!src) {
+      push(
+        'edgeUnknownSource',
+        `Edge from unknown node "${e.source}"`,
+        undefined,
+        { id: e.source },
+      );
+    }
+    if (!byId.has(e.target)) {
+      push(
+        'edgeUnknownTarget',
+        `Edge to unknown node "${e.target}"`,
+        undefined,
+        { id: e.target },
+      );
+    }
     if (!src) continue;
     const handle = e.sourceHandle ?? 'out';
     const dupeKey = `${e.source}::${handle}`;
     if (seenHandles.has(dupeKey)) {
-      errors.push(
+      push(
+        'edgeDupeHandle',
         `Node "${e.source}": two edges leave the same output "${handle}"`,
+        e.source,
+        { handle },
       );
     }
     seenHandles.add(dupeKey);
     if (TERMINAL_TYPES.includes(src.type)) {
-      errors.push(`Node "${e.source}" (${src.type}) cannot have outputs`);
+      push(
+        'edgeFromTerminal',
+        `Node "${e.source}" (${src.type}) cannot have outputs`,
+        e.source,
+        { type: src.type },
+      );
       continue;
     }
     const allowed = allowedHandles(src);
     if (!allowed.includes(handle)) {
-      errors.push(
+      push(
+        'edgeBadHandle',
         `Node "${e.source}": output "${handle}" is not one of ${allowed.join(', ')}`,
+        e.source,
+        { handle, allowed: allowed.join(', ') },
       );
     }
   }

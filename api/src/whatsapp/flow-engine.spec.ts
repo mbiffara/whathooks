@@ -1,9 +1,5 @@
 import { FlowEngineService } from './flow-engine.service';
-import {
-  FlowGraph,
-  defaultGraph,
-  validateGraph,
-} from '../flows/flow-graph';
+import { FlowGraph, defaultGraph, validateGraph } from '../flows/flow-graph';
 
 // ---- graph fixtures --------------------------------------------------------
 
@@ -32,7 +28,12 @@ function edge(
   target: string,
   sourceHandle?: string,
 ): FlowGraph['edges'][number] {
-  return { id: `${source}-${sourceHandle}-${target}`, source, target, sourceHandle };
+  return {
+    id: `${source}-${sourceHandle}-${target}`,
+    source,
+    target,
+    sourceHandle,
+  };
 }
 
 // ---- validation ------------------------------------------------------------
@@ -43,10 +44,28 @@ describe('validateGraph', () => {
   });
 
   it('requires exactly one trigger', () => {
-    const g: FlowGraph = { nodes: [node('a', 'keyword', { keywords: ['x'] })], edges: [] };
-    expect(validateGraph(g, REFS)).toContain(
+    const g: FlowGraph = {
+      nodes: [node('a', 'keyword', { keywords: ['x'] })],
+      edges: [],
+    };
+    expect(validateGraph(g, REFS).map((e) => e.message)).toContain(
       'The graph needs exactly one trigger node',
     );
+  });
+
+  it('treats empty optional assign fields as absent', () => {
+    const g: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('a', 'assignHuman', {
+          humanAgentId: 'ha1',
+          groupPrefix: '',
+          farewellText: '',
+        }),
+      ],
+      edges: [edge('t', 'a')],
+    };
+    expect(validateGraph(g, REFS)).toEqual([]);
   });
 
   it('rejects unknown references and bad handles', () => {
@@ -56,14 +75,13 @@ describe('validateGraph', () => {
         node('k', 'keyword', { keywords: ['hola'] }),
         node('r', 'agentReply', { agentId: 'nope' }),
       ],
-      edges: [
-        edge('t', 'k'),
-        edge('k', 'r', 'maybe'),
-      ],
+      edges: [edge('t', 'k'), edge('k', 'r', 'maybe')],
     };
     const errors = validateGraph(g, REFS);
-    expect(errors.some((e) => e.includes('pick an AI agent'))).toBe(true);
-    expect(errors.some((e) => e.includes('"maybe"'))).toBe(true);
+    expect(errors.some((e) => e.message.includes('pick an AI agent'))).toBe(
+      true,
+    );
+    expect(errors.some((e) => e.message.includes('"maybe"'))).toBe(true);
   });
 
   it('rejects outputs on terminal nodes and duplicate handles', () => {
@@ -81,8 +99,12 @@ describe('validateGraph', () => {
       ],
     };
     const errors = validateGraph(g, REFS);
-    expect(errors.some((e) => e.includes('cannot have outputs'))).toBe(true);
-    expect(errors.some((e) => e.includes('two edges leave'))).toBe(true);
+    expect(errors.some((e) => e.message.includes('cannot have outputs'))).toBe(
+      true,
+    );
+    expect(errors.some((e) => e.message.includes('two edges leave'))).toBe(
+      true,
+    );
   });
 
   it('validates intent nodes (reserved fallback key, dupes)', () => {
@@ -101,8 +123,10 @@ describe('validateGraph', () => {
       edges: [edge('t', 'i')],
     };
     const errors = validateGraph(g, REFS);
-    expect(errors.some((e) => e.includes('reserved'))).toBe(true);
-    expect(errors.some((e) => e.includes('duplicate intent key'))).toBe(true);
+    expect(errors.some((e) => e.message.includes('reserved'))).toBe(true);
+    expect(errors.some((e) => e.message.includes('duplicate intent key'))).toBe(
+      true,
+    );
   });
 });
 
@@ -246,7 +270,7 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'k'), edge('k', 'tag', 'yes')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX as never, t.manager as never);
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
     expect(t.updates).toHaveLength(1); // tag connected via the yes branch
   });
 
@@ -268,7 +292,7 @@ describe('FlowEngineService.run', () => {
         edge('i', 'r', 'fallback'),
       ],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX as never, t.manager as never);
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
     expect(t.created).toHaveLength(0);
     expect(t.agentReplies).toHaveLength(1);
   });
@@ -290,7 +314,7 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'i'), edge('i', 'a', 'sales')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX as never, t.manager as never);
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
     expect(t.created[0]).toMatchObject({
       leadJid: CTX.remoteJid,
       agent: { id: 'ha1', number: '555ha1' },
@@ -317,11 +341,21 @@ describe('FlowEngineService.run', () => {
       edges: [edge('t', 'rr')],
     };
     const first = makeEngine({ counterValues: [1] });
-    await first.engine.run({ id: 'f1', graph }, 's1', CTX as never, first.manager as never);
+    await first.engine.run(
+      { id: 'f1', graph },
+      's1',
+      CTX,
+      first.manager as never,
+    );
     expect(first.created[0]).toMatchObject({ agent: { id: 'ha1' } });
 
     const second = makeEngine({ counterValues: [2] });
-    await second.engine.run({ id: 'f1', graph }, 's1', CTX as never, second.manager as never);
+    await second.engine.run(
+      { id: 'f1', graph },
+      's1',
+      CTX,
+      second.manager as never,
+    );
     expect(second.created[0]).toMatchObject({ agent: { id: 'ha2' } });
   });
 
@@ -339,7 +373,7 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'r'), edge('r', 'a', 'onHandoff')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX as never, t.manager as never);
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
     // pauseOnHandoff false because the edge exists
     expect((t.agentReplies[0] as { args: unknown[] }).args[4]).toEqual({
       pauseOnHandoff: false,
@@ -351,9 +385,9 @@ describe('FlowEngineService.run', () => {
     const t = makeEngine({});
     t.prisma.flowConversationState.findUnique.mockResolvedValue({
       status: 'HANDED_OFF',
-    } as never);
+    });
     const graph = defaultGraph();
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX as never, t.manager as never);
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
     expect(t.agentReplies).toHaveLength(0);
   });
 
@@ -367,7 +401,7 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'w'), edge('w', 'tag'), edge('tag', 'w')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX as never, t.manager as never);
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
     expect(t.dispatched.length + t.updates.length).toBeLessThanOrEqual(20);
     expect(t.dispatched.length).toBeGreaterThan(3); // it did loop, then stopped
   });

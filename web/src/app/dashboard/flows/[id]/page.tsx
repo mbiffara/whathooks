@@ -15,7 +15,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { apiClient } from "@/lib/client-api";
+import { ApiError, apiClient } from "@/lib/client-api";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -40,6 +40,56 @@ import {
 
 type FlowNodeData = Record<string, unknown>;
 type EditorNode = Node<FlowNodeData>;
+
+/** Structured validation finding from the API (flow-graph.ts). */
+type GraphErrorEntry = {
+  code: string;
+  nodeId?: string;
+  params?: Record<string, string | number>;
+  message: string; // English fallback for codes we don't know
+};
+
+/** Codes with a `dash.flows.validation.*` translation. */
+const VALIDATION_CODES = new Set([
+  "graphShape",
+  "graphEmpty",
+  "graphTooBig",
+  "nodeIdMissing",
+  "nodeIdDupe",
+  "nodeUnknownType",
+  "nodePosition",
+  "keywordList",
+  "intentAgent",
+  "intentCount",
+  "intentKeySlug",
+  "intentKeyDupe",
+  "intentKeyReserved",
+  "intentLabel",
+  "agentMissing",
+  "humanMissing",
+  "roundRobinAgents",
+  "webhookMissing",
+  "tagMissing",
+  "teammateMissing",
+  "groupPrefixLength",
+  "farewellTooLong",
+  "triggerCount",
+  "edgeShape",
+  "edgeUnknownSource",
+  "edgeUnknownTarget",
+  "edgeDupeHandle",
+  "edgeFromTerminal",
+  "edgeBadHandle",
+]);
+
+/** The structured findings of a 400 graph-validation response, if any. */
+function graphErrorsOf(e: unknown): GraphErrorEntry[] | null {
+  if (!(e instanceof ApiError) || !e.body || typeof e.body !== "object") {
+    return null;
+  }
+  const ge = (e.body as { graphErrors?: unknown }).graphErrors;
+  return Array.isArray(ge) && ge.length > 0 ? (ge as GraphErrorEntry[]) : null;
+}
 
 const RefsContext = createContext<FlowRefs | null>(null);
 const HighlightContext = createContext<Set<string>>(new Set());
@@ -129,6 +179,9 @@ export default function FlowEditorPage() {
   const [highlight, setHighlight] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [graphErrors, setGraphErrors] = useState<GraphErrorEntry[] | null>(
+    null,
+  );
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -220,6 +273,7 @@ export default function FlowEditorPage() {
     if (!token || busy) return;
     setBusy(true);
     setError(null);
+    setGraphErrors(null);
     try {
       await apiClient(`/flows/${id}/graph`, token, {
         method: "PUT",
@@ -242,7 +296,9 @@ export default function FlowEditorPage() {
       });
       setDirty(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+      const ge = graphErrorsOf(e);
+      if (ge) setGraphErrors(ge);
+      else setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     } finally {
       setBusy(false);
     }
@@ -252,6 +308,7 @@ export default function FlowEditorPage() {
     if (!token || busy) return;
     setBusy(true);
     setError(null);
+    setGraphErrors(null);
     try {
       const updated = await apiClient<{ enabled: boolean }>(
         `/flows/${id}`,
@@ -260,7 +317,9 @@ export default function FlowEditorPage() {
       );
       setEnabled(updated.enabled);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+      const ge = graphErrorsOf(e);
+      if (ge) setGraphErrors(ge);
+      else setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     } finally {
       setBusy(false);
     }
@@ -313,6 +372,20 @@ export default function FlowEditorPage() {
     [nodes, selectedId],
   );
 
+  /** Localized display name for a node referenced by a validation error. */
+  function nodeLabelOf(nodeId: string): string {
+    const n = nodes.find((x) => x.id === nodeId);
+    if (!n) return nodeId;
+    const nt = n.type as FlowNodeType;
+    return `${NODE_ICONS[nt]} ${t(`nodes.${nt}.title`)}`;
+  }
+
+  /** Localized message for a validation error; English for unknown codes. */
+  function validationTextOf(ge: GraphErrorEntry): string {
+    if (!VALIDATION_CODES.has(ge.code)) return ge.message;
+    return t(`validation.${ge.code}`, ge.params ?? {});
+  }
+
   const loadRuns = useCallback(async () => {
     if (!token) return;
     try {
@@ -354,11 +427,6 @@ export default function FlowEditorPage() {
               </option>
             ))}
           </select>
-          {error && (
-            <span className="max-w-md truncate text-xs text-[var(--color-danger)]">
-              {error}
-            </span>
-          )}
           <div className="ml-auto flex items-center gap-2">
             {dirty && (
               <span className="text-xs text-[var(--color-warning)]">
@@ -409,6 +477,48 @@ export default function FlowEditorPage() {
             </button>
           </div>
         </div>
+
+        {(error || graphErrors) && (
+          <div className="flex items-start gap-3 border-b border-[var(--color-border)] bg-[var(--color-danger-bg)] px-4 py-2.5 text-xs text-[var(--color-danger)]">
+            <div className="min-w-0 flex-1">
+              {graphErrors ? (
+                <>
+                  <div className="font-semibold">{t("validationTitle")}</div>
+                  <ul className="mt-1 flex flex-col gap-0.5">
+                    {graphErrors.map((ge, i) => (
+                      <li key={i} className="flex flex-wrap items-baseline gap-1">
+                        {ge.nodeId && (
+                          <button
+                            onClick={() => {
+                              setRunsOpen(false);
+                              setSelectedId(ge.nodeId ?? null);
+                            }}
+                            className="font-medium underline decoration-dotted underline-offset-2 hover:opacity-75"
+                          >
+                            {nodeLabelOf(ge.nodeId)}
+                          </button>
+                        )}
+                        <span>{validationTextOf(ge)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <span>{error}</span>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setError(null);
+                setGraphErrors(null);
+              }}
+              aria-label={tc("close")}
+              className="shrink-0 rounded px-1 hover:opacity-75"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         <div className="flex min-h-0 flex-1">
           <div className="flex w-44 shrink-0 flex-col gap-1.5 overflow-y-auto border-r border-[var(--color-border)] p-3">
@@ -529,6 +639,39 @@ export default function FlowEditorPage() {
 
 // ---- side panel ------------------------------------------------------------
 
+// Keeps its own raw text (remounted per node via key): deriving the value
+// from the parsed array would drop the empty line a trailing Enter creates,
+// snapping the caret back and making it impossible to start a new keyword.
+function KeywordsField({
+  label,
+  keywords,
+  onPatch,
+}: {
+  label: string;
+  keywords: string[];
+  onPatch: (patch: FlowNodeData) => void;
+}) {
+  const [text, setText] = useState(keywords.join("\n"));
+  return (
+    <label className="flex flex-col gap-1 text-sm">
+      {label}
+      <textarea
+        className="input min-h-24 text-xs"
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          onPatch({
+            keywords: e.target.value
+              .split("\n")
+              .map((k) => k.trim())
+              .filter(Boolean),
+          });
+        }}
+      />
+    </label>
+  );
+}
+
 function NodePanel({
   node,
   refs,
@@ -555,21 +698,12 @@ function NodePanel({
       </div>
 
       {nt === "keyword" && (
-        <label className="flex flex-col gap-1 text-sm">
-          {t("keywordsLabel")}
-          <textarea
-            className="input min-h-24 text-xs"
-            value={((d.keywords as string[]) ?? []).join("\n")}
-            onChange={(e) =>
-              onPatch({
-                keywords: e.target.value
-                  .split("\n")
-                  .map((k) => k.trim())
-                  .filter(Boolean),
-              })
-            }
-          />
-        </label>
+        <KeywordsField
+          key={node.id}
+          label={t("keywordsLabel")}
+          keywords={(d.keywords as string[]) ?? []}
+          onPatch={onPatch}
+        />
       )}
 
       {(nt === "intent" || nt === "agentReply") && (

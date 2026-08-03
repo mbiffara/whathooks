@@ -323,7 +323,9 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       if (status === 0) {
         const code = update.messageStubParameters?.[0];
         const error = `WhatsApp rejected the message${code ? ` (error ${code})` : ''}`;
-        this.log.warn(`Outbound ${waMessageId} on ${sessionId} failed: ${error}`);
+        this.log.warn(
+          `Outbound ${waMessageId} on ${sessionId} failed: ${error}`,
+        );
         await this.prisma.message
           .updateMany({
             where: {
@@ -521,9 +523,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         // Decryption failed (missing sender key — common in LID groups):
         // Baileys emits a CIPHERTEXT stub and asks the sender to re-send.
         // Nothing is persisted and no webhook fires, so leave a trace.
-        if (
-          msg.messageStubType === proto.WebMessageInfo.StubType.CIPHERTEXT
-        ) {
+        if (msg.messageStubType === proto.WebMessageInfo.StubType.CIPHERTEXT) {
           this.log.warn(
             `Undecryptable message on ${sessionId} in ${msg.key.remoteJid} ` +
               `(sender ${msg.key.participant ?? msg.key.remoteJid}, ` +
@@ -780,9 +780,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     // is hidden (or missing). Keeps transcripts unambiguous once other
     // actors (AI agents) join mirror groups.
     const prefix =
-      thread.showLeadName && ctx.pushName
-        ? `*${ctx.pushName}:* `
-        : `*Lead:* `;
+      thread.showLeadName && ctx.pushName ? `*${ctx.pushName}:* ` : `*Lead:* `;
     await this.relayMirrorMessage(sessionId, thread.groupJid, ctx, prefix);
   }
 
@@ -865,9 +863,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Enabled mirror link for a session, cached briefly (checked per message). */
-  private async mirrorLinkFor(
-    sessionId: string,
-  ): Promise<{
+  private async mirrorLinkFor(sessionId: string): Promise<{
     id: string;
     agentNumber: string;
     groupPrefix: string;

@@ -88,6 +88,7 @@
       "overview": "Overview",
       "sessions": "WhatsApp Sessions",
       "messages": "Messages",
+      "quickReplies": "Quick replies",
       "agents": "Agents",
       "webhooks": "Webhooks",
       "apiKeys": "API Keys",
@@ -474,6 +475,10 @@
       "sendingAction": "Sending messages",
       "removeFile": "Remove file",
       "attachFile": "Attach file",
+      "quickReplies": "Quick replies",
+      "searchQuickReplies": "Search quick replies…",
+      "noQuickReplies": "No saved quick replies yet",
+      "manageQuickReplies": "Manage quick replies",
       "typeMessage": "Type a message…",
       "numberDisconnected": "Number disconnected",
       "sending": "Sending…",
@@ -500,6 +505,8 @@
         "unsupported": "Unsupported message",
         "note": "Note",
         "mirror": "Mirror",
+        "messageMenu": "Message options",
+        "saveQuickReply": "Save as quick reply",
         "notDelivered": "Not delivered"
       },
       "searchPlaceholder": "Search name, number, or text…",
@@ -552,6 +559,14 @@
       "showLeadName": "Show the lead's name in the group (otherwise messages are prefixed \"Lead:\")",
       "nameShown": "lead name: shown",
       "nameHidden": "lead name: hidden"
+    },
+    "quickReplies": {
+      "title": "Quick replies",
+      "subtitle": "Saved responses your team can insert from the inbox composer with ⚡. Shared across the organization.",
+      "titlePlaceholder": "Label (optional)",
+      "textPlaceholder": "Response text…",
+      "add": "Add quick reply",
+      "empty": "No quick replies yet. Save one from a sent message in the inbox, or create one here."
     },
     "humanAgents": {
       "title": "Human agents",

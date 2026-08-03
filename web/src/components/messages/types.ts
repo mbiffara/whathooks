@@ -51,6 +51,13 @@ export interface ChatMessage {
   media: ChatMedia | null;
 }
 
+/** Org-shared canned response for the composer. */
+export interface QuickReply {
+  id: string;
+  title: string | null;
+  text: string;
+}
+
 export interface MessagesPage {
   items: ChatMessage[];
   hasMore: boolean;

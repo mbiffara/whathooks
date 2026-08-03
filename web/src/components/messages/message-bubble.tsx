@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import type { ChatMessage } from "./types";
 import { clockTime, formatBytes } from "./utils";
 
@@ -49,10 +50,24 @@ function senderLabel(
   }
 }
 
-export function MessageBubble({ message }: { message: ChatMessage }) {
+export function MessageBubble({
+  message,
+  onSaveQuickReply,
+}: {
+  message: ChatMessage;
+  /** When set, manually sent messages get a ⋯ menu to save them as a quick reply. */
+  onSaveQuickReply?: (text: string) => void;
+}) {
   const t = useTranslations("dash.messages.bubble");
+  const [menuOpen, setMenuOpen] = useState(false);
   const outbound = message.fromMe || message.direction === "OUTBOUND";
   const media = message.media;
+  const canSave = Boolean(
+    onSaveQuickReply &&
+      outbound &&
+      message.source === "HUMAN" &&
+      message.text?.trim(),
+  );
 
   if (message.source === "NOTE") {
     return (
@@ -63,12 +78,44 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   return (
     <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[75%] rounded-2xl px-3 py-2 ${
+        className={`group relative max-w-[75%] rounded-2xl px-3 py-2 ${
           outbound
             ? "border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/15"
             : "border border-[var(--color-border)] bg-[var(--color-surface-2)]"
         }`}
       >
+        {canSave && (
+          <>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={t("messageMenu")}
+              className={`absolute -right-2 -top-2 h-6 w-6 place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-xs leading-none text-[var(--color-muted)] shadow-sm hover:text-[var(--color-fg)] ${
+                menuOpen ? "grid" : "hidden group-hover:grid"
+              }`}
+            >
+              ⋯
+            </button>
+            {menuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-4 z-20 w-60 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg">
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onSaveQuickReply?.(message.text ?? "");
+                    }}
+                    className="w-full rounded-md px-3 py-2 text-left text-xs text-[var(--color-fg)] hover:bg-[var(--color-surface-2)]"
+                  >
+                    ⚡ {t("saveQuickReply")}
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
         {outbound && senderLabel(message, t) && (
           <div className="mb-0.5 text-[10px] font-semibold text-[var(--color-brand)]">
             {senderLabel(message, t)}

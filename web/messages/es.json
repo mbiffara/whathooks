@@ -88,6 +88,7 @@
       "overview": "Resumen",
       "sessions": "Sesiones de WhatsApp",
       "messages": "Mensajes",
+      "quickReplies": "Respuestas rápidas",
       "agents": "Agentes",
       "webhooks": "Webhooks",
       "apiKeys": "Claves API",
@@ -474,6 +475,10 @@
       "sendingAction": "Enviar mensajes",
       "removeFile": "Quitar archivo",
       "attachFile": "Adjuntar archivo",
+      "quickReplies": "Respuestas rápidas",
+      "searchQuickReplies": "Buscar respuestas rápidas…",
+      "noQuickReplies": "Aún no hay respuestas rápidas guardadas",
+      "manageQuickReplies": "Administrar respuestas rápidas",
       "typeMessage": "Escribe un mensaje…",
       "numberDisconnected": "Número desconectado",
       "sending": "Enviando…",
@@ -500,6 +505,8 @@
         "unsupported": "Mensaje no compatible",
         "note": "Nota",
         "mirror": "Mirror",
+        "messageMenu": "Opciones del mensaje",
+        "saveQuickReply": "Guardar como respuesta rápida",
         "notDelivered": "No entregado"
       },
       "searchPlaceholder": "Busca nombre, número o texto…",
@@ -552,6 +559,14 @@
       "showLeadName": "Mostrar el nombre del lead en el grupo (si no, los mensajes llevan el prefijo \"Lead:\")",
       "nameShown": "nombre del lead: visible",
       "nameHidden": "nombre del lead: oculto"
+    },
+    "quickReplies": {
+      "title": "Respuestas rápidas",
+      "subtitle": "Respuestas guardadas que tu equipo puede insertar desde el chat con ⚡. Compartidas con toda la organización.",
+      "titlePlaceholder": "Etiqueta (opcional)",
+      "textPlaceholder": "Texto de la respuesta…",
+      "add": "Agregar respuesta rápida",
+      "empty": "Aún no hay respuestas rápidas. Guarda una desde un mensaje enviado en el chat, o crea una acá."
     },
     "humanAgents": {
       "title": "Agentes humanos",

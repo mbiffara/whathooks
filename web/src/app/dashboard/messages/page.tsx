@@ -6,6 +6,7 @@ import type {
   Conversation,
   ConversationTag,
   MessagesPage,
+  QuickReply,
 } from "@/components/messages/types";
 import { previewText, relativeTime } from "@/components/messages/utils";
 import { UpgradeModal } from "@/components/upgrade-modal";
@@ -14,6 +15,7 @@ import type { TeamMember, WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { Glyph } from "@/components/glyphs";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Suspense,
@@ -70,6 +72,9 @@ function MessagesInbox() {
   const [newTagName, setNewTagName] = useState("");
   const [tagError, setTagError] = useState<string | null>(null);
   const [noteMode, setNoteMode] = useState(false);
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrFilter, setQrFilter] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [convLoading, setConvLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -104,6 +109,13 @@ function MessagesInbox() {
     () => conversations.find((c) => c.id === selectedId) ?? null,
     [conversations, selectedId],
   );
+  const qrFiltered = useMemo(() => {
+    const needle = qrFilter.trim().toLowerCase();
+    if (!needle) return quickReplies;
+    return quickReplies.filter((q) =>
+      `${q.title ?? ""} ${q.text}`.toLowerCase().includes(needle),
+    );
+  }, [quickReplies, qrFilter]);
   const selectedSession = useMemo(
     () =>
       selectedConv
@@ -132,6 +144,9 @@ function MessagesInbox() {
     apiClient<ConversationTag[]>("/tags", token)
       .then(setTags)
       .catch(() => setTags([]));
+    apiClient<QuickReply[]>("/quick-replies", token)
+      .then(setQuickReplies)
+      .catch(() => setQuickReplies([]));
   }, [token]);
 
   useEffect(() => {
@@ -440,6 +455,24 @@ function MessagesInbox() {
     } finally {
       setTogglingAgent(false);
       loadConversations();
+    }
+  }
+
+  // Save a sent message's text as an org-shared quick reply (the API
+  // dedupes on identical text, so re-saving is a no-op).
+  async function saveQuickReply(text: string) {
+    if (!token || !text.trim()) return;
+    try {
+      const saved = await apiClient<QuickReply>("/quick-replies", token, {
+        method: "POST",
+        body: JSON.stringify({ text: text.trim() }),
+      });
+      setQuickReplies((prev) => [
+        saved,
+        ...prev.filter((q) => q.id !== saved.id),
+      ]);
+    } catch {
+      /* cap reached or transient failure — nothing to roll back */
     }
   }
 
@@ -1019,7 +1052,13 @@ function MessagesInbox() {
                   {t("noMessages")}
                 </div>
               ) : (
-                messages.map((m) => <MessageBubble key={m.id} message={m} />)
+                messages.map((m) => (
+                  <MessageBubble
+                    key={m.id}
+                    message={m}
+                    onSaveQuickReply={saveQuickReply}
+                  />
+                ))
               )}
             </div>
 
@@ -1088,6 +1127,74 @@ function MessagesInbox() {
                 >
                   📎
                 </button>
+                <span className="relative">
+                  <button
+                    onClick={() => {
+                      setQrOpen((v) => !v);
+                      setQrFilter("");
+                    }}
+                    disabled={noteMode || !isConnected || sending}
+                    className="btn-ghost rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+                    aria-label={t("quickReplies")}
+                    title={t("quickReplies")}
+                  >
+                    ⚡
+                  </button>
+                  {qrOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setQrOpen(false)}
+                      />
+                      <div className="absolute bottom-full left-0 z-20 mb-2 w-80 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-lg">
+                        <input
+                          autoFocus
+                          value={qrFilter}
+                          onChange={(e) => setQrFilter(e.target.value)}
+                          placeholder={t("searchQuickReplies")}
+                          className="input mb-2 w-full text-xs"
+                        />
+                        <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+                          {qrFiltered.length === 0 ? (
+                            <p className="px-2 py-3 text-center text-xs text-[var(--color-muted)]">
+                              {t("noQuickReplies")}
+                            </p>
+                          ) : (
+                            qrFiltered.map((q) => (
+                                <button
+                                  key={q.id}
+                                  onClick={() => {
+                                    setText((prev) =>
+                                      prev.trim()
+                                        ? `${prev.trimEnd()} ${q.text}`
+                                        : q.text,
+                                    );
+                                    setQrOpen(false);
+                                  }}
+                                  className="rounded-lg px-2.5 py-2 text-left hover:bg-[var(--color-surface-2)]"
+                                >
+                                  {q.title && (
+                                    <span className="block text-[10px] font-semibold text-[var(--color-brand)]">
+                                      {q.title}
+                                    </span>
+                                  )}
+                                  <span className="block truncate text-xs text-[var(--color-fg)]">
+                                    {q.text}
+                                  </span>
+                                </button>
+                              ))
+                          )}
+                        </div>
+                        <Link
+                          href="/dashboard/quick-replies"
+                          className="block border-t border-[var(--color-border)] px-2 pb-0.5 pt-2 text-[11px] text-[var(--color-brand)] hover:underline"
+                        >
+                          {t("manageQuickReplies")}
+                        </Link>
+                      </div>
+                    </>
+                  )}
+                </span>
                 <input
                   ref={fileInputRef}
                   type="file"

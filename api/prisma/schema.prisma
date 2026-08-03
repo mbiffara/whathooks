@@ -371,8 +371,27 @@ model Flow {
   updatedAt      DateTime     @updatedAt
 
   conversationStates FlowConversationState[]
+  runs               FlowRun[]
 
   @@index([organizationId])
+}
+
+// One engine execution: which nodes ran, with what outcome. Debugging and
+// audit surface for the editor's "Runs" panel.
+model FlowRun {
+  id             String   @id @default(cuid())
+  flowId         String
+  flow           Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  conversationId String
+  leadJid        String
+  // [{ nodeId, type, note? }] in execution order.
+  steps          Json
+  outcome        String // handed_off | agent_replied | agent_skipped | completed | error | step_limit
+  error          String?
+  durationMs     Int
+  createdAt      DateTime @default(now())
+
+  @@index([flowId, createdAt])
 }
 
 // Per-conversation routing memory: once HANDED_OFF, the flow no longer runs

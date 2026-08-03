@@ -21,6 +21,12 @@ interface CachedFlow {
 }
 
 const MAX_STEPS = 20;
+
+interface RunRecorder {
+  steps: Array<{ nodeId: string; type: string; note?: string }>;
+  outcome: string;
+  error?: string;
+}
 const DEFAULT_GROUP_PREFIX = '🔒 Lead';
 
 /**
@@ -68,13 +74,15 @@ export class FlowEngineService {
     ctx: InboundAutomationCtx,
     manager: ConnectionManagerService,
   ): Promise<void> {
-    try {
-      // Safety: a handed-off conversation is owned by its human agent.
-      const state = await this.prisma.flowConversationState.findUnique({
-        where: { conversationId: ctx.conversationId },
-      });
-      if (state?.status === 'HANDED_OFF') return;
+    // Safety: a handed-off conversation is owned by its human agent.
+    const state = await this.prisma.flowConversationState.findUnique({
+      where: { conversationId: ctx.conversationId },
+    });
+    if (state?.status === 'HANDED_OFF') return;
 
+    const startedAt = Date.now();
+    const rec: RunRecorder = { steps: [], outcome: 'completed' };
+    try {
       const graph = flow.graph;
       const trigger = graph.nodes.find((n) => n.type === 'trigger');
       if (!trigger) return;
@@ -84,13 +92,30 @@ export class FlowEngineService {
       while (current && steps < MAX_STEPS) {
         steps++;
         const node: FlowNode = current;
-        current = await this.execute(flow, sessionId, ctx, manager, node);
+        current = await this.execute(flow, sessionId, ctx, manager, node, rec);
       }
       if (steps >= MAX_STEPS) {
+        rec.outcome = 'step_limit';
         this.log.warn(`Flow ${flow.id}: step limit reached (cycle?)`);
       }
     } catch (e) {
+      rec.outcome = 'error';
+      rec.error = String(e);
       this.log.warn(`Flow ${flow.id} failed on ${sessionId}: ${e}`);
+    } finally {
+      await this.prisma.flowRun
+        .create({
+          data: {
+            flowId: flow.id,
+            conversationId: ctx.conversationId,
+            leadJid: ctx.remoteJid,
+            steps: rec.steps,
+            outcome: rec.outcome,
+            error: rec.error ?? null,
+            durationMs: Date.now() - startedAt,
+          },
+        })
+        .catch((e) => this.log.warn(`Flow run not recorded: ${e}`));
     }
   }
 
@@ -101,6 +126,7 @@ export class FlowEngineService {
     ctx: InboundAutomationCtx,
     manager: ConnectionManagerService,
     node: FlowNode,
+    rec: RunRecorder,
   ): Promise<FlowNode | undefined> {
     const graph = flow.graph;
     switch (node.type) {
@@ -108,6 +134,7 @@ export class FlowEngineService {
         const keywords = (node.data.keywords as string[]) ?? [];
         const haystack = normalize(ctx.text ?? '');
         const hit = keywords.some((k) => haystack.includes(normalize(k)));
+        rec.steps.push({ nodeId: node.id, type: node.type, note: hit ? 'yes' : 'no' });
         return this.follow(graph, node, hit ? 'yes' : 'no');
       }
 
@@ -120,6 +147,11 @@ export class FlowEngineService {
           ? await this.agentRunner.classify(agent, ctx.conversationId, intents)
           : null;
         const branch = key && intents.some((i) => i.key === key) ? key : null;
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: branch ?? 'fallback',
+        });
         const next = branch ? this.follow(graph, node, branch) : undefined;
         return next ?? this.follow(graph, node, 'fallback');
       }
@@ -133,6 +165,13 @@ export class FlowEngineService {
           node.data.agentId as string,
           { pauseOnHandoff: !handoffEdge },
         );
+        rec.steps.push({ nodeId: node.id, type: node.type, note: outcome });
+        rec.outcome =
+          outcome === 'replied'
+            ? 'agent_replied'
+            : outcome === 'handoff'
+              ? 'handed_off'
+              : 'agent_skipped';
         if (outcome === 'handoff' && handoffEdge) {
           return graph.nodes.find((n) => n.id === handoffEdge.target);
         }
@@ -140,15 +179,19 @@ export class FlowEngineService {
       }
 
       case 'assignHuman': {
-        await this.assign(flow, sessionId, ctx, manager, node, [
+        const who = await this.assign(flow, sessionId, ctx, manager, node, [
           node.data.humanAgentId as string,
         ]);
+        rec.steps.push({ nodeId: node.id, type: node.type, note: who ?? 'failed' });
+        rec.outcome = who ? 'handed_off' : rec.outcome;
         return undefined;
       }
 
       case 'roundRobin': {
         const list = (node.data.humanAgentIds as string[]) ?? [];
-        await this.assign(flow, sessionId, ctx, manager, node, list);
+        const who = await this.assign(flow, sessionId, ctx, manager, node, list);
+        rec.steps.push({ nodeId: node.id, type: node.type, note: who ?? 'failed' });
+        rec.outcome = who ? 'handed_off' : rec.outcome;
         return undefined;
       }
 
@@ -167,6 +210,7 @@ export class FlowEngineService {
           .catch((e) =>
             this.log.warn(`Flow ${flow.id}: webhook node failed: ${e}`),
           );
+        rec.steps.push({ nodeId: node.id, type: node.type });
         return this.follow(graph, node, 'out');
       }
 
@@ -179,6 +223,7 @@ export class FlowEngineService {
           .catch((e) =>
             this.log.warn(`Flow ${flow.id}: tag node failed: ${e}`),
           );
+        rec.steps.push({ nodeId: node.id, type: node.type });
         return this.follow(graph, node, 'out');
       }
 
@@ -191,6 +236,7 @@ export class FlowEngineService {
           .catch((e) =>
             this.log.warn(`Flow ${flow.id}: assignTeammate node failed: ${e}`),
           );
+        rec.steps.push({ nodeId: node.id, type: node.type });
         return this.follow(graph, node, 'out');
       }
 
@@ -207,8 +253,8 @@ export class FlowEngineService {
     manager: ConnectionManagerService,
     node: FlowNode,
     candidateIds: string[],
-  ): Promise<void> {
-    if (candidateIds.length === 0) return;
+  ): Promise<string | null> {
+    if (candidateIds.length === 0) return null;
     let chosenId = candidateIds[0];
     if (candidateIds.length > 1) {
       const counter = await this.prisma.flowCounter.upsert({
@@ -223,7 +269,7 @@ export class FlowEngineService {
     });
     if (!human) {
       this.log.warn(`Flow ${flow.id}: human agent ${chosenId} missing`);
-      return;
+      return null;
     }
     const thread = await manager.createMirrorThread(
       sessionId,
@@ -254,6 +300,7 @@ export class FlowEngineService {
     this.log.log(
       `Flow ${flow.id}: handed ${ctx.conversationId} to ${human.name}`,
     );
+    return human.name;
   }
 
   private follow(

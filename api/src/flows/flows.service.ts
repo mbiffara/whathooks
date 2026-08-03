@@ -13,6 +13,7 @@ import {
   defaultGraph,
   validateGraph,
 } from './flow-graph';
+import { FlowTemplate, buildTemplate } from './flow-templates';
 
 /** CRUD for Flows (platform-admin experiment). Org-scoped like the rest. */
 @Injectable()
@@ -43,7 +44,10 @@ export class FlowsService {
     }));
   }
 
-  async create(organizationId: string, dto: { sessionId: string; name: string }) {
+  async create(
+    organizationId: string,
+    dto: { sessionId: string; name: string; template?: FlowTemplate },
+  ) {
     const session = await this.prisma.waSession.findFirst({
       where: { id: dto.sessionId, organizationId },
     });
@@ -54,12 +58,25 @@ export class FlowsService {
     if (existing) {
       throw new ConflictException('This session already has a flow');
     }
+    let graph: FlowGraph;
+    if (dto.template && dto.template !== 'blank') {
+      // Prefill references where the org has an obvious candidate.
+      const refs = await this.references(organizationId);
+      graph = buildTemplate(dto.template, {
+        agentId:
+          refs.agents.find((a) => a.enabled)?.id ?? refs.agents[0]?.id ?? '',
+        humanAgentId: refs.humanAgents[0]?.id ?? '',
+        humanAgentIds: refs.humanAgents.slice(0, 3).map((h) => h.id),
+      });
+    } else {
+      graph = defaultGraph();
+    }
     return this.prisma.flow.create({
       data: {
         organizationId,
         sessionId: dto.sessionId,
         name: dto.name.trim(),
-        graph: defaultGraph() as unknown as Prisma.InputJsonValue,
+        graph: graph as unknown as Prisma.InputJsonValue,
       },
     });
   }
@@ -127,6 +144,16 @@ export class FlowsService {
     await this.prisma.flow.delete({ where: { id } });
     this.engine.invalidate(flow.sessionId);
     return { ok: true };
+  }
+
+  /** Recent engine executions for one flow (newest first). */
+  async listRuns(organizationId: string, id: string, limit = 50) {
+    await this.get(organizationId, id);
+    return this.prisma.flowRun.findMany({
+      where: { flowId: id },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(limit, 100),
+    });
   }
 
   /** Everything the editor's pickers need, in one call. */

@@ -13,6 +13,7 @@ import {
 import {
   IsBoolean,
   IsDefined,
+  IsIn,
   IsOptional,
   IsString,
   Length,
@@ -22,6 +23,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
+import { FLOW_TEMPLATES } from './flow-templates';
+import type { FlowTemplate } from './flow-templates';
 import { FlowsService } from './flows.service';
 
 class CreateFlowDto {
@@ -31,6 +34,10 @@ class CreateFlowDto {
   @IsString()
   @Length(1, 80)
   name!: string;
+
+  @IsOptional()
+  @IsIn(FLOW_TEMPLATES)
+  template?: FlowTemplate;
 }
 
 class SaveGraphDto {
@@ -85,6 +92,11 @@ export class FlowsController {
   @Get(':id')
   get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.flows.get(this.orgOf(user), id);
+  }
+
+  @Get(':id/runs')
+  runs(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.flows.listRuns(this.orgOf(user), id);
   }
 
   @Put(':id/graph')

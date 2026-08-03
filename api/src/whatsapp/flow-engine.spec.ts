@@ -123,7 +123,14 @@ function makeEngine(overrides: {
   const agentReplies: AnyRecord[] = [];
   let counterCall = 0;
 
+  const runs: AnyRecord[] = [];
   const prisma = {
+    flowRun: {
+      create: jest.fn((args: AnyRecord) => {
+        runs.push(args);
+        return Promise.resolve({});
+      }),
+    },
     flowConversationState: {
       findUnique: jest.fn().mockResolvedValue(null),
       upsert: jest.fn((args: AnyRecord) => {
@@ -214,6 +221,7 @@ function makeEngine(overrides: {
     updates,
     stateUpserts,
     agentReplies,
+    runs,
   };
 }
 
@@ -293,6 +301,11 @@ describe('FlowEngineService.run', () => {
     expect(t.stateUpserts[0]).toMatchObject({
       create: { status: 'HANDED_OFF', humanAgentId: 'ha1' },
     });
+    // The run was recorded with the taken path and outcome.
+    expect(t.runs).toHaveLength(1);
+    expect(
+      (t.runs[0] as { data: { outcome: string; steps: unknown[] } }).data,
+    ).toMatchObject({ outcome: 'handed_off' });
   });
 
   it('round-robins across human agents using the counter', async () => {

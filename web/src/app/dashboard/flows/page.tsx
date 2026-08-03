@@ -7,6 +7,34 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+const TEMPLATES = [
+  {
+    key: "blank",
+    title: "Blank",
+    desc: "Just the trigger — build from scratch.",
+  },
+  {
+    key: "ai-until-handoff",
+    title: "AI until handoff",
+    desc: "An AI agent answers everything; when it hands off, the lead goes to a human agent (Mirror group).",
+  },
+  {
+    key: "intent-routing",
+    title: "Intent routing",
+    desc: "Classify each conversation; buyers go to a human agent, the rest get AI answers.",
+  },
+  {
+    key: "round-robin",
+    title: "Round-robin dispatch",
+    desc: "Every new lead is assigned to your human agents, in turns.",
+  },
+  {
+    key: "faq-keyword",
+    title: "FAQ keywords",
+    desc: "Messages with your keywords get an AI answer; everything else goes to a human agent.",
+  },
+] as const;
+
 interface FlowRow {
   id: string;
   name: string;
@@ -29,6 +57,7 @@ export default function FlowsPage() {
   const [sessions, setSessions] = useState<WaSession[]>([]);
   const [sessionId, setSessionId] = useState("");
   const [name, setName] = useState("");
+  const [template, setTemplate] = useState<string>("blank");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +90,7 @@ export default function FlowsPage() {
     try {
       const flow = await apiClient<{ id: string }>("/flows", token, {
         method: "POST",
-        body: JSON.stringify({ sessionId, name: name.trim() }),
+        body: JSON.stringify({ sessionId, name: name.trim(), template }),
       });
       window.location.href = `/dashboard/flows/${flow.id}`;
     } catch (e) {
@@ -119,6 +148,28 @@ export default function FlowsPage() {
             required
             maxLength={80}
           />
+        </div>
+        <div className="w-full">
+          <label className="label">Start from</label>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {TEMPLATES.map((tp) => (
+              <button
+                type="button"
+                key={tp.key}
+                onClick={() => setTemplate(tp.key)}
+                className={`rounded-xl border p-3 text-left ${
+                  template === tp.key
+                    ? "border-[var(--color-brand)] bg-[var(--color-brand)]/5"
+                    : "border-[var(--color-border)] hover:border-[var(--color-brand)]/40"
+                }`}
+              >
+                <div className="text-sm font-medium">{tp.title}</div>
+                <div className="mt-1 text-xs text-[var(--color-muted)]">
+                  {tp.desc}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
         <button type="submit" disabled={busy} className="btn-primary">
           Create flow

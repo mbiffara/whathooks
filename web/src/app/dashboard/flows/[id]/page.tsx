@@ -41,10 +41,12 @@ type FlowNodeData = Record<string, unknown>;
 type EditorNode = Node<FlowNodeData>;
 
 const RefsContext = createContext<FlowRefs | null>(null);
+const HighlightContext = createContext<Set<string>>(new Set());
 
 /** Generic node card: title, summary, one target handle, labeled sources. */
 function FlowNodeCard({ id, type, data, selected }: NodeProps) {
   const refs = useContext(RefsContext);
+  const highlighted = useContext(HighlightContext).has(id);
   const t = type as FlowNodeType;
   const meta = NODE_META[t];
   const handles = handlesFor(t, data as FlowNodeData);
@@ -54,7 +56,7 @@ function FlowNodeCard({ id, type, data, selected }: NodeProps) {
         selected
           ? "border-[var(--color-brand)]"
           : "border-[var(--color-border)]"
-      }`}
+      } ${highlighted ? "ring-2 ring-[var(--color-warning)]" : ""}`}
     >
       {t !== "trigger" && (
         <Handle
@@ -112,6 +114,9 @@ export default function FlowEditorPage() {
   const [sessionLabel, setSessionLabel] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [runsOpen, setRunsOpen] = useState(false);
+  const [runs, setRuns] = useState<FlowRun[] | null>(null);
+  const [highlight, setHighlight] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -264,8 +269,22 @@ export default function FlowEditorPage() {
     [nodes, selectedId],
   );
 
+  const loadRuns = useCallback(async () => {
+    if (!token) return;
+    try {
+      setRuns(await apiClient<FlowRun[]>(`/flows/${id}/runs`, token));
+    } catch {
+      setRuns([]);
+    }
+  }, [token, id]);
+
+  useEffect(() => {
+    if (runsOpen) void loadRuns();
+  }, [runsOpen, loadRuns]);
+
   return (
     <RefsContext.Provider value={refs}>
+      <HighlightContext.Provider value={highlight}>
       <div className="flex h-full flex-col overflow-hidden">
         <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
           <button
@@ -289,6 +308,16 @@ export default function FlowEditorPage() {
                 unsaved changes
               </span>
             )}
+            <button
+              onClick={() => {
+                setRunsOpen((v) => !v);
+                setSelectedId(null);
+                if (runsOpen) setHighlight(new Set());
+              }}
+              className={`btn-ghost text-xs ${runsOpen ? "text-[var(--color-brand)]" : ""}`}
+            >
+              Runs
+            </button>
             <button
               onClick={save}
               disabled={busy || !dirty}
@@ -348,7 +377,10 @@ export default function FlowEditorPage() {
                   if (c.some((ch) => ch.type === "remove")) setDirty(true);
                 }}
                 onConnect={onConnect}
-                onNodeClick={(_, n) => setSelectedId(n.id)}
+                onNodeClick={(_, n) => {
+                  setSelectedId(n.id);
+                  setRunsOpen(false);
+                }}
                 onPaneClick={() => setSelectedId(null)}
                 nodeTypes={nodeTypes}
                 fitView
@@ -365,7 +397,7 @@ export default function FlowEditorPage() {
             )}
           </div>
 
-          {selected && refs && (
+          {selected && refs && !runsOpen && (
             <div className="w-80 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
               <NodePanel
                 node={selected}
@@ -375,8 +407,18 @@ export default function FlowEditorPage() {
               />
             </div>
           )}
+          {runsOpen && (
+            <div className="w-96 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
+              <RunsPanel
+                runs={runs}
+                onRefresh={loadRuns}
+                onHighlight={(ids) => setHighlight(new Set(ids))}
+              />
+            </div>
+          )}
         </div>
       </div>
+      </HighlightContext.Provider>
     </RefsContext.Provider>
   );
 }
@@ -664,6 +706,107 @@ function IntentListEditor({
         >
           + Add intent
         </button>
+      )}
+    </div>
+  );
+}
+
+// ---- runs panel ------------------------------------------------------------
+
+interface FlowRun {
+  id: string;
+  leadJid: string;
+  steps: { nodeId: string; type: string; note?: string }[];
+  outcome: string;
+  error: string | null;
+  durationMs: number;
+  createdAt: string;
+}
+
+const OUTCOME_STYLE: Record<string, string> = {
+  handed_off: "bg-[var(--color-brand)]/15 text-[var(--color-brand)]",
+  agent_replied: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
+  completed: "bg-[var(--color-chip)] text-[var(--color-muted)]",
+  agent_skipped: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
+  error: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
+  step_limit: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
+};
+
+function RunsPanel({
+  runs,
+  onRefresh,
+  onHighlight,
+}: {
+  runs: FlowRun[] | null;
+  onRefresh: () => void;
+  onHighlight: (ids: string[]) => void;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold">Runs</div>
+        <button onClick={onRefresh} className="btn-ghost text-xs">
+          Refresh
+        </button>
+      </div>
+      <p className="text-xs text-[var(--color-muted)]">
+        Every execution of this flow. Click a run to highlight the path it
+        took on the canvas.
+      </p>
+      {runs === null ? (
+        <p className="text-sm text-[var(--color-muted)]">Loading…</p>
+      ) : runs.length === 0 ? (
+        <p className="text-sm text-[var(--color-muted)]">
+          No runs yet — enable the flow and message the session.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {runs.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => {
+                const next = openId === r.id ? null : r.id;
+                setOpenId(next);
+                onHighlight(next ? r.steps.map((s) => s.nodeId) : []);
+              }}
+              className={`rounded-lg border p-2 text-left text-xs ${
+                openId === r.id
+                  ? "border-[var(--color-warning)]"
+                  : "border-[var(--color-border)] hover:border-[var(--color-brand)]/40"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-mono">
+                  +{r.leadJid.split("@")[0]}
+                </span>
+                <span
+                  className={`badge text-[10px] ${OUTCOME_STYLE[r.outcome] ?? OUTCOME_STYLE.completed}`}
+                >
+                  {r.outcome.replace(/_/g, " ")}
+                </span>
+                <span className="ml-auto text-[var(--color-muted)]">
+                  {new Date(r.createdAt).toLocaleTimeString()}
+                </span>
+              </div>
+              <div className="mt-1 text-[var(--color-muted)]">
+                {r.steps.length === 0
+                  ? "no steps (trigger not connected)"
+                  : r.steps
+                      .map(
+                        (s) =>
+                          `${NODE_META[s.type as FlowNodeType]?.icon ?? "•"}${s.note ? ` ${s.note}` : ""}`,
+                      )
+                      .join(" → ")}
+                {" · "}
+                {r.durationMs}ms
+              </div>
+              {r.error && (
+                <div className="mt-1 text-[var(--color-danger)]">{r.error}</div>
+              )}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

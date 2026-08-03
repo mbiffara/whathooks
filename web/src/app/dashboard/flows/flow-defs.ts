@@ -25,55 +25,16 @@ export interface FlowRefs {
   members: { id: string; name: string }[];
 }
 
-export const NODE_META: Record<
-  FlowNodeType,
-  { title: string; icon: string; hint: string }
-> = {
-  trigger: {
-    title: "Message received",
-    icon: "⚡",
-    hint: "Runs for every DM from a lead that isn't already handed off.",
-  },
-  keyword: {
-    title: "Keyword match",
-    icon: "🔎",
-    hint: "Routes yes/no on whether the message contains any keyword (accent-insensitive).",
-  },
-  intent: {
-    title: "Classify intent",
-    icon: "🧭",
-    hint: "An AI agent classifies the conversation into one of your intents.",
-  },
-  agentReply: {
-    title: "AI agent replies",
-    icon: "🤖",
-    hint: "The chosen AI agent answers. If it hands off and an On-handoff edge exists, the flow continues there.",
-  },
-  assignHuman: {
-    title: "Assign human agent",
-    icon: "🧑‍💼",
-    hint: "Creates the lead's mirror group with this human agent. Ends the flow.",
-  },
-  roundRobin: {
-    title: "Round-robin assign",
-    icon: "🔁",
-    hint: "Distributes leads across several human agents, in turns. Ends the flow.",
-  },
-  webhook: {
-    title: "Trigger webhook",
-    icon: "🪝",
-    hint: "Sends a flow.action event to one of your webhooks, then continues.",
-  },
-  tagConversation: {
-    title: "Tag conversation",
-    icon: "🏷️",
-    hint: "Adds a tag to the conversation, then continues.",
-  },
-  assignTeammate: {
-    title: "Assign teammate",
-    icon: "👤",
-    hint: "Assigns the conversation in the shared inbox, then continues.",
-  },
+export const NODE_ICONS: Record<FlowNodeType, string> = {
+  trigger: "⚡",
+  keyword: "🔎",
+  intent: "🧭",
+  agentReply: "🤖",
+  assignHuman: "🧑‍💼",
+  roundRobin: "🔁",
+  webhook: "🪝",
+  tagConversation: "🏷️",
+  assignTeammate: "👤",
 };
 
 /** Palette (what can be added — trigger is fixed). */
@@ -135,22 +96,25 @@ export function handlesFor(
   }
 }
 
-/** One-line summary shown on the node card. */
+/** One-line summary shown on the node card (t = dash.flows translator). */
 export function summarize(
   type: FlowNodeType,
   data: Record<string, unknown>,
   refs: FlowRefs | null,
+  t: (key: string, values?: Record<string, number>) => string,
 ): string {
   const name = (list: { id: string; name: string }[] | undefined, id: unknown) =>
     list?.find((x) => x.id === id)?.name ?? "—";
   switch (type) {
     case "keyword": {
       const kw = (data.keywords as string[]) ?? [];
-      return kw.length ? kw.slice(0, 3).join(", ") + (kw.length > 3 ? "…" : "") : "no keywords";
+      return kw.length
+        ? kw.slice(0, 3).join(", ") + (kw.length > 3 ? "…" : "")
+        : t("summaryNoKeywords");
     }
     case "intent": {
       const n = ((data.intents as FlowIntent[]) ?? []).length;
-      return `${name(refs?.agents, data.agentId)} · ${n} intent${n === 1 ? "" : "s"}`;
+      return `${name(refs?.agents, data.agentId)} · ${t("summaryIntents", { count: n })}`;
     }
     case "agentReply":
       return name(refs?.agents, data.agentId);
@@ -158,7 +122,7 @@ export function summarize(
       return name(refs?.humanAgents, data.humanAgentId);
     case "roundRobin": {
       const n = ((data.humanAgentIds as string[]) ?? []).length;
-      return `${n} human agent${n === 1 ? "" : "s"}`;
+      return t("summaryHumanAgents", { count: n });
     }
     case "webhook": {
       const url = refs?.webhooks.find((w) => w.id === data.webhookId)?.url;

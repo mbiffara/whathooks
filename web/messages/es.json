@@ -558,6 +558,110 @@
       "add": "Agregar agente humano",
       "empty": "Todavía no hay agentes humanos. Agrega a las personas que van a responder a tus leads.",
       "inUse": "{count, plural, one {usado por # mirror link} other {usado por # mirror links}}"
+    },
+    "flows": {
+      "title": "Flows",
+      "experimental": "experimental",
+      "subtitle": "Ruteo visual de los mensajes entrantes de una sesión: respuestas de IA, ramas por intención, FAQs por palabras clave, derivación a agentes humanos (Mirror), etiquetas y webhooks. Un flow habilitado toma el control de la automatización de la sesión.",
+      "sessionLabel": "Sesión",
+      "selectSession": "Selecciona una sesión…",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "Ruteo de leads",
+      "startFrom": "Comenzar desde",
+      "createFlow": "Crear flow",
+      "noFlows": "Todavía no hay flows. Crea uno para empezar a rutear conversaciones.",
+      "nodeCount": "{count, plural, one {# nodo} other {# nodos}}",
+      "templates": {
+        "blank": {
+          "title": "En blanco",
+          "desc": "Solo el disparador — construye desde cero."
+        },
+        "ai-until-handoff": {
+          "title": "IA hasta derivar",
+          "desc": "Un agente de IA responde todo; cuando deriva, el lead pasa a un agente humano (grupo Mirror)."
+        },
+        "intent-routing": {
+          "title": "Ruteo por intención",
+          "desc": "Clasifica cada conversación; los compradores van a un agente humano, el resto recibe respuestas de IA."
+        },
+        "round-robin": {
+          "title": "Reparto round-robin",
+          "desc": "Cada lead nuevo se asigna a tus agentes humanos, por turnos."
+        },
+        "faq-keyword": {
+          "title": "FAQs por palabras clave",
+          "desc": "Los mensajes con tus palabras clave reciben respuesta de IA; el resto va a un agente humano."
+        }
+      },
+      "backToFlows": "Flows",
+      "unsaved": "cambios sin guardar",
+      "saveFirst": "Guarda primero",
+      "runs": "Ejecuciones",
+      "runsHint": "Cada ejecución de este flow. Haz clic en una para resaltar el camino que tomó en el lienzo.",
+      "noRuns": "Todavía no hay ejecuciones — habilita el flow y escribe a la sesión.",
+      "noSteps": "sin pasos (el disparador no está conectado)",
+      "addNode": "Agregar nodo",
+      "deleteNode": "Eliminar nodo",
+      "select": "Selecciona…",
+      "keywordsLabel": "Palabras clave (una por línea)",
+      "aiAgent": "Agente de IA",
+      "agentDisabledSuffix": "(deshabilitado)",
+      "intentsLabel": "Intenciones (cada una es una salida)",
+      "intentKeyPlaceholder": "clave",
+      "intentLabelPlaceholder": "Etiqueta",
+      "intentDescPlaceholder": "Descripción para el clasificador (opcional)",
+      "addIntent": "Agregar intención",
+      "humanAgent": "Agente humano",
+      "rotationLabel": "Agentes humanos (en rotación)",
+      "groupPrefix": "Prefijo del grupo",
+      "showLeadName": "Mostrar el nombre del lead en el grupo",
+      "farewell": "Mensaje de despedida al lead (opcional)",
+      "farewellPlaceholder": "Te conectamos con un asesor…",
+      "webhookLabel": "Webhook",
+      "noteLabel": "Nota (se envía en el payload)",
+      "tagLabel": "Etiqueta",
+      "teammateLabel": "Miembro del equipo",
+      "summaryNoKeywords": "sin palabras clave",
+      "summaryIntents": "{count, plural, one {# intención} other {# intenciones}}",
+      "summaryHumanAgents": "{count, plural, one {# agente humano} other {# agentes humanos}}",
+      "nodes": {
+        "trigger": {
+          "title": "Mensaje recibido",
+          "hint": "Se ejecuta con cada mensaje directo de un lead que aún no fue derivado."
+        },
+        "keyword": {
+          "title": "Palabras clave",
+          "hint": "Rutea sí/no según si el mensaje contiene alguna palabra clave (ignora acentos)."
+        },
+        "intent": {
+          "title": "Clasificar intención",
+          "hint": "Un agente de IA clasifica la conversación en una de tus intenciones."
+        },
+        "agentReply": {
+          "title": "Responde agente de IA",
+          "hint": "El agente de IA elegido responde. Si deriva y existe una salida On-handoff, el flow continúa por ahí."
+        },
+        "assignHuman": {
+          "title": "Asignar agente humano",
+          "hint": "Crea el grupo mirror del lead con este agente humano. Termina el flow."
+        },
+        "roundRobin": {
+          "title": "Asignación round-robin",
+          "hint": "Reparte los leads entre varios agentes humanos, por turnos. Termina el flow."
+        },
+        "webhook": {
+          "title": "Disparar webhook",
+          "hint": "Envía un evento flow.action a uno de tus webhooks y continúa."
+        },
+        "tagConversation": {
+          "title": "Etiquetar conversación",
+          "hint": "Agrega una etiqueta a la conversación y continúa."
+        },
+        "assignTeammate": {
+          "title": "Asignar al equipo",
+          "hint": "Asigna la conversación en la bandeja compartida y continúa."
+        }
+      }
     }
   },
   "landing": {

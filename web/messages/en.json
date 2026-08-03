@@ -558,6 +558,110 @@
       "add": "Add human agent",
       "empty": "No human agents yet. Add the people who will answer your leads.",
       "inUse": "{count, plural, one {used by # mirror link} other {used by # mirror links}}"
+    },
+    "flows": {
+      "title": "Flows",
+      "experimental": "experimental",
+      "subtitle": "Visual routing for a session's inbound messages: AI replies, intent branches, keyword FAQs, human-agent handoffs (Mirror), tags and webhooks. An enabled flow takes over the session's automation.",
+      "sessionLabel": "Session",
+      "selectSession": "Select a session…",
+      "nameLabel": "Name",
+      "namePlaceholder": "Lead routing",
+      "startFrom": "Start from",
+      "createFlow": "Create flow",
+      "noFlows": "No flows yet. Create one to start routing conversations.",
+      "nodeCount": "{count, plural, one {# node} other {# nodes}}",
+      "templates": {
+        "blank": {
+          "title": "Blank",
+          "desc": "Just the trigger — build from scratch."
+        },
+        "ai-until-handoff": {
+          "title": "AI until handoff",
+          "desc": "An AI agent answers everything; when it hands off, the lead goes to a human agent (Mirror group)."
+        },
+        "intent-routing": {
+          "title": "Intent routing",
+          "desc": "Classify each conversation; buyers go to a human agent, the rest get AI answers."
+        },
+        "round-robin": {
+          "title": "Round-robin dispatch",
+          "desc": "Every new lead is assigned to your human agents, in turns."
+        },
+        "faq-keyword": {
+          "title": "FAQ keywords",
+          "desc": "Messages with your keywords get an AI answer; everything else goes to a human agent."
+        }
+      },
+      "backToFlows": "Flows",
+      "unsaved": "unsaved changes",
+      "saveFirst": "Save first",
+      "runs": "Runs",
+      "runsHint": "Every execution of this flow. Click a run to highlight the path it took on the canvas.",
+      "noRuns": "No runs yet — enable the flow and message the session.",
+      "noSteps": "no steps (trigger not connected)",
+      "addNode": "Add node",
+      "deleteNode": "Delete node",
+      "select": "Select…",
+      "keywordsLabel": "Keywords (one per line)",
+      "aiAgent": "AI agent",
+      "agentDisabledSuffix": "(disabled)",
+      "intentsLabel": "Intents (each becomes an output)",
+      "intentKeyPlaceholder": "key",
+      "intentLabelPlaceholder": "Label",
+      "intentDescPlaceholder": "Description for the classifier (optional)",
+      "addIntent": "Add intent",
+      "humanAgent": "Human agent",
+      "rotationLabel": "Human agents (in rotation)",
+      "groupPrefix": "Group name prefix",
+      "showLeadName": "Show the lead's name in the group",
+      "farewell": "Farewell message to the lead (optional)",
+      "farewellPlaceholder": "Connecting you with an advisor…",
+      "webhookLabel": "Webhook",
+      "noteLabel": "Note (sent in the payload)",
+      "tagLabel": "Tag",
+      "teammateLabel": "Team member",
+      "summaryNoKeywords": "no keywords",
+      "summaryIntents": "{count, plural, one {# intent} other {# intents}}",
+      "summaryHumanAgents": "{count, plural, one {# human agent} other {# human agents}}",
+      "nodes": {
+        "trigger": {
+          "title": "Message received",
+          "hint": "Runs for every DM from a lead that isn't already handed off."
+        },
+        "keyword": {
+          "title": "Keyword match",
+          "hint": "Routes yes/no on whether the message contains any keyword (accent-insensitive)."
+        },
+        "intent": {
+          "title": "Classify intent",
+          "hint": "An AI agent classifies the conversation into one of your intents."
+        },
+        "agentReply": {
+          "title": "AI agent replies",
+          "hint": "The chosen AI agent answers. If it hands off and an On-handoff edge exists, the flow continues there."
+        },
+        "assignHuman": {
+          "title": "Assign human agent",
+          "hint": "Creates the lead's mirror group with this human agent. Ends the flow."
+        },
+        "roundRobin": {
+          "title": "Round-robin assign",
+          "hint": "Distributes leads across several human agents, in turns. Ends the flow."
+        },
+        "webhook": {
+          "title": "Trigger webhook",
+          "hint": "Sends a flow.action event to one of your webhooks, then continues."
+        },
+        "tagConversation": {
+          "title": "Tag conversation",
+          "hint": "Adds a tag to the conversation, then continues."
+        },
+        "assignTeammate": {
+          "title": "Assign teammate",
+          "hint": "Assigns the conversation in the shared inbox, then continues."
+        }
+      }
     }
   },
   "landing": {

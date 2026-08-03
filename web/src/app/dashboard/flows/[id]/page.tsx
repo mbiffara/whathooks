@@ -26,11 +26,12 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useTranslations } from "next-intl";
 import {
   FlowIntent,
   FlowNodeType,
   FlowRefs,
-  NODE_META,
+  NODE_ICONS,
   PALETTE,
   defaultDataFor,
   handlesFor,
@@ -45,11 +46,11 @@ const HighlightContext = createContext<Set<string>>(new Set());
 
 /** Generic node card: title, summary, one target handle, labeled sources. */
 function FlowNodeCard({ id, type, data, selected }: NodeProps) {
+  const t = useTranslations("dash.flows");
   const refs = useContext(RefsContext);
   const highlighted = useContext(HighlightContext).has(id);
-  const t = type as FlowNodeType;
-  const meta = NODE_META[t];
-  const handles = handlesFor(t, data as FlowNodeData);
+  const nt = type as FlowNodeType;
+  const handles = handlesFor(nt, data as FlowNodeData);
   return (
     <div
       className={`w-52 rounded-xl border bg-[var(--color-surface)] px-3 py-2 shadow-sm ${
@@ -58,7 +59,7 @@ function FlowNodeCard({ id, type, data, selected }: NodeProps) {
           : "border-[var(--color-border)]"
       } ${highlighted ? "ring-2 ring-[var(--color-warning)]" : ""}`}
     >
-      {t !== "trigger" && (
+      {nt !== "trigger" && (
         <Handle
           type="target"
           position={Position.Left}
@@ -66,10 +67,10 @@ function FlowNodeCard({ id, type, data, selected }: NodeProps) {
         />
       )}
       <div className="text-sm font-medium">
-        {meta.icon} {meta.title}
+        {NODE_ICONS[nt]} {t(`nodes.${nt}.title`)}
       </div>
       <div className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
-        {summarize(t, data as FlowNodeData, refs)}
+        {summarize(nt, data as FlowNodeData, refs, t)}
       </div>
       {handles.length > 0 && (
         <div className="mt-1.5 flex flex-col gap-1">
@@ -97,10 +98,12 @@ function FlowNodeCard({ id, type, data, selected }: NodeProps) {
 }
 
 const nodeTypes = Object.fromEntries(
-  Object.keys(NODE_META).map((t) => [t, FlowNodeCard]),
+  Object.keys(NODE_ICONS).map((t) => [t, FlowNodeCard]),
 );
 
 export default function FlowEditorPage() {
+  const t = useTranslations("dash.flows");
+  const tc = useTranslations("common");
   const { id } = useParams<{ id: string }>();
   const { data: auth } = useSession();
   const token = auth?.accessToken;
@@ -142,7 +145,7 @@ export default function FlowEditorPage() {
         setRefs(references);
         setLoaded(true);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load");
+        setError(e instanceof Error ? e.message : tc("failedToLoad"));
       }
     })();
   }, [token, id, setNodes, setEdges]);
@@ -228,7 +231,7 @@ export default function FlowEditorPage() {
       });
       setDirty(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     } finally {
       setBusy(false);
     }
@@ -246,7 +249,7 @@ export default function FlowEditorPage() {
       );
       setEnabled(updated.enabled);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Toggle failed");
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     } finally {
       setBusy(false);
     }
@@ -259,7 +262,7 @@ export default function FlowEditorPage() {
       await apiClient(`/flows/${id}`, token, { method: "DELETE" });
       router.push("/dashboard/flows");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
       setBusy(false);
     }
   }
@@ -291,7 +294,7 @@ export default function FlowEditorPage() {
             onClick={() => router.push("/dashboard/flows")}
             className="text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
           >
-            ← Flows
+            ← {t("backToFlows")}
           </button>
           <div className="font-semibold">{flowName}</div>
           <span className="text-xs text-[var(--color-muted)]">
@@ -305,7 +308,7 @@ export default function FlowEditorPage() {
           <div className="ml-auto flex items-center gap-2">
             {dirty && (
               <span className="text-xs text-[var(--color-warning)]">
-                unsaved changes
+                {t("unsaved")}
               </span>
             )}
             <button
@@ -316,33 +319,33 @@ export default function FlowEditorPage() {
               }}
               className={`btn-ghost text-xs ${runsOpen ? "text-[var(--color-brand)]" : ""}`}
             >
-              Runs
+              {t("runs")}
             </button>
             <button
               onClick={save}
               disabled={busy || !dirty}
               className="btn-primary text-xs disabled:opacity-50"
             >
-              {busy ? "…" : "Save"}
+              {busy ? "…" : tc("save")}
             </button>
             <button
               onClick={toggleEnabled}
               disabled={busy || dirty}
-              title={dirty ? "Save first" : undefined}
+              title={dirty ? t("saveFirst") : undefined}
               className={`badge ${
                 enabled
                   ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
                   : "bg-[var(--color-chip)] text-[var(--color-muted)]"
               } disabled:opacity-50`}
             >
-              {enabled ? "enabled" : "disabled"}
+              {enabled ? tc("enabled") : tc("disabled")}
             </button>
             <button
               onClick={removeFlow}
               disabled={busy}
               className="btn-danger text-xs"
             >
-              Delete
+              {tc("delete")}
             </button>
           </div>
         </div>
@@ -350,15 +353,15 @@ export default function FlowEditorPage() {
         <div className="flex min-h-0 flex-1">
           <div className="flex w-44 shrink-0 flex-col gap-1.5 overflow-y-auto border-r border-[var(--color-border)] p-3">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-              Add node
+              {t("addNode")}
             </div>
-            {PALETTE.map((t) => (
+            {PALETTE.map((pt) => (
               <button
-                key={t}
-                onClick={() => addNode(t)}
+                key={pt}
+                onClick={() => addNode(pt)}
                 className="rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-left text-xs hover:border-[var(--color-brand)]/50"
               >
-                {NODE_META[t].icon} {NODE_META[t].title}
+                {NODE_ICONS[pt]} {t(`nodes.${pt}.title`)}
               </button>
             ))}
           </div>
@@ -392,7 +395,7 @@ export default function FlowEditorPage() {
               </ReactFlow>
             ) : (
               <p className="p-6 text-sm text-[var(--color-muted)]">
-                {error ?? "Loading…"}
+                {error ?? tc("loading")}
               </p>
             )}
           </div>
@@ -436,21 +439,23 @@ function NodePanel({
   onPatch: (patch: FlowNodeData) => void;
   onDelete: () => void;
 }) {
-  const t = node.type as FlowNodeType;
-  const meta = NODE_META[t];
+  const t = useTranslations("dash.flows");
+  const nt = node.type as FlowNodeType;
   const d = node.data;
   return (
     <div className="flex flex-col gap-3">
       <div>
         <div className="font-semibold">
-          {meta.icon} {meta.title}
+          {NODE_ICONS[nt]} {t(`nodes.${nt}.title`)}
         </div>
-        <p className="mt-1 text-xs text-[var(--color-muted)]">{meta.hint}</p>
+        <p className="mt-1 text-xs text-[var(--color-muted)]">
+          {t(`nodes.${nt}.hint`)}
+        </p>
       </div>
 
-      {t === "keyword" && (
+      {nt === "keyword" && (
         <label className="flex flex-col gap-1 text-sm">
-          Keywords (one per line)
+          {t("keywordsLabel")}
           <textarea
             className="input min-h-24 text-xs"
             value={((d.keywords as string[]) ?? []).join("\n")}
@@ -466,41 +471,41 @@ function NodePanel({
         </label>
       )}
 
-      {(t === "intent" || t === "agentReply") && (
+      {(nt === "intent" || nt === "agentReply") && (
         <label className="flex flex-col gap-1 text-sm">
-          AI agent
+          {t("aiAgent")}
           <select
             className="input"
             value={(d.agentId as string) ?? ""}
             onChange={(e) => onPatch({ agentId: e.target.value })}
           >
-            <option value="">Select…</option>
+            <option value="">{t("select")}</option>
             {refs.agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
-                {a.enabled ? "" : " (disabled)"}
+                {a.enabled ? "" : ` ${t("agentDisabledSuffix")}`}
               </option>
             ))}
           </select>
         </label>
       )}
 
-      {t === "intent" && (
+      {nt === "intent" && (
         <IntentListEditor
           intents={(d.intents as FlowIntent[]) ?? []}
           onChange={(intents) => onPatch({ intents })}
         />
       )}
 
-      {t === "assignHuman" && (
+      {nt === "assignHuman" && (
         <label className="flex flex-col gap-1 text-sm">
-          Human agent
+          {t("humanAgent")}
           <select
             className="input"
             value={(d.humanAgentId as string) ?? ""}
             onChange={(e) => onPatch({ humanAgentId: e.target.value })}
           >
-            <option value="">Select…</option>
+            <option value="">{t("select")}</option>
             {refs.humanAgents.map((h) => (
               <option key={h.id} value={h.id}>
                 {h.name} (+{h.phoneNumber})
@@ -510,9 +515,9 @@ function NodePanel({
         </label>
       )}
 
-      {t === "roundRobin" && (
+      {nt === "roundRobin" && (
         <div className="flex flex-col gap-1 text-sm">
-          Human agents (in rotation)
+          {t("rotationLabel")}
           {refs.humanAgents.map((h) => {
             const list = (d.humanAgentIds as string[]) ?? [];
             const checked = list.includes(h.id);
@@ -536,10 +541,10 @@ function NodePanel({
         </div>
       )}
 
-      {(t === "assignHuman" || t === "roundRobin") && (
+      {(nt === "assignHuman" || nt === "roundRobin") && (
         <>
           <label className="flex flex-col gap-1 text-sm">
-            Group name prefix
+            {t("groupPrefix")}
             <input
               className="input"
               placeholder="🔒 Lead"
@@ -554,14 +559,14 @@ function NodePanel({
               checked={(d.showLeadName as boolean) ?? true}
               onChange={(e) => onPatch({ showLeadName: e.target.checked })}
             />
-            Show the lead&apos;s name in the group
+            {t("showLeadName")}
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Farewell message to the lead (optional)
+            {t("farewell")}
             <textarea
               className="input min-h-16 text-xs"
               maxLength={500}
-              placeholder="Te conectamos con un asesor…"
+              placeholder={t("farewellPlaceholder")}
               value={(d.farewellText as string) ?? ""}
               onChange={(e) => onPatch({ farewellText: e.target.value })}
             />
@@ -569,26 +574,26 @@ function NodePanel({
         </>
       )}
 
-      {t === "webhook" && (
+      {nt === "webhook" && (
         <>
           <label className="flex flex-col gap-1 text-sm">
-            Webhook
+            {t("webhookLabel")}
             <select
               className="input"
               value={(d.webhookId as string) ?? ""}
               onChange={(e) => onPatch({ webhookId: e.target.value })}
             >
-              <option value="">Select…</option>
+              <option value="">{t("select")}</option>
               {refs.webhooks.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.url}
-                  {w.active ? "" : " (disabled)"}
+                  {w.active ? "" : ` ${t("agentDisabledSuffix")}`}
                 </option>
               ))}
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Note (sent in the payload)
+            {t("noteLabel")}
             <input
               className="input"
               maxLength={200}
@@ -599,15 +604,15 @@ function NodePanel({
         </>
       )}
 
-      {t === "tagConversation" && (
+      {nt === "tagConversation" && (
         <label className="flex flex-col gap-1 text-sm">
-          Tag
+          {t("tagLabel")}
           <select
             className="input"
             value={(d.tagId as string) ?? ""}
             onChange={(e) => onPatch({ tagId: e.target.value })}
           >
-            <option value="">Select…</option>
+            <option value="">{t("select")}</option>
             {refs.tags.map((tg) => (
               <option key={tg.id} value={tg.id}>
                 {tg.name}
@@ -617,15 +622,15 @@ function NodePanel({
         </label>
       )}
 
-      {t === "assignTeammate" && (
+      {nt === "assignTeammate" && (
         <label className="flex flex-col gap-1 text-sm">
-          Team member
+          {t("teammateLabel")}
           <select
             className="input"
             value={(d.userId as string) ?? ""}
             onChange={(e) => onPatch({ userId: e.target.value })}
           >
-            <option value="">Select…</option>
+            <option value="">{t("select")}</option>
             {refs.members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -635,9 +640,9 @@ function NodePanel({
         </label>
       )}
 
-      {t !== "trigger" && (
+      {nt !== "trigger" && (
         <button onClick={onDelete} className="btn-danger self-start text-xs">
-          Delete node
+          {t("deleteNode")}
         </button>
       )}
     </div>
@@ -651,12 +656,13 @@ function IntentListEditor({
   intents: FlowIntent[];
   onChange: (intents: FlowIntent[]) => void;
 }) {
+  const t = useTranslations("dash.flows");
   function patch(i: number, changes: Partial<FlowIntent>) {
     onChange(intents.map((it, j) => (j === i ? { ...it, ...changes } : it)));
   }
   return (
     <div className="flex flex-col gap-2 text-sm">
-      Intents (each becomes an output)
+      {t("intentsLabel")}
       {intents.map((it, i) => (
         <div
           key={i}
@@ -665,7 +671,7 @@ function IntentListEditor({
           <div className="flex gap-2">
             <input
               className="input h-8 w-28 px-2 py-0 font-mono text-xs"
-              placeholder="key"
+              placeholder={t("intentKeyPlaceholder")}
               value={it.key}
               onChange={(e) =>
                 patch(i, {
@@ -678,7 +684,7 @@ function IntentListEditor({
             />
             <input
               className="input h-8 flex-1 px-2 py-0 text-xs"
-              placeholder="Label"
+              placeholder={t("intentLabelPlaceholder")}
               value={it.label}
               onChange={(e) => patch(i, { label: e.target.value })}
             />
@@ -692,7 +698,7 @@ function IntentListEditor({
           </div>
           <input
             className="input h-8 px-2 py-0 text-xs"
-            placeholder="Description for the classifier (optional)"
+            placeholder={t("intentDescPlaceholder")}
             value={it.description ?? ""}
             onChange={(e) => patch(i, { description: e.target.value })}
           />
@@ -704,7 +710,7 @@ function IntentListEditor({
           onClick={() => onChange([...intents, { key: "", label: "" }])}
           className="btn-ghost self-start text-xs"
         >
-          + Add intent
+          + {t("addIntent")}
         </button>
       )}
     </div>
@@ -741,25 +747,23 @@ function RunsPanel({
   onRefresh: () => void;
   onHighlight: (ids: string[]) => void;
 }) {
+  const t = useTranslations("dash.flows");
+  const tc = useTranslations("common");
+  const tw = useTranslations("dash.webhooks");
   const [openId, setOpenId] = useState<string | null>(null);
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <div className="font-semibold">Runs</div>
+        <div className="font-semibold">{t("runs")}</div>
         <button onClick={onRefresh} className="btn-ghost text-xs">
-          Refresh
+          {tw("refresh")}
         </button>
       </div>
-      <p className="text-xs text-[var(--color-muted)]">
-        Every execution of this flow. Click a run to highlight the path it
-        took on the canvas.
-      </p>
+      <p className="text-xs text-[var(--color-muted)]">{t("runsHint")}</p>
       {runs === null ? (
-        <p className="text-sm text-[var(--color-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
       ) : runs.length === 0 ? (
-        <p className="text-sm text-[var(--color-muted)]">
-          No runs yet — enable the flow and message the session.
-        </p>
+        <p className="text-sm text-[var(--color-muted)]">{t("noRuns")}</p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {runs.map((r) => (
@@ -791,11 +795,11 @@ function RunsPanel({
               </div>
               <div className="mt-1 text-[var(--color-muted)]">
                 {r.steps.length === 0
-                  ? "no steps (trigger not connected)"
+                  ? t("noSteps")
                   : r.steps
                       .map(
                         (s) =>
-                          `${NODE_META[s.type as FlowNodeType]?.icon ?? "•"}${s.note ? ` ${s.note}` : ""}`,
+                          `${NODE_ICONS[s.type as FlowNodeType] ?? "•"}${s.note ? ` ${s.note}` : ""}`,
                       )
                       .join(" → ")}
                 {" · "}

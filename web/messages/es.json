@@ -661,7 +661,15 @@
           "title": "Asignar al equipo",
           "hint": "Asigna la conversación en la bandeja compartida y continúa."
         }
-      }
+      },
+      "draft": "Borrador",
+      "noSession": "Sin sesión",
+      "assignSession": "Asignar una sesión…",
+      "removeSession": "— Sin sesión (borrador) —",
+      "conflictTitle": "Sesión en uso",
+      "conflictBody": "\"{session}\" ya está asignada al flow \"{flow}\". Reasignarla desvinculará ese flow y lo deshabilitará.",
+      "confirmReassign": "Reasignar sesión",
+      "enableNeedsSession": "Asigna una sesión antes de habilitar"
     }
   },
   "landing": {

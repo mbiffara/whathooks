@@ -46,18 +46,8 @@ export class FlowsService {
 
   async create(
     organizationId: string,
-    dto: { sessionId: string; name: string; template?: FlowTemplate },
+    dto: { name: string; template?: FlowTemplate },
   ) {
-    const session = await this.prisma.waSession.findFirst({
-      where: { id: dto.sessionId, organizationId },
-    });
-    if (!session) throw new NotFoundException('Session not found');
-    const existing = await this.prisma.flow.findUnique({
-      where: { sessionId: dto.sessionId },
-    });
-    if (existing) {
-      throw new ConflictException('This session already has a flow');
-    }
     let graph: FlowGraph;
     if (dto.template && dto.template !== 'blank') {
       // Prefill references where the org has an obvious candidate.
@@ -74,11 +64,62 @@ export class FlowsService {
     return this.prisma.flow.create({
       data: {
         organizationId,
-        sessionId: dto.sessionId,
         name: dto.name.trim(),
         graph: graph as unknown as Prisma.InputJsonValue,
       },
     });
+  }
+
+  /**
+   * Assign (or clear, sessionId=null) the flow's session. A session already
+   * attached to another flow requires force=true — the other flow is
+   * detached and disabled.
+   */
+  async assignSession(
+    organizationId: string,
+    id: string,
+    sessionId: string | null,
+    force: boolean,
+  ) {
+    const flow = await this.get(organizationId, id);
+    const previousSessionId = flow.sessionId;
+
+    if (sessionId === null) {
+      const updated = await this.prisma.flow.update({
+        where: { id },
+        data: { sessionId: null, enabled: false },
+      });
+      if (previousSessionId) this.engine.invalidate(previousSessionId);
+      return updated;
+    }
+
+    const session = await this.prisma.waSession.findFirst({
+      where: { id: sessionId, organizationId },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+
+    const holder = await this.prisma.flow.findUnique({
+      where: { sessionId },
+      select: { id: true, name: true },
+    });
+    if (holder && holder.id !== id) {
+      if (!force) {
+        throw new ConflictException(
+          `SESSION_TAKEN:${holder.name}`,
+        );
+      }
+      await this.prisma.flow.update({
+        where: { id: holder.id },
+        data: { sessionId: null, enabled: false },
+      });
+    }
+    const updated = await this.prisma.flow.update({
+      where: { id },
+      data: { sessionId },
+    });
+    this.engine.invalidate(sessionId);
+    if (previousSessionId) this.engine.invalidate(previousSessionId);
+    return updated;
   }
 
   async get(organizationId: string, id: string) {
@@ -106,7 +147,7 @@ export class FlowsService {
       where: { id },
       data: { graph: graph as Prisma.InputJsonValue },
     });
-    this.engine.invalidate(updated.sessionId);
+    if (updated.sessionId) this.engine.invalidate(updated.sessionId);
     return updated;
   }
 
@@ -117,6 +158,9 @@ export class FlowsService {
   ) {
     const flow = await this.get(organizationId, id);
     if (patch.enabled) {
+      if (!flow.sessionId) {
+        throw new BadRequestException('Assign a session before enabling');
+      }
       // Refuse to enable a graph that no longer validates (refs deleted).
       const errors = validateGraph(
         flow.graph,
@@ -135,14 +179,14 @@ export class FlowsService {
         ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
       },
     });
-    this.engine.invalidate(updated.sessionId);
+    if (updated.sessionId) this.engine.invalidate(updated.sessionId);
     return updated;
   }
 
   async remove(organizationId: string, id: string) {
     const flow = await this.get(organizationId, id);
     await this.prisma.flow.delete({ where: { id } });
-    this.engine.invalidate(flow.sessionId);
+    if (flow.sessionId) this.engine.invalidate(flow.sessionId);
     return { ok: true };
   }
 

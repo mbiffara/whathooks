@@ -26,7 +26,7 @@ interface FlowRow {
     label: string;
     phoneNumber: string | null;
     status: WaStatus;
-  };
+  } | null;
   updatedAt: string;
 }
 
@@ -37,8 +37,6 @@ export default function FlowsPage() {
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const [flows, setFlows] = useState<FlowRow[]>([]);
-  const [sessions, setSessions] = useState<WaSession[]>([]);
-  const [sessionId, setSessionId] = useState("");
   const [name, setName] = useState("");
   const [template, setTemplate] = useState<string>("blank");
   const [loading, setLoading] = useState(true);
@@ -48,12 +46,7 @@ export default function FlowsPage() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const [flowList, sessionList] = await Promise.all([
-        apiClient<FlowRow[]>("/flows", token),
-        apiClient<WaSession[]>("/sessions", token),
-      ]);
-      setFlows(flowList);
-      setSessions(sessionList);
+      setFlows(await apiClient<FlowRow[]>("/flows", token));
     } catch (e) {
       setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {
@@ -73,7 +66,7 @@ export default function FlowsPage() {
     try {
       const flow = await apiClient<{ id: string }>("/flows", token, {
         method: "POST",
-        body: JSON.stringify({ sessionId, name: name.trim(), template }),
+        body: JSON.stringify({ name: name.trim(), template }),
       });
       window.location.href = `/dashboard/flows/${flow.id}`;
     } catch (e) {
@@ -81,10 +74,6 @@ export default function FlowsPage() {
       setBusy(false);
     }
   }
-
-  const availableSessions = sessions.filter(
-    (s) => !flows.some((f) => f.session.id === s.id),
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,23 +90,6 @@ export default function FlowsPage() {
       </div>
 
       <form onSubmit={create} className="card flex flex-wrap items-end gap-3">
-        <div className="min-w-60 flex-1">
-          <label className="label">{t("sessionLabel")}</label>
-          <select
-            className="input"
-            value={sessionId}
-            onChange={(e) => setSessionId(e.target.value)}
-            required
-          >
-            <option value="">{t("selectSession")}</option>
-            {availableSessions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-                {s.phoneNumber ? ` (+${s.phoneNumber})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="min-w-52 flex-1">
           <label className="label">{t("nameLabel")}</label>
           <input
@@ -177,9 +149,17 @@ export default function FlowsPage() {
               <div className="min-w-0">
                 <div className="font-medium">{f.name}</div>
                 <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--color-muted)]">
-                  {f.session.label}
-                  {f.session.phoneNumber && ` (+${f.session.phoneNumber})`}
-                  <StatusBadge status={f.session.status} />
+                  {f.session ? (
+                    <>
+                      {f.session.label}
+                      {f.session.phoneNumber && ` (+${f.session.phoneNumber})`}
+                      <StatusBadge status={f.session.status} />
+                    </>
+                  ) : (
+                    <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
+                      {t("draft")}
+                    </span>
+                  )}
                 </div>
               </div>
               <span className="ml-auto text-xs text-[var(--color-muted)]">

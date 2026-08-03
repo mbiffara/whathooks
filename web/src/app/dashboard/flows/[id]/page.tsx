@@ -114,7 +114,14 @@ export default function FlowEditorPage() {
   const [refs, setRefs] = useState<FlowRefs | null>(null);
   const [flowName, setFlowName] = useState("");
   const [enabled, setEnabled] = useState(false);
-  const [sessionLabel, setSessionLabel] = useState("");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<
+    { id: string; label: string; phoneNumber: string | null }[]
+  >([]);
+  const [pendingAssign, setPendingAssign] = useState<{
+    sessionId: string;
+    holderName: string;
+  } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [runsOpen, setRunsOpen] = useState(false);
@@ -128,18 +135,22 @@ export default function FlowEditorPage() {
     if (!token) return;
     (async () => {
       try {
-        const [flow, references] = await Promise.all([
+        const [flow, references, sessionList] = await Promise.all([
           apiClient<{
             name: string;
             enabled: boolean;
             graph: { nodes: EditorNode[]; edges: Edge[] };
-            session: { label: string };
+            session: { id: string; label: string } | null;
           }>(`/flows/${id}`, token),
           apiClient<FlowRefs>("/flows/references", token),
+          apiClient<
+            { id: string; label: string; phoneNumber: string | null }[]
+          >("/sessions", token),
         ]);
         setFlowName(flow.name);
         setEnabled(flow.enabled);
-        setSessionLabel(flow.session.label);
+        setSessionId(flow.session?.id ?? null);
+        setSessions(sessionList);
         setNodes(flow.graph.nodes ?? []);
         setEdges((flow.graph.edges ?? []).map((e) => ({ ...e })));
         setRefs(references);
@@ -255,6 +266,36 @@ export default function FlowEditorPage() {
     }
   }
 
+  async function assignSession(next: string | null, force = false) {
+    if (!token || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await apiClient<{
+        sessionId: string | null;
+        enabled: boolean;
+      }>(`/flows/${id}/assign`, token, {
+        method: "POST",
+        body: JSON.stringify({ sessionId: next, force }),
+      });
+      setSessionId(updated.sessionId);
+      setEnabled(updated.enabled);
+      setPendingAssign(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.startsWith("SESSION_TAKEN:") && next) {
+        setPendingAssign({
+          sessionId: next,
+          holderName: msg.slice("SESSION_TAKEN:".length),
+        });
+      } else {
+        setError(msg || tc("somethingWentWrong"));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function removeFlow() {
     if (!token || busy) return;
     setBusy(true);
@@ -297,9 +338,22 @@ export default function FlowEditorPage() {
             ← {t("backToFlows")}
           </button>
           <div className="font-semibold">{flowName}</div>
-          <span className="text-xs text-[var(--color-muted)]">
-            {sessionLabel}
-          </span>
+          <select
+            className="input h-8 w-56 px-2 py-0 text-xs"
+            value={sessionId ?? ""}
+            onChange={(e) => void assignSession(e.target.value || null)}
+            disabled={busy}
+          >
+            <option value="">
+              {sessionId ? t("removeSession") : t("assignSession")}
+            </option>
+            {sessions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+                {s.phoneNumber ? ` (+${s.phoneNumber})` : ""}
+              </option>
+            ))}
+          </select>
           {error && (
             <span className="max-w-md truncate text-xs text-[var(--color-danger)]">
               {error}
@@ -330,8 +384,14 @@ export default function FlowEditorPage() {
             </button>
             <button
               onClick={toggleEnabled}
-              disabled={busy || dirty}
-              title={dirty ? t("saveFirst") : undefined}
+              disabled={busy || dirty || (!enabled && !sessionId)}
+              title={
+                dirty
+                  ? t("saveFirst")
+                  : !enabled && !sessionId
+                    ? t("enableNeedsSession")
+                    : undefined
+              }
               className={`badge ${
                 enabled
                   ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
@@ -420,6 +480,47 @@ export default function FlowEditorPage() {
             </div>
           )}
         </div>
+
+        {pendingAssign && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setPendingAssign(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="card w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-lg font-semibold">{t("conflictTitle")}</h2>
+              <p className="mt-2 text-sm text-[var(--color-muted)]">
+                {t("conflictBody", {
+                  session:
+                    sessions.find((s) => s.id === pendingAssign.sessionId)
+                      ?.label ?? pendingAssign.sessionId,
+                  flow: pendingAssign.holderName,
+                })}
+              </p>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  onClick={() => setPendingAssign(null)}
+                  className="btn-ghost"
+                >
+                  {tc("cancel")}
+                </button>
+                <button
+                  onClick={() =>
+                    void assignSession(pendingAssign.sessionId, true)
+                  }
+                  disabled={busy}
+                  className="btn-primary"
+                >
+                  {t("confirmReassign")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       </HighlightContext.Provider>
     </RefsContext.Provider>

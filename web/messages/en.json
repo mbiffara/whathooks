@@ -661,7 +661,15 @@
           "title": "Assign teammate",
           "hint": "Assigns the conversation in the shared inbox, then continues."
         }
-      }
+      },
+      "draft": "Draft",
+      "noSession": "No session",
+      "assignSession": "Assign a session…",
+      "removeSession": "— No session (draft) —",
+      "conflictTitle": "Session in use",
+      "conflictBody": "\"{session}\" is already assigned to the flow \"{flow}\". Reassigning will detach that flow and disable it.",
+      "confirmReassign": "Reassign session",
+      "enableNeedsSession": "Assign a session before enabling"
     }
   },
   "landing": {

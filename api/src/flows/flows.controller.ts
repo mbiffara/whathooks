@@ -17,6 +17,7 @@ import {
   IsOptional,
   IsString,
   Length,
+  ValidateIf,
 } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -29,15 +30,24 @@ import { FlowsService } from './flows.service';
 
 class CreateFlowDto {
   @IsString()
-  sessionId!: string;
-
-  @IsString()
   @Length(1, 80)
   name!: string;
 
   @IsOptional()
   @IsIn(FLOW_TEMPLATES)
   template?: FlowTemplate;
+}
+
+class AssignSessionDto {
+  // null clears the assignment (flow becomes a draft and is disabled).
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  sessionId!: string | null;
+
+  // Required to steal a session already attached to another flow.
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }
 
 class SaveGraphDto {
@@ -92,6 +102,20 @@ export class FlowsController {
   @Get(':id')
   get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.flows.get(this.orgOf(user), id);
+  }
+
+  @Post(':id/assign')
+  assign(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: AssignSessionDto,
+  ) {
+    return this.flows.assignSession(
+      this.orgOf(user),
+      id,
+      dto.sessionId,
+      dto.force ?? false,
+    );
   }
 
   @Get(':id/runs')

@@ -362,8 +362,10 @@ model Flow {
   id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  sessionId      String       @unique // one flow per session (v1)
-  session        WaSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // Null = draft. At most one flow per session; assignment is an explicit
+  // operation (reassigning a session detaches + disables the previous flow).
+  sessionId      String?      @unique
+  session        WaSession?   @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   name           String
   graph          Json // ReactFlow { nodes, edges }
   enabled        Boolean      @default(false)

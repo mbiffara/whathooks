@@ -13,6 +13,7 @@ import {
   type Edge,
   type Node,
   type NodeProps,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Glyph } from "@/components/glyphs";
@@ -196,6 +197,9 @@ export default function FlowEditorPage() {
     nodesRef.current = nodes;
     edgesRef.current = edges;
   }, [nodes, edges]);
+  // Canvas viewport access, for spawning nodes where the user is looking.
+  const rfInstance = useRef<ReactFlowInstance<EditorNode, Edge> | null>(null);
+  const flowWrapRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<Snapshot[]>([]);
   const futureRef = useRef<Snapshot[]>([]);
   const lastSnapAt = useRef(0);
@@ -317,14 +321,25 @@ export default function FlowEditorPage() {
   function addNode(type: FlowNodeType) {
     snapshot();
     const nid = `${type}_${Math.random().toString(36).slice(2, 8)}`;
+    // Spawn at the visible canvas center — fixed coordinates end up
+    // off-screen once the user pans or zooms. The small cascade keeps
+    // consecutive adds from stacking exactly on top of each other.
+    const count = nodesRef.current.length;
+    const cascade = (count % 5) * 24;
+    const rect = flowWrapRef.current?.getBoundingClientRect();
+    const inst = rfInstance.current;
+    let position = { x: 320 + cascade, y: 80 + count * 60 };
+    if (inst && rect) {
+      const center = inst.screenToFlowPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+      // Center the 208px-wide card on that point.
+      position = { x: center.x - 104 + cascade, y: center.y - 30 + cascade };
+    }
     setNodes((ns) => [
       ...ns,
-      {
-        id: nid,
-        type,
-        position: { x: 320 + Math.random() * 120, y: 80 + ns.length * 60 },
-        data: defaultDataFor(type),
-      },
+      { id: nid, type, position, data: defaultDataFor(type) },
     ]);
     setSelectedId(nid);
     setDirty(true);
@@ -655,9 +670,12 @@ export default function FlowEditorPage() {
             ))}
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1" ref={flowWrapRef}>
             {loaded ? (
               <ReactFlow
+                onInit={(inst) => {
+                  rfInstance.current = inst;
+                }}
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={(c) => {

@@ -21,6 +21,8 @@ interface CachedFlow {
 }
 
 const MAX_STEPS = 20;
+// Messages copied into a fresh mirror group when the assign node asks for it.
+const HISTORY_COPY_LIMIT = 25;
 
 interface RunRecorder {
   steps: Array<{ nodeId: string; type: string; note?: string }>;
@@ -271,15 +273,33 @@ export class FlowEngineService {
       this.log.warn(`Flow ${flow.id}: human agent ${chosenId} missing`);
       return null;
     }
+    const showLeadName = (node.data.showLeadName as boolean) ?? true;
     const thread = await manager.createMirrorThread(
       sessionId,
       ctx.remoteJid,
       { id: human.id, number: human.phoneNumber },
       {
         prefix: (node.data.groupPrefix as string) || DEFAULT_GROUP_PREFIX,
-        showLeadName: (node.data.showLeadName as boolean) ?? true,
+        showLeadName,
       },
     );
+    // Optionally seed the group with the conversation so far, so the human
+    // has context before the triggering message arrives. Best-effort.
+    if ((node.data.copyHistory as boolean) ?? false) {
+      const transcript = await this.historyTranscript(
+        ctx.conversationId,
+        showLeadName ? ctx.pushName : null,
+      );
+      if (transcript) {
+        await manager
+          .sendText(sessionId, thread.groupJid, transcript, {
+            source: MessageSource.MIRROR,
+          })
+          .catch((e) =>
+            this.log.warn(`Flow ${flow.id}: history copy failed: ${e}`),
+          );
+      }
+    }
     await manager.forwardLeadToGroup(sessionId, thread, ctx);
     const farewell = (node.data.farewellText as string) ?? '';
     if (farewell.trim()) {
@@ -301,6 +321,40 @@ export class FlowEngineService {
       `Flow ${flow.id}: handed ${ctx.conversationId} to ${human.name}`,
     );
     return human.name;
+  }
+
+  /**
+   * Compact one-message transcript of the conversation so far. The newest
+   * inbound row (the message that triggered the flow) is left out — it is
+   * forwarded to the group separately, right after this. Null when there is
+   * no prior history worth copying.
+   */
+  private async historyTranscript(
+    conversationId: string,
+    leadName: string | null,
+  ): Promise<string | null> {
+    const rows = await this.prisma.message.findMany({
+      where: { conversationId, source: { not: MessageSource.NOTE } },
+      orderBy: { timestamp: 'desc' },
+      take: HISTORY_COPY_LIMIT + 1,
+      select: { direction: true, source: true, type: true, text: true },
+    });
+    rows.reverse();
+    if (rows.length && rows[rows.length - 1].direction === 'INBOUND') {
+      rows.pop();
+    }
+    const lines = rows.slice(-HISTORY_COPY_LIMIT).map((m) => {
+      const text = (m.text ?? `[${m.type.toLowerCase()}]`).slice(0, 300);
+      const who =
+        m.direction === 'INBOUND'
+          ? (leadName ?? 'Lead')
+          : m.source === MessageSource.AGENT
+            ? 'Bot'
+            : 'Equipo';
+      return `*${who}:* ${text}`;
+    });
+    if (lines.length === 0) return null;
+    return `📋 *Historial:*\n\n${lines.join('\n')}`;
   }
 
   private follow(

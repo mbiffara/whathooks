@@ -188,6 +188,9 @@ function makeEngine(overrides: {
         return Promise.resolve({});
       }),
     },
+    message: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
   };
   const agentRunner = {
     classify: jest.fn(overrides.classify ?? (() => Promise.resolve(null))),
@@ -330,6 +333,37 @@ describe('FlowEngineService.run', () => {
     expect(
       (t.runs[0] as { data: { outcome: string; steps: unknown[] } }).data,
     ).toMatchObject({ outcome: 'handed_off' });
+  });
+
+  it('copies the conversation history into the new group when asked', async () => {
+    const t = makeEngine({});
+    // Newest first, as the real query returns them.
+    t.prisma.message.findMany.mockResolvedValue([
+      { direction: 'INBOUND', source: 'CONTACT', type: 'TEXT', text: CTX.text },
+      {
+        direction: 'OUTBOUND',
+        source: 'AGENT',
+        type: 'TEXT',
+        text: 'Hola, ¿en qué te ayudo?',
+      },
+      { direction: 'INBOUND', source: 'CONTACT', type: 'TEXT', text: 'Hola' },
+    ]);
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('a', 'assignHuman', { humanAgentId: 'ha1', copyHistory: true }),
+      ],
+      edges: [edge('t', 'a')],
+    };
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    // The transcript lands in the group, attributed per speaker…
+    const transcript = t.sent.find((s) => s.to === 'g@g.us');
+    expect(transcript?.text).toContain('Historial');
+    expect(transcript?.text).toContain('*Juan:* Hola');
+    expect(transcript?.text).toContain('*Bot:* Hola, ¿en qué te ayudo?');
+    // …without the triggering message, which is forwarded separately.
+    expect(transcript?.text.includes(CTX.text)).toBe(false);
+    expect(t.forwarded).toHaveLength(1);
   });
 
   it('round-robins across human agents using the counter', async () => {

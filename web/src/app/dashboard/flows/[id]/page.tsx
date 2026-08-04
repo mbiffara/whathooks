@@ -851,6 +851,14 @@ function NodePanel({
             />
             {t("showLeadName")}
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={(d.copyHistory as boolean) ?? false}
+              onChange={(e) => onPatch({ copyHistory: e.target.checked })}
+            />
+            {t("copyHistory")}
+          </label>
           <label className="flex flex-col gap-1 text-sm">
             {t("farewell")}
             <textarea

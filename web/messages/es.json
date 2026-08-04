@@ -646,6 +646,7 @@
       "farewellPlaceholder": "Te conectamos con un asesor…",
       "webhookLabel": "Webhook",
       "noteLabel": "Nota (se envía en el payload)",
+      "copyHistory": "Copiar el historial de la conversación al grupo",
       "tagLabel": "Etiqueta",
       "newTagPlaceholder": "Nombre de la etiqueta…",
       "createTag": "Crear",

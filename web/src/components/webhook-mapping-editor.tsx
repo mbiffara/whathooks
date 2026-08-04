@@ -86,6 +86,7 @@ export function MappingEditor({
 
   return (
     <div className="flex flex-col gap-2">
+      <p className="text-xs text-[var(--color-muted)]">{t("mappingScope")}</p>
       <datalist id="wh-source-paths">
         {SOURCE_SUGGESTIONS.map((p) => (
           <option key={p} value={p} />

@@ -68,10 +68,14 @@ export class WebhookDispatchService {
     // Per-webhook projection: when mapping rules exist, `data` carries only
     // the fields the customer configured (renames, formatted dates, fixed
     // values). The envelope itself is stable so signatures/tooling keep
-    // working.
-    const data = isMappingRules(hook.payloadMapping)
-      ? applyPayloadMapping(hook.payloadMapping, envelope)
-      : params.payload;
+    // working. Rules are authored against the message payload, so they apply
+    // to message.received ONLY — other events (session.*, contact.*,
+    // flow.action) always deliver their full payload.
+    const data =
+      params.event === 'message.received' &&
+      isMappingRules(hook.payloadMapping)
+        ? applyPayloadMapping(hook.payloadMapping, envelope)
+        : params.payload;
     const body = JSON.stringify({ ...envelope, data });
     const signature =
       'sha256=' + createHmac('sha256', hook.secret).update(body).digest('hex');

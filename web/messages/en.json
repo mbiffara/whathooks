@@ -298,6 +298,7 @@
       "saveMapping": "Save mapping",
       "failedToSaveMapping": "Failed to save mapping",
       "kindField": "field",
+      "mappingScope": "The mapping applies to message.received deliveries only — other events (session, contact) always send their complete payload.",
       "kindFixed": "fixed value",
       "dateFormatPlaceholder": "date format (optional)",
       "dateFormatTitle": "iso, unix, unix_ms, or a pattern like yyyy-MM-dd HH:mm",

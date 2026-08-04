@@ -298,6 +298,7 @@
       "saveMapping": "Guardar mapeo",
       "failedToSaveMapping": "No se pudo guardar el mapeo",
       "kindField": "campo",
+      "mappingScope": "El mapeo aplica solo a las entregas de message.received — los demás eventos (session, contact) siempre envían su payload completo.",
       "kindFixed": "valor fijo",
       "dateFormatPlaceholder": "formato de fecha (opcional)",
       "dateFormatTitle": "iso, unix, unix_ms o un patrón como yyyy-MM-dd HH:mm",

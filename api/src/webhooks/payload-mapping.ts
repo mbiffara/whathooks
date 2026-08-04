@@ -1,7 +1,10 @@
 /**
  * Webhook payload projection. When a webhook has mapping rules, the delivered
  * `data` object is built ONLY from those rules (the envelope — event,
- * sessionId, timestamp — is unchanged). Each rule produces one output field:
+ * sessionId, timestamp — is unchanged). Rules are authored against the
+ * incoming-message payload and therefore apply to `message.received`
+ * deliveries only; every other event ships its full payload unmapped (see
+ * webhook-dispatch.service). Each rule produces one output field:
  *
  *   { target: "phone",      source: "data.from" }                 // rename
  *   { target: "receivedAt", source: "data.timestamp",

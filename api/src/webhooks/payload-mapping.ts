@@ -1,10 +1,11 @@
 /**
- * Webhook payload projection. When a webhook has mapping rules, the delivered
- * `data` object is built ONLY from those rules (the envelope — event,
- * sessionId, timestamp — is unchanged). Rules are authored against the
- * incoming-message payload and therefore apply to `message.received`
- * deliveries only; every other event ships its full payload unmapped (see
- * webhook-dispatch.service). Each rule produces one output field:
+ * Webhook payload projection. Mappings are stored PER EVENT
+ * ({ "message.received": [...rules], "contact.created": [...] }); an event
+ * without rules delivers its full payload. Legacy webhooks stored a single
+ * rule array — normalizeMappings reads that as message.received rules.
+ * When rules apply, the delivered `data` object is built ONLY from them
+ * (the envelope — event, sessionId, timestamp — is unchanged). Each rule
+ * produces one output field:
  *
  *   { target: "phone",      source: "data.from" }                 // rename
  *   { target: "receivedAt", source: "data.timestamp",
@@ -57,6 +58,44 @@ export function mappingRulesError(rules: MappingRule[]): string | null {
     if (rule.dateFormat !== undefined && !hasSource) {
       return `dateFormat on "${rule.target}" requires a source`;
     }
+    if (rule.dateFormat !== undefined && rule.dateFormat.length > 40) {
+      return `dateFormat on "${rule.target}" is too long (max 40)`;
+    }
+  }
+  return null;
+}
+
+/** Rule lists keyed by the event they project. */
+export type EventMappings = Record<string, MappingRule[]>;
+
+/**
+ * Read a stored/submitted payloadMapping in either shape: a legacy rule
+ * array (== message.received rules) or the keyed object. Entries that are
+ * not valid rule lists are dropped; anything else yields {}.
+ */
+export function normalizeMappings(value: unknown): EventMappings {
+  if (isMappingRules(value)) return { 'message.received': value };
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const out: EventMappings = {};
+    for (const [event, rules] of Object.entries(value)) {
+      if (isMappingRules(rules)) out[event] = rules;
+    }
+    return out;
+  }
+  return {};
+}
+
+/** Validate keyed mappings at write time; error message or null when ok. */
+export function mappingsError(
+  mappings: EventMappings,
+  validEvents: readonly string[],
+): string | null {
+  for (const [event, rules] of Object.entries(mappings)) {
+    if (!validEvents.includes(event)) {
+      return `Unknown event "${event}" in payload mapping`;
+    }
+    const error = mappingRulesError(rules);
+    if (error) return `${event}: ${error}`;
   }
   return null;
 }

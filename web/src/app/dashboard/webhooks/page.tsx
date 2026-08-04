@@ -6,12 +6,20 @@ import {
   MappingEditor,
   RuleRow,
   WEBHOOK_EVENTS,
-  emptyRow,
-  rowsToRules,
+  normalizeMappings,
+  rowsByEventToMappings,
 } from "@/components/webhook-mapping-editor";
 import { apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import Link from "next/link";
-import type { MappingRule, WaSession, Webhook } from "@/lib/types";
+import type { WaSession, Webhook } from "@/lib/types";
+
+/** Total mapped fields across all events (legacy arrays included). */
+function mappingRuleCount(payloadMapping: Webhook["payloadMapping"]): number {
+  return Object.values(normalizeMappings(payloadMapping)).reduce(
+    (n, rules) => n + rules.length,
+    0,
+  );
+}
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
@@ -26,7 +34,9 @@ export default function WebhooksPage() {
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<string[]>(["message.received"]);
   const [sessionId, setSessionId] = useState("");
-  const [mappingRows, setMappingRows] = useState<RuleRow[]>([]);
+  const [mappingRows, setMappingRows] = useState<Record<string, RuleRow[]>>(
+    {},
+  );
   const [showMapping, setShowMapping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,19 +75,19 @@ export default function WebhooksPage() {
     setError(null);
     setNewSecret(null);
     try {
-      const payloadMapping = rowsToRules(mappingRows);
+      const payloadMapping = rowsByEventToMappings(mappingRows);
       const created = await apiClient<Webhook>("/webhooks", token, {
         method: "POST",
         body: JSON.stringify({
           url,
           events,
           sessionId: sessionId || undefined,
-          ...(payloadMapping.length ? { payloadMapping } : {}),
+          ...(Object.keys(payloadMapping).length ? { payloadMapping } : {}),
         }),
       });
       setNewSecret(created.secret ?? null);
       setUrl("");
-      setMappingRows([]);
+      setMappingRows({});
       setShowMapping(false);
       await load();
     } catch (e) {
@@ -159,19 +169,30 @@ export default function WebhooksPage() {
         <div>
           <button
             type="button"
-            onClick={() => {
-              setShowMapping((v) => !v);
-              if (!showMapping && mappingRows.length === 0) {
-                setMappingRows([emptyRow()]);
-              }
-            }}
+            onClick={() => setShowMapping((v) => !v)}
             className="text-sm text-[var(--color-brand)] hover:underline"
           >
             {showMapping ? "▾" : "▸"} {t("customizePayload")}
           </button>
           {showMapping && (
-            <div className="mt-3">
-              <MappingEditor rows={mappingRows} onChange={setMappingRows} />
+            <div className="mt-3 flex flex-col gap-4">
+              <p className="text-xs text-[var(--color-muted)]">
+                {t("mappingEventsHint")}
+              </p>
+              {events.map((ev) => (
+                <div key={ev}>
+                  <div className="mb-1.5 text-xs font-semibold">
+                    {t("mappingFor", { event: ev })}
+                  </div>
+                  <MappingEditor
+                    event={ev}
+                    rows={mappingRows[ev] ?? []}
+                    onChange={(rows) =>
+                      setMappingRows((m) => ({ ...m, [ev]: rows }))
+                    }
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -228,10 +249,10 @@ export default function WebhooksPage() {
                         {ev}
                       </span>
                     ))}
-                    {(h.payloadMapping?.length ?? 0) > 0 && (
+                    {mappingRuleCount(h.payloadMapping) > 0 && (
                       <span className="pill border-[var(--color-brand)]/40 text-[var(--color-brand)]">
                         {t("customPayload", {
-                          count: h.payloadMapping!.length,
+                          count: mappingRuleCount(h.payloadMapping),
                         })}
                       </span>
                     )}

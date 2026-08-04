@@ -88,7 +88,9 @@ export interface Webhook {
   events: string[];
   sessionId: string | null;
   active: boolean;
-  payloadMapping: MappingRule[] | null;
+  // Keyed by event; legacy webhooks may still carry a flat rule array
+  // (read as message.received rules).
+  payloadMapping: Record<string, MappingRule[]> | MappingRule[] | null;
   secretHint: string;
   secret?: string;
   createdAt: string;

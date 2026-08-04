@@ -5,8 +5,8 @@ import { WebhookDeliveries } from "@/components/webhook-deliveries";
 import {
   MappingEditor,
   RuleRow,
-  rowsToRules,
-  rulesToRows,
+  mappingsToRowsByEvent,
+  rowsByEventToMappings,
 } from "@/components/webhook-mapping-editor";
 import { apiClient } from "@/lib/client-api";
 import type { WaSession, Webhook } from "@/lib/types";
@@ -26,7 +26,9 @@ export default function WebhookDetailPage() {
   const [hook, setHook] = useState<Webhook | null>(null);
   const [sessions, setSessions] = useState<WaSession[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [rows, setRows] = useState<RuleRow[]>([]);
+  const [rowsByEvent, setRowsByEvent] = useState<Record<string, RuleRow[]>>(
+    {},
+  );
   const [savingMapping, setSavingMapping] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -39,7 +41,7 @@ export default function WebhookDetailPage() {
       ]);
       setHook(h);
       setSessions(s);
-      setRows(rulesToRows(h.payloadMapping));
+      setRowsByEvent(mappingsToRowsByEvent(h.payloadMapping, h.events));
     } catch (e) {
       setError(e instanceof Error ? e.message : tc("failedToLoad"));
     }
@@ -82,8 +84,10 @@ export default function WebhookDetailPage() {
     try {
       await apiClient(`/webhooks/${id}`, token, {
         method: "PATCH",
-        // An empty list clears the mapping (back to the default payload).
-        body: JSON.stringify({ payloadMapping: rowsToRules(rows) }),
+        // An empty object clears every mapping (back to default payloads).
+        body: JSON.stringify({
+          payloadMapping: rowsByEventToMappings(rowsByEvent),
+        }),
       });
       await load();
     } catch (e) {
@@ -154,7 +158,25 @@ export default function WebhookDetailPage() {
 
       <div className="card">
         <h2 className="mb-3 font-semibold">{t("customizePayload")}</h2>
-        <MappingEditor rows={rows} onChange={setRows} />
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-[var(--color-muted)]">
+            {t("mappingEventsHint")}
+          </p>
+          {hook.events.map((ev) => (
+            <div key={ev}>
+              <div className="mb-1.5 text-xs font-semibold">
+                {t("mappingFor", { event: ev })}
+              </div>
+              <MappingEditor
+                event={ev}
+                rows={rowsByEvent[ev] ?? []}
+                onChange={(rows) =>
+                  setRowsByEvent((m) => ({ ...m, [ev]: rows }))
+                }
+              />
+            </div>
+          ))}
+        </div>
         <div className="mt-3">
           <button
             onClick={saveMapping}

@@ -2,6 +2,8 @@ import {
   applyPayloadMapping,
   formatDate,
   mappingRulesError,
+  mappingsError,
+  normalizeMappings,
 } from './payload-mapping';
 
 const envelope = {
@@ -96,6 +98,60 @@ describe('formatDate', () => {
   it('passes unparseable values through unchanged', () => {
     expect(formatDate('not a date', 'yyyy-MM-dd')).toBe('not a date');
     expect(formatDate({ nope: true }, 'iso')).toEqual({ nope: true });
+  });
+});
+
+describe('normalizeMappings', () => {
+  it('reads a legacy rule array as message.received rules', () => {
+    const rules = [{ target: 'phone', source: 'data.from' }];
+    expect(normalizeMappings(rules)).toEqual({ 'message.received': rules });
+  });
+
+  it('passes a keyed object through, dropping non-rule entries', () => {
+    const rules = [{ target: 'name', source: 'data.name' }];
+    expect(
+      normalizeMappings({
+        'contact.created': rules,
+        'session.status': 'garbage',
+        'session.qr': [],
+      }),
+    ).toEqual({ 'contact.created': rules });
+  });
+
+  it('yields {} for anything else', () => {
+    expect(normalizeMappings(undefined)).toEqual({});
+    expect(normalizeMappings(null)).toEqual({});
+    expect(normalizeMappings([])).toEqual({});
+    expect(normalizeMappings('x')).toEqual({});
+  });
+});
+
+describe('mappingsError', () => {
+  const EVENTS = ['message.received', 'contact.created'] as const;
+
+  it('accepts valid per-event rules', () => {
+    expect(
+      mappingsError(
+        {
+          'contact.created': [
+            { target: 'phone', source: 'data.phoneNumber' },
+          ],
+        },
+        EVENTS,
+      ),
+    ).toBeNull();
+  });
+
+  it('rejects unknown events', () => {
+    expect(
+      mappingsError({ nope: [{ target: 'x', value: 1 }] }, EVENTS),
+    ).toContain('Unknown event');
+  });
+
+  it('prefixes rule errors with the event', () => {
+    expect(
+      mappingsError({ 'contact.created': [{ target: '!!' } as never] }, EVENTS),
+    ).toMatch(/^contact\.created:/);
   });
 });
 

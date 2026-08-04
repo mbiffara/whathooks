@@ -1,4 +1,3 @@
-import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -8,32 +7,7 @@ import {
   IsString,
   IsUrl,
   MaxLength,
-  ValidateNested,
 } from 'class-validator';
-
-/**
- * One payload-projection rule. Cross-field constraints (exactly one of
- * source/value, target uniqueness, path syntax) are checked by
- * mappingRulesError() in the service, where a friendly message is easier.
- */
-export class MappingRuleDto {
-  @IsString()
-  @MaxLength(64)
-  target!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(128)
-  source?: string;
-
-  @IsOptional()
-  value?: string | number | boolean | null;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(40)
-  dateFormat?: string;
-}
 
 export const WEBHOOK_EVENTS = [
   'message.received',
@@ -56,12 +30,12 @@ export class CreateWebhookDto {
   @IsString()
   sessionId?: string;
 
-  // Empty array (or omitted) = deliver the default payload.
+  // Per-event rule lists ({ event: rules }) or a legacy flat rule array
+  // (read as message.received). Shape + rules validated in the service
+  // (mappingsError), where friendly messages are easier. Omitted/empty =
+  // deliver the default payload for every event.
   @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MappingRuleDto)
-  payloadMapping?: MappingRuleDto[];
+  payloadMapping?: unknown;
 }
 
 export class UpdateWebhookDto {
@@ -80,9 +54,7 @@ export class UpdateWebhookDto {
   active?: boolean;
 
   // Empty array clears the mapping (reverts to the default payload).
+  // See CreateWebhookDto.payloadMapping; {} clears every mapping.
   @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MappingRuleDto)
-  payloadMapping?: MappingRuleDto[];
+  payloadMapping?: unknown;
 }

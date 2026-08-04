@@ -11,23 +11,41 @@ export const WEBHOOK_EVENTS = [
   "contact.updated",
 ];
 
-/** Source paths offered in the editor (free text is also allowed). */
-const SOURCE_SUGGESTIONS = [
-  "data.id",
-  "data.from",
-  "data.pushName",
-  "data.type",
-  "data.text",
-  "data.media.url",
-  "data.media.mimeType",
-  "data.media.fileName",
-  "data.waMessageId",
-  "data.timestamp",
-  "data.conversationId",
-  "event",
-  "sessionId",
-  "timestamp",
-];
+const ENVELOPE_PATHS = ["event", "sessionId", "timestamp"];
+
+/** Source paths offered per event (free text is also allowed). */
+const SOURCE_SUGGESTIONS: Record<string, string[]> = {
+  "message.received": [
+    "data.id",
+    "data.from",
+    "data.pushName",
+    "data.type",
+    "data.text",
+    "data.media.url",
+    "data.media.mimeType",
+    "data.media.fileName",
+    "data.waMessageId",
+    "data.timestamp",
+    "data.conversationId",
+    ...ENVELOPE_PATHS,
+  ],
+  "contact.created": [
+    "data.id",
+    "data.name",
+    "data.phoneNumber",
+    "data.lid",
+    "data.company",
+    "data.email",
+    "data.website",
+    "data.instagram",
+    "data.notes",
+    "data.createdAt",
+    ...ENVELOPE_PATHS,
+  ],
+  "session.status": ["data.sessionId", "data.status", ...ENVELOPE_PATHS],
+};
+SOURCE_SUGGESTIONS["contact.updated"] = SOURCE_SUGGESTIONS["contact.created"];
+SOURCE_SUGGESTIONS["session.qr"] = SOURCE_SUGGESTIONS["session.status"];
 
 /** Editable row: a MappingRule plus which kind the user picked. */
 export interface RuleRow {
@@ -61,6 +79,51 @@ export function rowsToRules(rows: RuleRow[]): MappingRule[] {
     .filter((r) => ("source" in r ? Boolean(r.source) : true));
 }
 
+/** Stored payloadMapping (keyed object, or legacy array = message.received). */
+export type EventMappings = Record<string, MappingRule[]>;
+
+/** Mirror of the API's normalizeMappings for values read back from it. */
+export function normalizeMappings(value: unknown): EventMappings {
+  if (Array.isArray(value)) {
+    return value.length ? { "message.received": value as MappingRule[] } : {};
+  }
+  if (value && typeof value === "object") {
+    const out: EventMappings = {};
+    for (const [event, rules] of Object.entries(value)) {
+      if (Array.isArray(rules) && rules.length) {
+        out[event] = rules as MappingRule[];
+      }
+    }
+    return out;
+  }
+  return {};
+}
+
+/** Editor state for a webhook: one row list per subscribed event. */
+export function mappingsToRowsByEvent(
+  payloadMapping: unknown,
+  events: string[],
+): Record<string, RuleRow[]> {
+  const mappings = normalizeMappings(payloadMapping);
+  const out: Record<string, RuleRow[]> = {};
+  for (const event of events) {
+    out[event] = rulesToRows(mappings[event] ?? null);
+  }
+  return out;
+}
+
+/** Back to the wire shape; events without complete rules are dropped. */
+export function rowsByEventToMappings(
+  rowsByEvent: Record<string, RuleRow[]>,
+): EventMappings {
+  const out: EventMappings = {};
+  for (const [event, rows] of Object.entries(rowsByEvent)) {
+    const rules = rowsToRules(rows);
+    if (rules.length) out[event] = rules;
+  }
+  return out;
+}
+
 export function rulesToRows(rules: MappingRule[] | null): RuleRow[] {
   if (!rules?.length) return [];
   return rules.map((r) => ({
@@ -73,22 +136,25 @@ export function rulesToRows(rules: MappingRule[] | null): RuleRow[] {
 }
 
 export function MappingEditor({
+  event,
   rows,
   onChange,
 }: {
+  /** Which event these rules project — selects the field suggestions. */
+  event: string;
   rows: RuleRow[];
   onChange: (rows: RuleRow[]) => void;
 }) {
   const t = useTranslations("dash.webhooks");
+  const datalistId = `wh-source-paths-${event.replace(/\W/g, "-")}`;
   function patch(i: number, changes: Partial<RuleRow>) {
     onChange(rows.map((row, j) => (j === i ? { ...row, ...changes } : row)));
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-[var(--color-muted)]">{t("mappingScope")}</p>
-      <datalist id="wh-source-paths">
-        {SOURCE_SUGGESTIONS.map((p) => (
+      <datalist id={datalistId}>
+        {(SOURCE_SUGGESTIONS[event] ?? ENVELOPE_PATHS).map((p) => (
           <option key={p} value={p} />
         ))}
       </datalist>
@@ -118,8 +184,8 @@ export function MappingEditor({
             <>
               <input
                 className="input h-9 min-w-36 flex-1 text-xs"
-                placeholder="data.from"
-                list="wh-source-paths"
+                placeholder={SOURCE_SUGGESTIONS[event]?.[1] ?? "data.from"}
+                list={datalistId}
                 value={row.source}
                 onChange={(e) => patch(i, { source: e.target.value })}
               />

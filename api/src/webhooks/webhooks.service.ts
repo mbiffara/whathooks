@@ -9,10 +9,10 @@ import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateWebhookDto,
-  MappingRuleDto,
   UpdateWebhookDto,
+  WEBHOOK_EVENTS,
 } from './dto/webhook.dto';
-import { mappingRulesError } from './payload-mapping';
+import { mappingsError, normalizeMappings } from './payload-mapping';
 
 @Injectable()
 export class WebhooksService {
@@ -98,9 +98,10 @@ export class WebhooksService {
     return {
       items,
       hasMore: rows.length > limit,
-      nextBefore: rows.length > limit
-        ? items[items.length - 1].createdAt.toISOString()
-        : null,
+      nextBefore:
+        rows.length > limit
+          ? items[items.length - 1].createdAt.toISOString()
+          : null,
     };
   }
 
@@ -112,14 +113,20 @@ export class WebhooksService {
     return hook;
   }
 
-  /** Validate + normalize mapping rules for the Json column. */
+  /**
+   * Validate + normalize the payloadMapping input for the Json column.
+   * Accepts the keyed { event: rules } shape or a legacy flat rule array
+   * (stored as message.received rules). Empty = clear.
+   */
   private mappingInput(
-    rules: MappingRuleDto[] | undefined,
+    value: unknown,
   ): Prisma.InputJsonValue | typeof Prisma.JsonNull {
-    if (!rules || rules.length === 0) return Prisma.JsonNull;
-    const error = mappingRulesError(rules);
+    if (value === undefined || value === null) return Prisma.JsonNull;
+    const mappings = normalizeMappings(value);
+    if (Object.keys(mappings).length === 0) return Prisma.JsonNull;
+    const error = mappingsError(mappings, WEBHOOK_EVENTS);
     if (error) throw new BadRequestException(error);
-    return rules as unknown as Prisma.InputJsonValue;
+    return mappings as unknown as Prisma.InputJsonValue;
   }
 
   private toPublic(h: Webhook) {

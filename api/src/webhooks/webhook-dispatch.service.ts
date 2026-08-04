@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Webhook } from '@prisma/client';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { applyPayloadMapping, isMappingRules } from './payload-mapping';
+import { applyPayloadMapping, normalizeMappings } from './payload-mapping';
 
 interface DispatchParams {
   organizationId: string;
@@ -65,17 +65,12 @@ export class WebhookDispatchService {
       data: params.payload,
       timestamp: new Date().toISOString(),
     };
-    // Per-webhook projection: when mapping rules exist, `data` carries only
-    // the fields the customer configured (renames, formatted dates, fixed
-    // values). The envelope itself is stable so signatures/tooling keep
-    // working. Rules are authored against the message payload, so they apply
-    // to message.received ONLY — other events (session.*, contact.*,
-    // flow.action) always deliver their full payload.
-    const data =
-      params.event === 'message.received' &&
-      isMappingRules(hook.payloadMapping)
-        ? applyPayloadMapping(hook.payloadMapping, envelope)
-        : params.payload;
+    // Per-event projection: when this event has mapping rules, `data`
+    // carries only the fields the customer configured (renames, formatted
+    // dates, fixed values); events without rules deliver their full payload.
+    // The envelope itself is stable so signatures/tooling keep working.
+    const rules = normalizeMappings(hook.payloadMapping)[params.event];
+    const data = rules ? applyPayloadMapping(rules, envelope) : params.payload;
     const body = JSON.stringify({ ...envelope, data });
     const signature =
       'sha256=' + createHmac('sha256', hook.secret).update(body).digest('hex');

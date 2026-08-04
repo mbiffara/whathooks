@@ -344,6 +344,9 @@ model MirrorThread {
   humanAgentId String?
   humanAgent   HumanAgent? @relation(fields: [humanAgentId], references: [id], onDelete: SetNull)
   agentNumber  String // denormalized: the relay's sender check reads this
+  // Team groups (assignGroup node): every listed number may reply as the
+  // brand. Empty = single-agent thread, agentNumber alone applies.
+  agentNumbers String[] @default([])
   showLeadName Boolean     @default(true)
   leadJid      String // original DM sender
   groupJid     String // the mirror group

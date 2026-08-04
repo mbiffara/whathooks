@@ -15,11 +15,16 @@ export const FLOW_NODE_TYPES = [
   'tagConversation',
   'assignTeammate',
   'saveContact',
+  'assignGroup',
 ] as const;
 export type FlowNodeType = (typeof FLOW_NODE_TYPES)[number];
 
 /** Node types that end the walk (no outgoing edges allowed). */
-export const TERMINAL_TYPES: FlowNodeType[] = ['assignHuman', 'roundRobin'];
+export const TERMINAL_TYPES: FlowNodeType[] = [
+  'assignHuman',
+  'roundRobin',
+  'assignGroup',
+];
 
 export interface FlowNode {
   id: string;
@@ -250,7 +255,8 @@ export function validateGraph(
           push('humanMissing', `Node "${n.id}": pick a human agent`, n.id);
         }
         break;
-      case 'roundRobin': {
+      case 'roundRobin':
+      case 'assignGroup': {
         const list = d.humanAgentIds;
         if (
           !Array.isArray(list) ||
@@ -283,7 +289,11 @@ export function validateGraph(
         break;
     }
     // Shared optional fields on assign nodes: empty means "use the default".
-    if (n.type === 'assignHuman' || n.type === 'roundRobin') {
+    if (
+      n.type === 'assignHuman' ||
+      n.type === 'roundRobin' ||
+      n.type === 'assignGroup'
+    ) {
       if (!isOptStr(d.groupPrefix, 40)) {
         push(
           'groupPrefixLength',

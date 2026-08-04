@@ -223,10 +223,10 @@ function makeEngine(overrides: {
       (
         sessionId: string,
         leadJid: string,
-        agent: AnyRecord,
+        agents: AnyRecord[],
         opts: AnyRecord,
       ) => {
-        created.push({ sessionId, leadJid, agent, opts });
+        created.push({ sessionId, leadJid, agents, opts });
         return Promise.resolve({
           id: 'thr1',
           groupJid: 'g@g.us',
@@ -334,7 +334,7 @@ describe('FlowEngineService.run', () => {
     await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
     expect(t.created[0]).toMatchObject({
       leadJid: CTX.remoteJid,
-      agent: { id: 'ha1', number: '555ha1' },
+      agents: [{ id: 'ha1', number: '555ha1' }],
       opts: { prefix: 'ConsultasWeb' },
     });
     expect(t.forwarded).toHaveLength(1);
@@ -391,15 +391,13 @@ describe('FlowEngineService.run', () => {
       edges: [edge('t', 'c'), edge('c', 'tag', 'out')],
     };
     await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
-    expect(t.prisma.contact.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          organizationId: 'org1',
-          phoneNumber: '549111',
-          name: 'Juan',
-        }),
-      }),
-    );
+    const createArgs = t.prisma.contact.create.mock
+      .calls[0][0] as AnyRecord;
+    expect(createArgs.data).toMatchObject({
+      organizationId: 'org1',
+      phoneNumber: '549111',
+      name: 'Juan',
+    });
     expect(t.webhooks.dispatch).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'contact.created' }),
     );
@@ -430,7 +428,7 @@ describe('FlowEngineService.run', () => {
       CTX,
       first.manager as never,
     );
-    expect(first.created[0]).toMatchObject({ agent: { id: 'ha1' } });
+    expect(first.created[0]).toMatchObject({ agents: [{ id: 'ha1' }] });
 
     const second = makeEngine({ counterValues: [2] });
     await second.engine.run(
@@ -439,7 +437,35 @@ describe('FlowEngineService.run', () => {
       CTX,
       second.manager as never,
     );
-    expect(second.created[0]).toMatchObject({ agent: { id: 'ha2' } });
+    expect(second.created[0]).toMatchObject({ agents: [{ id: 'ha2' }] });
+  });
+
+  it('assignGroup puts every agent in one group and hands off', async () => {
+    const t = makeEngine({});
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('g', 'assignGroup', { humanAgentIds: ['ha1', 'ha2'] }),
+      ],
+      edges: [edge('t', 'g')],
+    };
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    // One group with both agents — no round-robin counter involved.
+    expect(t.created).toHaveLength(1);
+    expect(t.created[0]).toMatchObject({
+      agents: [
+        { id: 'ha1', number: '555ha1' },
+        { id: 'ha2', number: '555ha2' },
+      ],
+    });
+    expect(t.prisma.flowCounter.upsert).not.toHaveBeenCalled();
+    expect(t.forwarded).toHaveLength(1);
+    expect(t.stateUpserts[0]).toMatchObject({
+      create: { status: 'HANDED_OFF', humanAgentId: 'ha1' },
+    });
+    expect((t.runs[0] as { data: { outcome: string } }).data).toMatchObject({
+      outcome: 'handed_off',
+    });
   });
 
   it('continues along onHandoff when the agent hands off', async () => {
@@ -461,7 +487,7 @@ describe('FlowEngineService.run', () => {
     expect((t.agentReplies[0] as { args: unknown[] }).args[4]).toEqual({
       pauseOnHandoff: false,
     });
-    expect(t.created[0]).toMatchObject({ agent: { id: 'ha2' } });
+    expect(t.created[0]).toMatchObject({ agents: [{ id: 'ha2' }] });
   });
 
   it('skips handed-off conversations entirely', async () => {

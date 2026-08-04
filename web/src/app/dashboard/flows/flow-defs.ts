@@ -10,7 +10,8 @@ export type FlowNodeType =
   | "webhook"
   | "tagConversation"
   | "assignTeammate"
-  | "saveContact";
+  | "saveContact"
+  | "assignGroup";
 
 export interface FlowIntent {
   key: string;
@@ -37,6 +38,7 @@ export const NODE_ICONS: Record<FlowNodeType, string> = {
   tagConversation: "🏷️",
   assignTeammate: "👤",
   saveContact: "📇",
+  assignGroup: "👥",
 };
 
 /** Palette (what can be added — trigger is fixed). */
@@ -50,6 +52,7 @@ export const PALETTE: FlowNodeType[] = [
   "tagConversation",
   "assignTeammate",
   "saveContact",
+  "assignGroup",
 ];
 
 export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
@@ -63,6 +66,7 @@ export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
     case "assignHuman":
       return { humanAgentId: "", groupPrefix: "", farewellText: "" };
     case "roundRobin":
+    case "assignGroup":
       return { humanAgentIds: [], groupPrefix: "", farewellText: "" };
     case "webhook":
       return { webhookId: "", note: "" };
@@ -124,7 +128,8 @@ export function summarize(
       return name(refs?.agents, data.agentId);
     case "assignHuman":
       return name(refs?.humanAgents, data.humanAgentId);
-    case "roundRobin": {
+    case "roundRobin":
+    case "assignGroup": {
       const n = ((data.humanAgentIds as string[]) ?? []).length;
       return t("summaryHumanAgents", { count: n });
     }

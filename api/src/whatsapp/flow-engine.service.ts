@@ -211,6 +211,26 @@ export class FlowEngineService {
         return undefined;
       }
 
+      case 'assignGroup': {
+        const list = (node.data.humanAgentIds as string[]) ?? [];
+        const who = await this.assign(
+          flow,
+          sessionId,
+          ctx,
+          manager,
+          node,
+          list,
+          true, // one shared group; any listed agent replies as the brand
+        );
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: who ?? 'failed',
+        });
+        rec.outcome = who ? 'handed_off' : rec.outcome;
+        return undefined;
+      }
+
       case 'webhook': {
         await this.webhooks
           .dispatchTo(node.data.webhookId as string, 'flow.action', {
@@ -278,29 +298,37 @@ export class FlowEngineService {
     manager: ConnectionManagerService,
     node: FlowNode,
     candidateIds: string[],
+    /** true (assignGroup): every candidate joins one shared group. */
+    all = false,
   ): Promise<string | null> {
     if (candidateIds.length === 0) return null;
-    let chosenId = candidateIds[0];
-    if (candidateIds.length > 1) {
+    let ids = candidateIds;
+    if (!all && candidateIds.length > 1) {
       const counter = await this.prisma.flowCounter.upsert({
         where: { flowId_nodeId: { flowId: flow.id, nodeId: node.id } },
         create: { flowId: flow.id, nodeId: node.id, value: 1 },
         update: { value: { increment: 1 } },
       });
-      chosenId = candidateIds[(counter.value - 1) % candidateIds.length];
+      ids = [candidateIds[(counter.value - 1) % candidateIds.length]];
+    } else if (!all) {
+      ids = [candidateIds[0]];
     }
-    const human = await this.prisma.humanAgent.findUnique({
-      where: { id: chosenId },
-    });
-    if (!human) {
-      this.log.warn(`Flow ${flow.id}: human agent ${chosenId} missing`);
+    const humans = (
+      await Promise.all(
+        ids.map((id) => this.prisma.humanAgent.findUnique({ where: { id } })),
+      )
+    ).filter((h): h is NonNullable<typeof h> => h !== null);
+    if (humans.length === 0) {
+      this.log.warn(
+        `Flow ${flow.id}: human agent(s) ${ids.join(', ')} missing`,
+      );
       return null;
     }
     const showLeadName = (node.data.showLeadName as boolean) ?? true;
     const thread = await manager.createMirrorThread(
       sessionId,
       ctx.remoteJid,
-      { id: human.id, number: human.phoneNumber },
+      humans.map((h) => ({ id: h.id, number: h.phoneNumber })),
       {
         prefix: (node.data.groupPrefix as string) || DEFAULT_GROUP_PREFIX,
         showLeadName,
@@ -336,14 +364,13 @@ export class FlowEngineService {
         flowId: flow.id,
         conversationId: ctx.conversationId,
         status: 'HANDED_OFF',
-        humanAgentId: human.id,
+        humanAgentId: humans[0].id,
       },
-      update: { status: 'HANDED_OFF', humanAgentId: human.id },
+      update: { status: 'HANDED_OFF', humanAgentId: humans[0].id },
     });
-    this.log.log(
-      `Flow ${flow.id}: handed ${ctx.conversationId} to ${human.name}`,
-    );
-    return human.name;
+    const names = humans.map((h) => h.name).join(', ');
+    this.log.log(`Flow ${flow.id}: handed ${ctx.conversationId} to ${names}`);
+    return names;
   }
 
   /**

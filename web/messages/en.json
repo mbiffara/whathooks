@@ -667,6 +667,7 @@
       "webhookLabel": "Webhook",
       "noteLabel": "Note (sent in the payload)",
       "copyHistory": "Copy the conversation history into the group",
+      "groupAgentsLabel": "Human agents in the group",
       "tagLabel": "Tag",
       "newTagPlaceholder": "New tag name…",
       "createTag": "Create",
@@ -710,6 +711,10 @@
         "assignTeammate": {
           "title": "Assign teammate",
           "hint": "Assigns the conversation in the shared inbox, then continues."
+        },
+        "assignGroup": {
+          "title": "Team group",
+          "hint": "Creates the lead's mirror group with every selected human agent — anyone in it can reply as the brand. Ends the flow."
         },
         "saveContact": {
           "title": "Save contact",

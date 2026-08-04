@@ -713,7 +713,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         const created = await this.createMirrorThread(
           sessionId,
           ctx.remoteJid,
-          { id: link.humanAgentId, number: link.agentNumber },
+          [{ id: link.humanAgentId, number: link.agentNumber }],
           {
             prefix: link.groupPrefix,
             showLeadName: link.showLeadName,
@@ -741,22 +741,28 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     });
     if (!thread) return;
     // The sender may be addressed by LID with the phone in senderAltJid —
-    // accept a match on either identity.
+    // accept a match on either identity. Team groups list every agent
+    // number in agentNumbers; single-agent threads only have agentNumber.
+    const allowed = thread.agentNumbers.length
+      ? thread.agentNumbers
+      : [thread.agentNumber];
     const senderNumbers = [ctx.senderJid, ctx.senderAltJid]
       .filter((j): j is string => Boolean(j))
       .map((j) => j.split(':')[0]?.split('@')[0]);
-    if (!senderNumbers.includes(thread.agentNumber)) {
+    const matched = senderNumbers.find((n) => allowed.includes(n));
+    if (!matched) {
       this.log.log(
         `Mirror thread ${thread.id}: ignoring group message from ` +
           `${senderNumbers.join('/') || 'unknown'} ` +
-          `(human agent is ${thread.agentNumber})`,
+          `(agents: ${allowed.join(', ')})`,
       );
       return;
     }
-    // Attribute the lead's stored copy to the human agent behind the group.
-    const human = thread.humanAgentId
-      ? await this.prisma.humanAgent.findUnique({
-          where: { id: thread.humanAgentId },
+    // Attribute the lead's stored copy to whichever agent actually wrote.
+    const organizationId = await this.orgIdOf(sessionId).catch(() => null);
+    const human = organizationId
+      ? await this.prisma.humanAgent.findFirst({
+          where: { organizationId, phoneNumber: matched },
           select: { name: true },
         })
       : null;
@@ -785,26 +791,31 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Create the WhatsApp group + thread row binding a lead to a human agent.
-   * Shared by the static MirrorLink path and Flow assign nodes.
+   * Create the WhatsApp group + thread row binding a lead to one or more
+   * human agents (any listed agent may reply as the brand). Shared by the
+   * static MirrorLink path and the Flow assign nodes.
    */
   async createMirrorThread(
     sessionId: string,
     leadJid: string,
-    agent: { id?: string | null; number: string },
+    agents: Array<{ id?: string | null; number: string }>,
     opts: { prefix: string; showLeadName: boolean; linkId?: string | null },
   ) {
+    if (agents.length === 0) throw new Error('Mirror thread needs an agent');
     const seq =
       (await this.prisma.mirrorThread.count({ where: { sessionId } })) + 1;
-    const group = await this.createGroup(sessionId, `${opts.prefix} #${seq}`, [
-      agent.number,
-    ]);
+    const group = await this.createGroup(
+      sessionId,
+      `${opts.prefix} #${seq}`,
+      agents.map((a) => a.number),
+    );
     const thread = await this.prisma.mirrorThread.create({
       data: {
         sessionId,
         linkId: opts.linkId ?? null,
-        humanAgentId: agent.id ?? null,
-        agentNumber: agent.number,
+        humanAgentId: agents[0].id ?? null,
+        agentNumber: agents[0].number,
+        agentNumbers: agents.length > 1 ? agents.map((a) => a.number) : [],
         showLeadName: opts.showLeadName,
         leadJid,
         groupJid: group.id,

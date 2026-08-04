@@ -667,6 +667,7 @@
       "webhookLabel": "Webhook",
       "noteLabel": "Nota (se envía en el payload)",
       "copyHistory": "Copiar el historial de la conversación al grupo",
+      "groupAgentsLabel": "Agentes humanos del grupo",
       "tagLabel": "Etiqueta",
       "newTagPlaceholder": "Nombre de la etiqueta…",
       "createTag": "Crear",
@@ -710,6 +711,10 @@
         "assignTeammate": {
           "title": "Asignar al equipo",
           "hint": "Asigna la conversación en la bandeja compartida y continúa."
+        },
+        "assignGroup": {
+          "title": "Grupo de agentes",
+          "hint": "Crea el grupo espejo del lead con todos los agentes seleccionados — cualquiera puede responder como la marca. Termina el flow."
         },
         "saveContact": {
           "title": "Guardar contacto",

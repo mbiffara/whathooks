@@ -909,9 +909,9 @@ function NodePanel({
         </label>
       )}
 
-      {nt === "roundRobin" && (
+      {(nt === "roundRobin" || nt === "assignGroup") && (
         <div className="flex flex-col gap-1 text-sm">
-          {t("rotationLabel")}
+          {nt === "roundRobin" ? t("rotationLabel") : t("groupAgentsLabel")}
           {refs.humanAgents.map((h) => {
             const list = (d.humanAgentIds as string[]) ?? [];
             const checked = list.includes(h.id);
@@ -935,7 +935,9 @@ function NodePanel({
         </div>
       )}
 
-      {(nt === "assignHuman" || nt === "roundRobin") && (
+      {(nt === "assignHuman" ||
+        nt === "roundRobin" ||
+        nt === "assignGroup") && (
         <>
           <label className="flex flex-col gap-1 text-sm">
             {t("groupPrefix")}

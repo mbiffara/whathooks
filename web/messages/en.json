@@ -89,6 +89,7 @@
       "sessions": "WhatsApp Sessions",
       "messages": "Messages",
       "quickReplies": "Quick replies",
+      "tags": "Tags",
       "agents": "Agents",
       "webhooks": "Webhooks",
       "apiKeys": "API Keys",
@@ -560,6 +561,14 @@
       "nameShown": "lead name: shown",
       "nameHidden": "lead name: hidden"
     },
+    "tags": {
+      "title": "Tags",
+      "subtitle": "Labels for organizing conversations, shared across the organization. Used from the inbox and the \"Tag conversation\" flow node.",
+      "namePlaceholder": "Tag name…",
+      "color": "Color",
+      "add": "Add tag",
+      "empty": "No tags yet. Create one here or from the inbox."
+    },
     "quickReplies": {
       "title": "Quick replies",
       "subtitle": "Saved responses your team can insert from the inbox composer with ⚡. Shared across the organization.",
@@ -638,6 +647,8 @@
       "webhookLabel": "Webhook",
       "noteLabel": "Note (sent in the payload)",
       "tagLabel": "Tag",
+      "newTagPlaceholder": "New tag name…",
+      "createTag": "Create",
       "teammateLabel": "Team member",
       "summaryNoKeywords": "no keywords",
       "summaryIntents": "{count, plural, one {# intent} other {# intents}}",

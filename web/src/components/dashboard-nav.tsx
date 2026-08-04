@@ -25,6 +25,7 @@ type IconName =
   | "humanAgents"
   | "flows"
   | "quickReplies"
+  | "tags"
   | "signOut";
 
 /** Minimal stroke icons (24 viewBox), sized by the parent via width/height. */
@@ -101,6 +102,12 @@ function NavIcon({ name }: { name: IconName }) {
     ),
     admin: <path d="M12 2l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-4z" />,
     quickReplies: <path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z" />,
+    tags: (
+      <>
+        <path d="M20.6 13.4 11 3.8a1.8 1.8 0 0 0-1.3-.5H5.1a1.8 1.8 0 0 0-1.8 1.8v4.6c0 .5.2 1 .5 1.3l9.6 9.6a1.8 1.8 0 0 0 2.6 0l4.6-4.6a1.8 1.8 0 0 0 0-2.6z" />
+        <circle cx="7.6" cy="7.6" r="0.8" />
+      </>
+    ),
     signOut: (
       <>
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -141,6 +148,7 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
       { href: "/dashboard", key: "overview", exact: true },
       { href: "/dashboard/messages", key: "messages" },
       { href: "/dashboard/quick-replies", key: "quickReplies" },
+      { href: "/dashboard/tags", key: "tags" },
       { href: "/dashboard/sessions", key: "sessions" },
     ],
   },

@@ -89,6 +89,7 @@
       "sessions": "Sesiones de WhatsApp",
       "messages": "Mensajes",
       "quickReplies": "Respuestas rápidas",
+      "tags": "Etiquetas",
       "agents": "Agentes",
       "webhooks": "Webhooks",
       "apiKeys": "Claves API",
@@ -560,6 +561,14 @@
       "nameShown": "nombre del lead: visible",
       "nameHidden": "nombre del lead: oculto"
     },
+    "tags": {
+      "title": "Etiquetas",
+      "subtitle": "Etiquetas para organizar conversaciones, compartidas con toda la organización. Se usan desde el chat y desde el nodo \"Etiquetar conversación\" de los flows.",
+      "namePlaceholder": "Nombre de la etiqueta…",
+      "color": "Color",
+      "add": "Agregar etiqueta",
+      "empty": "Aún no hay etiquetas. Crea una acá o desde el chat."
+    },
     "quickReplies": {
       "title": "Respuestas rápidas",
       "subtitle": "Respuestas guardadas que tu equipo puede insertar desde el chat con ⚡. Compartidas con toda la organización.",
@@ -638,6 +647,8 @@
       "webhookLabel": "Webhook",
       "noteLabel": "Nota (se envía en el payload)",
       "tagLabel": "Etiqueta",
+      "newTagPlaceholder": "Nombre de la etiqueta…",
+      "createTag": "Crear",
       "teammateLabel": "Miembro del equipo",
       "summaryNoKeywords": "sin palabras clave",
       "summaryIntents": "{count, plural, one {# intención} other {# intenciones}}",

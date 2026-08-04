@@ -6,6 +6,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -27,6 +28,18 @@ class CreateTagDto {
   @MinLength(1)
   @MaxLength(30)
   name!: string;
+
+  @IsOptional()
+  @IsHexColor()
+  color?: string;
+}
+
+class UpdateTagDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(30)
+  name?: string;
 
   @IsOptional()
   @IsHexColor()
@@ -72,6 +85,36 @@ export class TagsController {
     if (existing) return existing;
     return this.prisma.tag.create({
       data: { organizationId, name, color: dto.color ?? '#25d366' },
+      select: { id: true, name: true, color: true },
+    });
+  }
+
+  @Patch(':id')
+  async update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateTagDto,
+  ) {
+    const organizationId = this.orgOf(user);
+    const tag = await this.prisma.tag.findFirst({
+      where: { id, organizationId },
+    });
+    if (!tag) throw new NotFoundException('Tag not found');
+    const name = dto.name?.trim();
+    if (name && name !== tag.name) {
+      const clash = await this.prisma.tag.findUnique({
+        where: { organizationId_name: { organizationId, name } },
+      });
+      if (clash) {
+        throw new BadRequestException('A tag with that name already exists');
+      }
+    }
+    return this.prisma.tag.update({
+      where: { id },
+      data: {
+        ...(name ? { name } : {}),
+        ...(dto.color ? { color: dto.color } : {}),
+      },
       select: { id: true, name: true, color: true },
     });
   }

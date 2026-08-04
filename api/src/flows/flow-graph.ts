@@ -14,6 +14,7 @@ export const FLOW_NODE_TYPES = [
   'webhook',
   'tagConversation',
   'assignTeammate',
+  'saveContact',
 ] as const;
 export type FlowNodeType = (typeof FLOW_NODE_TYPES)[number];
 
@@ -167,6 +168,7 @@ export function validateGraph(
     const d = n.data ?? {};
     switch (n.type) {
       case 'trigger':
+      case 'saveContact': // no configuration
         break;
       case 'keyword': {
         const kw = d.keywords;
@@ -377,6 +379,7 @@ export function allowedHandles(node: FlowNode): string[] {
     case 'webhook':
     case 'tagConversation':
     case 'assignTeammate':
+    case 'saveContact':
       return ['out'];
     default:
       return [];

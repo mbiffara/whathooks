@@ -90,6 +90,7 @@
       "messages": "Messages",
       "quickReplies": "Quick replies",
       "tags": "Tags",
+      "contacts": "Contacts",
       "agents": "Agents",
       "webhooks": "Webhooks",
       "apiKeys": "API Keys",
@@ -561,6 +562,23 @@
       "nameShown": "lead name: shown",
       "nameHidden": "lead name: hidden"
     },
+    "contacts": {
+      "title": "Contacts",
+      "subtitle": "People your number talks to — saved by the \"Save contact\" flow node or added by hand. contact.created / contact.updated webhooks fire on changes.",
+      "add": "Add contact",
+      "name": "Name",
+      "phone": "Phone (digits, with country code)",
+      "lid": "LID (if the phone is hidden)",
+      "company": "Company",
+      "email": "Email",
+      "website": "Website",
+      "instagram": "Instagram",
+      "notes": "Notes…",
+      "needIdentifier": "A phone number or LID is required",
+      "searchPlaceholder": "Search by name, phone, company or email…",
+      "unnamed": "(no name)",
+      "empty": "No contacts yet. Add the \"Save contact\" node to a flow, or create one here."
+    },
     "tags": {
       "title": "Tags",
       "subtitle": "Labels for organizing conversations, shared across the organization. Used from the inbox and the \"Tag conversation\" flow node.",
@@ -690,6 +708,10 @@
         "assignTeammate": {
           "title": "Assign teammate",
           "hint": "Assigns the conversation in the shared inbox, then continues."
+        },
+        "saveContact": {
+          "title": "Save contact",
+          "hint": "Adds the lead to Contacts on first contact (name and number from WhatsApp), then continues. Fires the contact.created webhook."
         }
       },
       "draft": "Draft",

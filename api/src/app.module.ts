@@ -12,6 +12,7 @@ import { MediaModule } from './media/media.module';
 import { MessagesModule } from './messages/messages.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { ContactsModule } from './contacts/contacts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QuickRepliesModule } from './quick-replies/quick-replies.module';
 import { TagsModule } from './tags/tags.module';
@@ -23,6 +24,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
   imports: [
     TagsModule,
     QuickRepliesModule,
+    ContactsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     RedisModule,

@@ -26,6 +26,7 @@ type IconName =
   | "flows"
   | "quickReplies"
   | "tags"
+  | "contacts"
   | "signOut";
 
 /** Minimal stroke icons (24 viewBox), sized by the parent via width/height. */
@@ -102,6 +103,13 @@ function NavIcon({ name }: { name: IconName }) {
     ),
     admin: <path d="M12 2l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-4z" />,
     quickReplies: <path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z" />,
+    contacts: (
+      <>
+        <rect x="4" y="3" width="16" height="18" rx="2" />
+        <circle cx="12" cy="10" r="2.5" />
+        <path d="M8 17c.8-1.8 2.3-2.7 4-2.7s3.2.9 4 2.7" />
+      </>
+    ),
     tags: (
       <>
         <path d="M20.6 13.4 11 3.8a1.8 1.8 0 0 0-1.3-.5H5.1a1.8 1.8 0 0 0-1.8 1.8v4.6c0 .5.2 1 .5 1.3l9.6 9.6a1.8 1.8 0 0 0 2.6 0l4.6-4.6a1.8 1.8 0 0 0 0-2.6z" />
@@ -147,6 +155,7 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
     links: [
       { href: "/dashboard", key: "overview", exact: true },
       { href: "/dashboard/messages", key: "messages" },
+      { href: "/dashboard/contacts", key: "contacts" },
       { href: "/dashboard/quick-replies", key: "quickReplies" },
       { href: "/dashboard/tags", key: "tags" },
       { href: "/dashboard/sessions", key: "sessions" },

@@ -1,12 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MessageSource } from '@prisma/client';
 import { AgentRunnerService } from '../agents/agent-runner.service';
-import {
-  FlowGraph,
-  FlowNode,
-  edgeFrom,
-  intentsOf,
-} from '../flows/flow-graph';
+import { FlowGraph, FlowNode, edgeFrom, intentsOf } from '../flows/flow-graph';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import type {
@@ -136,7 +131,11 @@ export class FlowEngineService {
         const keywords = (node.data.keywords as string[]) ?? [];
         const haystack = normalize(ctx.text ?? '');
         const hit = keywords.some((k) => haystack.includes(normalize(k)));
-        rec.steps.push({ nodeId: node.id, type: node.type, note: hit ? 'yes' : 'no' });
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: hit ? 'yes' : 'no',
+        });
         return this.follow(graph, node, hit ? 'yes' : 'no');
       }
 
@@ -184,15 +183,30 @@ export class FlowEngineService {
         const who = await this.assign(flow, sessionId, ctx, manager, node, [
           node.data.humanAgentId as string,
         ]);
-        rec.steps.push({ nodeId: node.id, type: node.type, note: who ?? 'failed' });
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: who ?? 'failed',
+        });
         rec.outcome = who ? 'handed_off' : rec.outcome;
         return undefined;
       }
 
       case 'roundRobin': {
         const list = (node.data.humanAgentIds as string[]) ?? [];
-        const who = await this.assign(flow, sessionId, ctx, manager, node, list);
-        rec.steps.push({ nodeId: node.id, type: node.type, note: who ?? 'failed' });
+        const who = await this.assign(
+          flow,
+          sessionId,
+          ctx,
+          manager,
+          node,
+          list,
+        );
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: who ?? 'failed',
+        });
         rec.outcome = who ? 'handed_off' : rec.outcome;
         return undefined;
       }
@@ -239,6 +253,15 @@ export class FlowEngineService {
             this.log.warn(`Flow ${flow.id}: assignTeammate node failed: ${e}`),
           );
         rec.steps.push({ nodeId: node.id, type: node.type });
+        return this.follow(graph, node, 'out');
+      }
+
+      case 'saveContact': {
+        const note = await this.saveContact(sessionId, ctx).catch((e) => {
+          this.log.warn(`Flow ${flow.id}: saveContact failed: ${e}`);
+          return 'error';
+        });
+        rec.steps.push({ nodeId: node.id, type: node.type, note });
         return this.follow(graph, node, 'out');
       }
 
@@ -321,6 +344,55 @@ export class FlowEngineService {
       `Flow ${flow.id}: handed ${ctx.conversationId} to ${human.name}`,
     );
     return human.name;
+  }
+
+  /**
+   * Upsert the lead into the org's contact book. First contact creates the
+   * record (dispatching contact.created); later runs only fill a missing
+   * name from the WhatsApp profile (dispatching contact.updated).
+   */
+  private async saveContact(
+    sessionId: string,
+    ctx: InboundAutomationCtx,
+  ): Promise<string> {
+    const session = await this.prisma.waSession.findUnique({
+      where: { id: sessionId },
+      select: { organizationId: true },
+    });
+    if (!session) return 'error';
+    const organizationId = session.organizationId;
+    // DMs arrive from a phone jid or (phone hidden) a LID jid.
+    const [num, host] = ctx.remoteJid.split('@');
+    const key = host === 'lid' ? { lid: num } : { phoneNumber: num };
+    const existing = await this.prisma.contact.findFirst({
+      where: { organizationId, ...key },
+    });
+    if (existing) {
+      if (!existing.name && ctx.pushName) {
+        const updated = await this.prisma.contact.update({
+          where: { id: existing.id },
+          data: { name: ctx.pushName },
+        });
+        void this.webhooks.dispatch({
+          organizationId,
+          sessionId,
+          event: 'contact.updated',
+          payload: updated,
+        });
+        return 'updated';
+      }
+      return 'exists';
+    }
+    const created = await this.prisma.contact.create({
+      data: { organizationId, name: ctx.pushName ?? null, ...key },
+    });
+    void this.webhooks.dispatch({
+      organizationId,
+      sessionId,
+      event: 'contact.created',
+      payload: created,
+    });
+    return 'created';
   }
 
   /**

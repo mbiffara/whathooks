@@ -9,7 +9,8 @@ export type FlowNodeType =
   | "roundRobin"
   | "webhook"
   | "tagConversation"
-  | "assignTeammate";
+  | "assignTeammate"
+  | "saveContact";
 
 export interface FlowIntent {
   key: string;
@@ -35,6 +36,7 @@ export const NODE_ICONS: Record<FlowNodeType, string> = {
   webhook: "🪝",
   tagConversation: "🏷️",
   assignTeammate: "👤",
+  saveContact: "📇",
 };
 
 /** Palette (what can be added — trigger is fixed). */
@@ -47,6 +49,7 @@ export const PALETTE: FlowNodeType[] = [
   "webhook",
   "tagConversation",
   "assignTeammate",
+  "saveContact",
 ];
 
 export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
@@ -90,6 +93,7 @@ export function handlesFor(
     case "webhook":
     case "tagConversation":
     case "assignTeammate":
+    case "saveContact":
       return ["out"];
     default:
       return []; // terminal

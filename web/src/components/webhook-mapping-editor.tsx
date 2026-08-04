@@ -3,7 +3,13 @@
 import type { MappingRule } from "@/lib/types";
 import { useTranslations } from "next-intl";
 
-export const WEBHOOK_EVENTS = ["message.received", "session.status", "session.qr"];
+export const WEBHOOK_EVENTS = [
+  "message.received",
+  "session.status",
+  "session.qr",
+  "contact.created",
+  "contact.updated",
+];
 
 /** Source paths offered in the editor (free text is also allowed). */
 const SOURCE_SUGGESTIONS = [

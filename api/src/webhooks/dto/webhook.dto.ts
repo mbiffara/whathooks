@@ -39,6 +39,8 @@ export const WEBHOOK_EVENTS = [
   'message.received',
   'session.status',
   'session.qr',
+  'contact.created',
+  'contact.updated',
 ] as const;
 
 export class CreateWebhookDto {

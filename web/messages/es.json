@@ -90,6 +90,7 @@
       "messages": "Mensajes",
       "quickReplies": "Respuestas rápidas",
       "tags": "Etiquetas",
+      "contacts": "Contactos",
       "agents": "Agentes",
       "webhooks": "Webhooks",
       "apiKeys": "Claves API",
@@ -561,6 +562,23 @@
       "nameShown": "nombre del lead: visible",
       "nameHidden": "nombre del lead: oculto"
     },
+    "contacts": {
+      "title": "Contactos",
+      "subtitle": "Personas con las que habla tu número — guardadas por el nodo \"Guardar contacto\" o agregadas a mano. Los webhooks contact.created / contact.updated se disparan con los cambios.",
+      "add": "Agregar contacto",
+      "name": "Nombre",
+      "phone": "Teléfono (dígitos, con código de país)",
+      "lid": "LID (si el teléfono está oculto)",
+      "company": "Empresa",
+      "email": "Email",
+      "website": "Sitio web",
+      "instagram": "Instagram",
+      "notes": "Notas…",
+      "needIdentifier": "Se necesita un teléfono o un LID",
+      "searchPlaceholder": "Buscar por nombre, teléfono, empresa o email…",
+      "unnamed": "(sin nombre)",
+      "empty": "Aún no hay contactos. Agrega el nodo \"Guardar contacto\" a un flow, o crea uno acá."
+    },
     "tags": {
       "title": "Etiquetas",
       "subtitle": "Etiquetas para organizar conversaciones, compartidas con toda la organización. Se usan desde el chat y desde el nodo \"Etiquetar conversación\" de los flows.",
@@ -690,6 +708,10 @@
         "assignTeammate": {
           "title": "Asignar al equipo",
           "hint": "Asigna la conversación en la bandeja compartida y continúa."
+        },
+        "saveContact": {
+          "title": "Guardar contacto",
+          "hint": "Agrega el lead a Contactos en el primer contacto (nombre y número de WhatsApp) y continúa. Dispara el webhook contact.created."
         }
       },
       "draft": "Borrador",

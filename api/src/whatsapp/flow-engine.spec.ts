@@ -191,6 +191,18 @@ function makeEngine(overrides: {
     message: {
       findMany: jest.fn().mockResolvedValue([]),
     },
+    waSession: {
+      findUnique: jest.fn().mockResolvedValue({ organizationId: 'org1' }),
+    },
+    contact: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn((args: AnyRecord) =>
+        Promise.resolve({ id: 'c1', ...(args.data as AnyRecord) }),
+      ),
+      update: jest.fn((args: AnyRecord) =>
+        Promise.resolve({ id: 'c1', ...(args.data as AnyRecord) }),
+      ),
+    },
   };
   const agentRunner = {
     classify: jest.fn(overrides.classify ?? (() => Promise.resolve(null))),
@@ -200,6 +212,7 @@ function makeEngine(overrides: {
       dispatched.push({ args });
       return Promise.resolve();
     }),
+    dispatch: jest.fn(() => Promise.resolve()),
   };
   const manager = {
     runAgentReply: jest.fn((...args: unknown[]) => {
@@ -241,6 +254,7 @@ function makeEngine(overrides: {
     manager,
     prisma,
     agentRunner,
+    webhooks,
     sent,
     created,
     forwarded,
@@ -364,6 +378,41 @@ describe('FlowEngineService.run', () => {
     // …without the triggering message, which is forwarded separately.
     expect(transcript?.text.includes(CTX.text)).toBe(false);
     expect(t.forwarded).toHaveLength(1);
+  });
+
+  it('saveContact creates the lead once and dispatches contact.created', async () => {
+    const t = makeEngine({});
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('c', 'saveContact'),
+        node('tag', 'tagConversation', { tagId: 'tag1' }),
+      ],
+      edges: [edge('t', 'c'), edge('c', 'tag', 'out')],
+    };
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    expect(t.prisma.contact.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'org1',
+          phoneNumber: '549111',
+          name: 'Juan',
+        }),
+      }),
+    );
+    expect(t.webhooks.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'contact.created' }),
+    );
+    // The walk continued through the out handle.
+    expect(t.updates.length).toBeGreaterThan(0);
+
+    // Second run: the contact exists with a name — no create, no dispatch.
+    t.prisma.contact.findFirst.mockResolvedValue({ id: 'c1', name: 'Juan' });
+    t.prisma.contact.create.mockClear();
+    (t.webhooks.dispatch as jest.Mock).mockClear();
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    expect(t.prisma.contact.create).not.toHaveBeenCalled();
+    expect(t.webhooks.dispatch).not.toHaveBeenCalled();
   });
 
   it('round-robins across human agents using the counter', async () => {

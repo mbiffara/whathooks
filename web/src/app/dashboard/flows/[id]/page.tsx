@@ -25,6 +25,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useTranslations } from "next-intl";
@@ -185,6 +186,83 @@ export default function FlowEditorPage() {
   );
   const [loaded, setLoaded] = useState(false);
 
+  // ---- undo/redo -----------------------------------------------------------
+  // Snapshots of {nodes, edges}. State objects are replaced immutably on
+  // every mutation (ReactFlow + our patchers), so shallow copies are safe.
+  type Snapshot = { nodes: EditorNode[]; edges: Edge[] };
+  const nodesRef = useRef<EditorNode[]>(nodes);
+  const edgesRef = useRef<Edge[]>(edges);
+  useEffect(() => {
+    nodesRef.current = nodes;
+    edgesRef.current = edges;
+  }, [nodes, edges]);
+  const historyRef = useRef<Snapshot[]>([]);
+  const futureRef = useRef<Snapshot[]>([]);
+  const lastSnapAt = useRef(0);
+
+  /** Record the current graph before a mutation. `coalesceMs` groups rapid
+   *  edits (typing in a config field) into a single undo step. */
+  const snapshot = useCallback((coalesceMs = 0) => {
+    const now = Date.now();
+    if (coalesceMs && now - lastSnapAt.current < coalesceMs) return;
+    lastSnapAt.current = now;
+    historyRef.current.push({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+    });
+    if (historyRef.current.length > 50) historyRef.current.shift();
+    futureRef.current = [];
+  }, []);
+
+  const undo = useCallback(() => {
+    const prev = historyRef.current.pop();
+    if (!prev) return;
+    futureRef.current.push({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+    });
+    setNodes(prev.nodes);
+    setEdges(prev.edges);
+    // The config panel keeps field-local state (e.g. the keyword textarea);
+    // closing it avoids showing text that no longer matches the node data.
+    setSelectedId(null);
+    setDirty(true);
+  }, [setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    historyRef.current.push({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+    });
+    setNodes(next.nodes);
+    setEdges(next.edges);
+    setSelectedId(null);
+    setDirty(true);
+  }, [setNodes, setEdges]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+      // Native text-undo wins while typing in a field.
+      const el = e.target as HTMLElement;
+      if (
+        el.tagName === "INPUT" ||
+        el.tagName === "TEXTAREA" ||
+        el.tagName === "SELECT" ||
+        el.isContentEditable
+      ) {
+        return;
+      }
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo, redo]);
+
   useEffect(() => {
     if (!token) return;
     (async () => {
@@ -217,6 +295,7 @@ export default function FlowEditorPage() {
 
   const onConnect = useCallback(
     (conn: Connection) => {
+      snapshot();
       setEdges((eds) =>
         addEdge(
           conn,
@@ -232,10 +311,11 @@ export default function FlowEditorPage() {
       );
       setDirty(true);
     },
-    [setEdges],
+    [setEdges, snapshot],
   );
 
   function addNode(type: FlowNodeType) {
+    snapshot();
     const nid = `${type}_${Math.random().toString(36).slice(2, 8)}`;
     setNodes((ns) => [
       ...ns,
@@ -252,6 +332,8 @@ export default function FlowEditorPage() {
 
   function patchSelected(patch: FlowNodeData) {
     if (!selectedId) return;
+    // Coalesced: rapid keystrokes in a config field form one undo step.
+    snapshot(800);
     setNodes((ns) =>
       ns.map((n) =>
         n.id === selectedId ? { ...n, data: { ...n.data, ...patch } } : n,
@@ -262,6 +344,7 @@ export default function FlowEditorPage() {
 
   function deleteSelected() {
     if (!selectedId || selectedId === "trigger") return;
+    snapshot();
     setNodes((ns) => ns.filter((n) => n.id !== selectedId));
     setEdges((es) =>
       es.filter((e) => e.source !== selectedId && e.target !== selectedId),
@@ -578,13 +661,16 @@ export default function FlowEditorPage() {
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={(c) => {
+                  if (c.some((ch) => ch.type === "remove")) snapshot();
                   onNodesChange(c);
                   if (c.some((ch) => ch.type === "position")) setDirty(true);
                 }}
                 onEdgesChange={(c) => {
+                  if (c.some((ch) => ch.type === "remove")) snapshot();
                   onEdgesChange(c);
                   if (c.some((ch) => ch.type === "remove")) setDirty(true);
                 }}
+                onNodeDragStart={() => snapshot()}
                 onConnect={onConnect}
                 onNodeClick={(_, n) => {
                   setSelectedId(n.id);

@@ -96,6 +96,7 @@
       "apiKeys": "Claves API",
       "logs": "Registro de mensajes",
       "docs": "Documentación",
+      "guide": "Guía de inicio",
       "team": "Equipo",
       "billing": "Facturación",
       "settings": "Configuración",
@@ -913,6 +914,80 @@
     "trialNote": "Prueba gratis de 7 días",
     "annualNote": "o {price}/año — 2 meses gratis"
   },
+  "guide": {
+      "title": "Guía de inicio",
+      "intro": "Todo lo que necesitas para poner tu WhatsApp a trabajar — sin escribir código. En diez minutos conectas tu número, organizas tu bandeja y dejas la automatización corriendo.",
+      "sections": {
+        "connect": {
+          "title": "1. Conecta tu número",
+          "paragraphs": [
+            "En Sesiones de WhatsApp crea una sesión, ponle un nombre (por ejemplo \"Ventas\") y escanea el código QR desde el teléfono que tiene el número: WhatsApp → Configuración → Dispositivos vinculados → Vincular un dispositivo.",
+            "Listo: los mensajes que lleguen a ese número aparecen en tu bandeja, y el teléfono sigue funcionando como siempre. Puedes conectar más números según tu plan."
+          ],
+          "items": [
+            "Consejo: activa \"Guardar contactos automáticamente\" en la sesión para que cada persona que escriba quede registrada en Contactos."
+          ]
+        },
+        "inbox": {
+          "title": "2. La bandeja de mensajes",
+          "paragraphs": [
+            "En Mensajes está cada conversación: responde con texto o archivos, deja notas internas (nunca se envían al cliente) y marca conversaciones como resueltas.",
+            "Trabájala en equipo: asigna cada conversación a un responsable, etiquétala con colores y filtra por estado, asignación o etiqueta."
+          ],
+          "items": [
+            "Respuestas rápidas: guarda un mensaje enviado con el menú ⋯ del globo y reutilízalo con el botón ⚡ del redactor.",
+            "Etiquetas: créalas al vuelo desde el chat o adminístralas en su propia sección."
+          ]
+        },
+        "contacts": {
+          "title": "3. Contactos",
+          "paragraphs": [
+            "Contactos es tu libreta: nombre y número de WhatsApp, más empresa, email, sitio web, Instagram y notas. Se llena sola si activas el guardado automático en una sesión, o desde un flow con el nodo \"Guardar contacto\".",
+            "Cada contacto muestra a qué números tuyos escribió — útil cuando manejas ventas y soporte en líneas separadas."
+          ],
+          "items": []
+        },
+        "aiAgents": {
+          "title": "4. Agentes IA",
+          "paragraphs": [
+            "Un agente IA responde por ti con tu propio tono: defines su carácter e instrucciones, le subes documentos de referencia y usas tu propia clave de Anthropic u OpenAI — tú controlas el costo del modelo.",
+            "Asígnalo a una sesión y responderá los mensajes entrantes. Puede pausarse solo y avisarte cuando una conversación necesita un humano, y desde la bandeja puedes pausarlo o reanudarlo por conversación."
+          ],
+          "items": [
+            "En Pro y Business, los agentes también pueden usar herramientas MCP para consultar tus propios sistemas."
+          ]
+        },
+        "humanAgents": {
+          "title": "5. Agentes humanos y grupos espejo",
+          "paragraphs": [
+            "Un agente humano es una persona real que atiende desde su propio WhatsApp — sin cuenta ni contraseña: solo su número.",
+            "Cuando un lead se deriva a un humano, whathooks crea un grupo espejo en WhatsApp con esa persona. Todo lo que el lead escribe aparece en el grupo, y lo que el agente responde le llega al lead como tu marca — el lead nunca ve el número personal del agente."
+          ],
+          "items": [
+            "Vincula un agente humano con un miembro del equipo para que las derivaciones también le asignen la conversación en la bandeja."
+          ]
+        },
+        "flows": {
+          "title": "6. Flows (beta)",
+          "paragraphs": [
+            "Flows es tu enrutador visual: decide qué pasa con cada mensaje entrante. Conecta nodos de palabras clave, clasificación de intención con IA, respuesta del agente, derivación a humanos (uno, por turnos o un grupo con varios), etiquetas, contactos y webhooks.",
+            "Empieza desde una plantilla, asígnale una sesión y actívalo. El panel de Ejecuciones muestra el camino que tomó cada mensaje, para ajustar sin adivinar."
+          ],
+          "items": [
+            "Consejo: marca \"Copiar el historial\" en los nodos de derivación para que el humano reciba el contexto completo al entrar al grupo."
+          ]
+        },
+        "team": {
+          "title": "7. Tu equipo y roles",
+          "paragraphs": [
+            "Invita a tu equipo desde la sección Equipo. Los roles definen qué ve cada quien: Admin administra todo; Miembro opera la bandeja (puedes limitarlo a ciertas sesiones); Operador solo ve las conversaciones que le asignes — ideal para atención al cliente."
+          ],
+          "items": []
+        }
+      },
+      "outro": "Todo lo anterior funciona sin código. Si además quieres integrar tus sistemas — recibir cada mensaje o contacto en tu backend, o enviar por API — revisa la",
+      "outroDocsLink": "documentación para desarrolladores"
+    },
   "docs": {
     "nav": {
       "introduction": "Introducción",

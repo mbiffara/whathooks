@@ -28,6 +28,7 @@ type IconName =
   | "tags"
   | "contacts"
   | "docs"
+  | "guide"
   | "signOut";
 
 /** Minimal stroke icons (24 viewBox), sized by the parent via width/height. */
@@ -110,6 +111,13 @@ function NavIcon({ name }: { name: IconName }) {
         <path d="M14 3v5h5M9 13h6M9 17h6" />
       </>
     ),
+    guide: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.6 9.2a2.5 2.5 0 1 1 3.3 2.4c-.75.28-1.3.95-1.3 1.75v.35" />
+        <path d="M12 16.8v.2" />
+      </>
+    ),
     contacts: (
       <>
         <rect x="4" y="3" width="16" height="18" rx="2" />
@@ -162,6 +170,7 @@ interface NavLink {
 /** The inbox toolset — all an OPERATOR gets to see. */
 const OPERATOR_KEYS = new Set<IconName>([
   "messages",
+  "guide",
   "contacts",
   "quickReplies",
   "tags",
@@ -178,6 +187,7 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
       { href: "/dashboard/quick-replies", key: "quickReplies" },
       { href: "/dashboard/tags", key: "tags" },
       { href: "/dashboard/sessions", key: "sessions" },
+      { href: "/getting-started", key: "guide", newTab: true },
     ],
   },
   {

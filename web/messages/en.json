@@ -96,6 +96,7 @@
       "apiKeys": "API Keys",
       "logs": "Message Log",
       "docs": "Documentation",
+      "guide": "Getting started",
       "team": "Team",
       "billing": "Billing",
       "settings": "Settings",
@@ -913,6 +914,80 @@
     "trialNote": "7-day free trial",
     "annualNote": "or {price}/year — 2 months free"
   },
+  "guide": {
+      "title": "Getting started",
+      "intro": "Everything you need to put your WhatsApp to work — no code required. In ten minutes you'll connect your number, organize your inbox, and leave the automation running.",
+      "sections": {
+        "connect": {
+          "title": "1. Connect your number",
+          "paragraphs": [
+            "In WhatsApp Sessions, create a session, name it (say \"Sales\") and scan the QR code from the phone that owns the number: WhatsApp → Settings → Linked devices → Link a device.",
+            "That's it: messages to that number appear in your inbox, and the phone keeps working as usual. Connect more numbers depending on your plan."
+          ],
+          "items": [
+            "Tip: turn on \"Save contacts automatically\" on the session so everyone who writes in gets recorded in Contacts."
+          ]
+        },
+        "inbox": {
+          "title": "2. The message inbox",
+          "paragraphs": [
+            "Messages holds every conversation: reply with text or files, leave internal notes (never sent to the customer) and mark conversations resolved.",
+            "Work it as a team: assign each conversation to an owner, tag it with colors, and filter by status, assignee or tag."
+          ],
+          "items": [
+            "Quick replies: save a sent message from its ⋯ bubble menu and reuse it with the composer's ⚡ button.",
+            "Tags: create them on the fly from a chat or manage them in their own section."
+          ]
+        },
+        "contacts": {
+          "title": "3. Contacts",
+          "paragraphs": [
+            "Contacts is your address book: WhatsApp name and number, plus company, email, website, Instagram and notes. It fills itself if you enable auto-save on a session, or from a flow via the \"Save contact\" node.",
+            "Each contact shows which of your numbers they've written to — useful when sales and support run on separate lines."
+          ],
+          "items": []
+        },
+        "aiAgents": {
+          "title": "4. AI agents",
+          "paragraphs": [
+            "An AI agent replies for you in your own voice: define its character and instructions, upload reference documents, and use your own Anthropic or OpenAI key — you control the model cost.",
+            "Assign it to a session and it answers inbound messages. It can pause itself and alert you when a conversation needs a human, and you can pause or resume it per conversation from the inbox."
+          ],
+          "items": [
+            "On Pro and Business, agents can also use MCP tools to query your own systems."
+          ]
+        },
+        "humanAgents": {
+          "title": "5. Human agents & mirror groups",
+          "paragraphs": [
+            "A human agent is a real person answering from their own WhatsApp — no account or password needed: just their number.",
+            "When a lead is handed to a human, whathooks creates a mirror group on WhatsApp with that person. Everything the lead writes appears in the group, and whatever the agent replies reaches the lead as your brand — the lead never sees the agent's personal number."
+          ],
+          "items": [
+            "Link a human agent to a team member so handoffs also assign the conversation to them in the inbox."
+          ]
+        },
+        "flows": {
+          "title": "6. Flows (beta)",
+          "paragraphs": [
+            "Flows is your visual router: it decides what happens to every inbound message. Connect nodes for keywords, AI intent classification, agent replies, human handoff (one person, round-robin, or a shared team group), tags, contacts and webhooks.",
+            "Start from a template, assign it a session and enable it. The Runs panel shows the path each message took, so you tune without guessing."
+          ],
+          "items": [
+            "Tip: check \"Copy the conversation history\" on handoff nodes so the human gets the full context when the group opens."
+          ]
+        },
+        "team": {
+          "title": "7. Your team & roles",
+          "paragraphs": [
+            "Invite your team from the Team section. Roles define what each person sees: Admin manages everything; Member works the inbox (optionally limited to certain sessions); Operator only sees the conversations you assign to them — ideal for support staff."
+          ],
+          "items": []
+        }
+      },
+      "outro": "Everything above works without code. If you also want to integrate your systems — receive every message or contact in your backend, or send via API — check the",
+      "outroDocsLink": "developer documentation"
+    },
   "docs": {
     "nav": {
       "introduction": "Introduction",

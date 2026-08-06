@@ -24,6 +24,11 @@ export function MemberSessionAccess({
 }) {
   const t = useTranslations("dash.team");
   const [open, setOpen] = useState(false);
+  // Fixed-position anchor: the panel must escape the members table's
+  // overflow-x-auto container, which clips absolutely-positioned children.
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(
+    null,
+  );
   const [selected, setSelected] = useState<string[]>(sessionIds);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +63,12 @@ export function MemberSessionAccess({
             ? t("allSessionsAccess")
             : t("nSessions", { count: sessionIds.length })
         }
-        onClick={() => {
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setAnchor({
+            top: r.bottom + 4,
+            left: Math.max(8, Math.min(r.left, window.innerWidth - 264)),
+          });
           setSelected(sessionIds);
           setError(null);
           setOpen((v) => !v);
@@ -66,10 +76,13 @@ export function MemberSessionAccess({
       >
         {t("sessionAccess")}: {label}
       </button>
-      {open && (
+      {open && anchor && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-8 z-30 w-64 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-lg">
+          <div
+            className="fixed z-30 w-64 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-lg"
+            style={{ top: anchor.top, left: anchor.left }}
+          >
             <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto">
               {sessions.map((s) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">

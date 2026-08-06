@@ -1,5 +1,6 @@
 "use client";
 
+import { Glyph } from "@/components/glyphs";
 import { MemberSessionAccess } from "@/components/member-session-access";
 import { apiClient } from "@/lib/client-api";
 import type {
@@ -296,7 +297,9 @@ export default function TeamPage() {
                           {isOwner && !isSelf && m.role !== "OWNER" && (
                             <>
                               <button
-                                className="btn-danger text-xs"
+                                className="btn-danger px-2 py-1.5 text-xs"
+                                aria-label={t("remove")}
+                                title={t("remove")}
                                 onClick={() => {
                                   if (
                                     confirm(
@@ -312,7 +315,7 @@ export default function TeamPage() {
                                     );
                                 }}
                               >
-                                {t("remove")}
+                                <Glyph name="trash" size={14} />
                               </button>
                               <button
                                 className="btn-ghost text-xs"

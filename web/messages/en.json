@@ -624,7 +624,7 @@
     },
     "flows": {
       "title": "Flows",
-      "experimental": "experimental",
+      "experimental": "beta",
       "subtitle": "Visual routing for a session's inbound messages: AI replies, intent branches, keyword FAQs, human-agent handoffs (Mirror), tags and webhooks. An enabled flow takes over the session's automation.",
       "sessionLabel": "Session",
       "selectSession": "Select a session…",

@@ -624,7 +624,7 @@
     },
     "flows": {
       "title": "Flows",
-      "experimental": "experimental",
+      "experimental": "beta",
       "subtitle": "Ruteo visual de los mensajes entrantes de una sesión: respuestas de IA, ramas por intención, FAQs por palabras clave, derivación a agentes humanos (Mirror), etiquetas y webhooks. Un flow habilitado toma el control de la automatización de la sesión.",
       "sessionLabel": "Sesión",
       "selectSession": "Selecciona una sesión…",

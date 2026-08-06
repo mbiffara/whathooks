@@ -20,10 +20,10 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
+import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
-import { Roles } from '../common/decorators/roles.decorator';
+import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { FLOW_TEMPLATES } from './flow-templates';
 import type { FlowTemplate } from './flow-templates';
 import { FlowsService } from './flows.service';
@@ -67,12 +67,12 @@ class UpdateFlowDto {
 }
 
 /**
- * Flows CRUD — platform-admin experiment: requires the platform ADMIN role
- * (like the admin console), but operates on the admin's ACTIVE org, so
- * support-mode org switching works.
+ * Flows CRUD — org admins/owners manage their org's automation (platform
+ * ADMINs bypass via OrgRolesGuard, so support mode keeps working). Flow
+ * creation is plan-capped in the service.
  */
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@UseGuards(JwtAuthGuard, OrgRolesGuard)
+@OrgRoles('ADMIN')
 @Controller('flows')
 export class FlowsController {
   constructor(private readonly flows: FlowsService) {}

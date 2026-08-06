@@ -146,6 +146,8 @@ interface NavLink {
   exact?: boolean;
   /** Render only for platform admins (like the Admin console link). */
   adminOnly?: boolean;
+  /** Render only for org OWNER/ADMIN (and platform admins). */
+  orgAdminOnly?: boolean;
 }
 
 /** The inbox toolset — all an OPERATOR gets to see. */
@@ -176,7 +178,7 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
       { href: "/dashboard/human-agents", key: "humanAgents" },
       { href: "/dashboard/webhooks", key: "webhooks" },
       { href: "/dashboard/mirror", key: "mirror" },
-      { href: "/dashboard/flows", key: "flows", adminOnly: true },
+      { href: "/dashboard/flows", key: "flows", orgAdminOnly: true },
     ],
   },
   {
@@ -203,6 +205,8 @@ export function DashboardNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
+  const isOrgAdmin =
+    session?.user?.orgRole === "OWNER" || session?.user?.orgRole === "ADMIN";
   // Operators are inbox-focused: only the conversation tools show up.
   const isOperator = !isAdmin && session?.user?.orgRole === "OPERATOR";
   const visibleGroups = GROUPS.map((g) => ({
@@ -210,6 +214,7 @@ export function DashboardNav() {
     links: g.links.filter(
       (l) =>
         (!l.adminOnly || isAdmin) &&
+        (!l.orgAdminOnly || isOrgAdmin || isAdmin) &&
         (!isOperator || OPERATOR_KEYS.has(l.key)),
     ),
   })).filter((g) => g.links.length > 0);

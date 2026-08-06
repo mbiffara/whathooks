@@ -20,6 +20,8 @@ export interface PlanLimits {
   teamMembers: number | null;
   /** Max human agents (WhatsApp-side reps); null = unlimited. */
   humanAgents: number | null;
+  /** Max flows (drafts included); null = unlimited. */
+  flows: number | null;
   /** Max webhook endpoints; null = unlimited. */
   webhooks: number | null;
   /**
@@ -40,6 +42,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     waNumbers: 1,
     teamMembers: 2,
     humanAgents: 2,
+    flows: 1,
     webhooks: 1,
     priceEnv: 'STRIPE_PRICE_STARTER',
     annualPriceEnv: 'STRIPE_PRICE_STARTER_YEAR',
@@ -51,6 +54,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     waNumbers: 3,
     teamMembers: 10,
     humanAgents: 10,
+    flows: 3,
     webhooks: null,
     priceEnv: 'STRIPE_PRICE_PRO',
     annualPriceEnv: 'STRIPE_PRICE_PRO_YEAR',
@@ -62,6 +66,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     waNumbers: 10,
     teamMembers: null,
     humanAgents: null,
+    flows: null,
     webhooks: null,
     priceEnv: 'STRIPE_PRICE_BUSINESS',
     annualPriceEnv: 'STRIPE_PRICE_BUSINESS_YEAR',
@@ -73,6 +78,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     waNumbers: null,
     teamMembers: null,
     humanAgents: null,
+    flows: null,
     webhooks: null,
   },
 };

@@ -131,6 +131,20 @@ export class QuotaService {
     }
   }
 
+  /** Throw if the org may not create another flow (drafts included). */
+  async assertCanAddFlow(organizationId: string): Promise<void> {
+    const org = await this.orgBilling(organizationId);
+    this.assertSubscribed(org);
+    const limit = org.limits.flows;
+    if (limit == null) return;
+    const count = await this.prisma.flow.count({ where: { organizationId } });
+    if (count >= limit) {
+      throw new ForbiddenException(
+        `Your plan allows ${limit} flow(s). Upgrade to add more.`,
+      );
+    }
+  }
+
   /** Throw if the org may not add another human agent. */
   async assertCanAddHumanAgent(organizationId: string): Promise<void> {
     const org = await this.orgBilling(organizationId);

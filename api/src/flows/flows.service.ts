@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FlowEngineService } from '../whatsapp/flow-engine.service';
 import {
@@ -31,12 +32,13 @@ function invalidGraph(errors: GraphError[], prefix = '') {
   });
 }
 
-/** CRUD for Flows (platform-admin experiment). Org-scoped like the rest. */
+/** CRUD for Flows. Org-scoped; creation is plan-capped. */
 @Injectable()
 export class FlowsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly engine: FlowEngineService,
+    private readonly quota: QuotaService,
   ) {}
 
   async list(organizationId: string) {
@@ -64,6 +66,7 @@ export class FlowsService {
     organizationId: string,
     dto: { name: string; template?: FlowTemplate },
   ) {
+    await this.quota.assertCanAddFlow(organizationId);
     let graph: FlowGraph;
     if (dto.template && dto.template !== 'blank') {
       // Prefill references where the org has an obvious candidate.

@@ -42,6 +42,13 @@ export default function TeamPage() {
   const [role, setRole] = useState<"ADMIN" | "MEMBER" | "OPERATOR">("MEMBER");
   const [created, setCreated] = useState<InvitationCreated | null>(null);
   const [copied, setCopied] = useState(false);
+  // Row ⋯ menu — fixed-positioned so the table's overflow container
+  // (overflow-x-auto) can't clip it.
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -318,28 +325,22 @@ export default function TeamPage() {
                                 <Glyph name="trash" size={14} />
                               </button>
                               <button
-                                className="btn-ghost text-xs"
-                                onClick={() => {
-                                  if (
-                                    confirm(
-                                      t("confirmTransfer", { email: m.email }),
-                                    )
-                                  )
-                                    run(() =>
-                                      apiClient(
-                                        "/organizations/transfer-ownership",
-                                        token,
-                                        {
-                                          method: "POST",
-                                          body: JSON.stringify({
-                                            userId: m.userId,
-                                          }),
-                                        },
-                                      ),
-                                    );
+                                className="btn-ghost px-2 py-1.5 text-xs leading-none"
+                                aria-label={t("rowActions")}
+                                title={t("rowActions")}
+                                onClick={(e) => {
+                                  const r =
+                                    e.currentTarget.getBoundingClientRect();
+                                  setMenuAnchor({
+                                    top: r.bottom + 4,
+                                    left: Math.max(8, r.right - 192),
+                                  });
+                                  setMenuFor((v) =>
+                                    v === m.userId ? null : m.userId,
+                                  );
                                 }}
                               >
-                                {t("makeOwner")}
+                                ⋯
                               </button>
                             </>
                           )}
@@ -361,6 +362,34 @@ export default function TeamPage() {
           </div>
         )}
       </section>
+
+      {menuFor && menuAnchor && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setMenuFor(null)} />
+          <div
+            className="fixed z-30 w-48 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg"
+            style={{ top: menuAnchor.top, left: menuAnchor.left }}
+          >
+            <button
+              className="w-full rounded-md px-3 py-2 text-left text-xs text-[var(--color-fg)] hover:bg-[var(--color-surface-2)]"
+              onClick={() => {
+                const m = members.find((x) => x.userId === menuFor);
+                setMenuFor(null);
+                if (!m) return;
+                if (confirm(t("confirmTransfer", { email: m.email })))
+                  run(() =>
+                    apiClient("/organizations/transfer-ownership", token, {
+                      method: "POST",
+                      body: JSON.stringify({ userId: m.userId }),
+                    }),
+                  );
+              }}
+            >
+              {t("makeOwner")}
+            </button>
+          </div>
+        </>
+      )}
 
       {canManage && pending.length > 0 && (
         <section className="flex flex-col gap-3">

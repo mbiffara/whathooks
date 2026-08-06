@@ -360,6 +360,7 @@
       "remove": "Remove",
       "confirmRemove": "Remove {email} from the team?",
       "makeOwner": "Make owner",
+      "rowActions": "More actions",
       "confirmTransfer": "Transfer ownership to {email}? You will become an admin.",
       "leave": "Leave",
       "confirmLeave": "Leave this organization?",

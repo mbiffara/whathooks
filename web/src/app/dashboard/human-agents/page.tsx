@@ -1,6 +1,7 @@
 "use client";
 
 import { apiClient } from "@/lib/client-api";
+import type { TeamMember } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -10,6 +11,8 @@ interface HumanAgent {
   id: string;
   name: string;
   phoneNumber: string;
+  /** Linked dashboard account (handoffs also assign the conversation). */
+  user: { id: string; name: string | null; email: string } | null;
   links: number;
 }
 
@@ -20,11 +23,14 @@ export default function HumanAgentsPage() {
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const [agents, setAgents] = useState<HumanAgent[] | null>(null);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [linkUserId, setLinkUserId] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editUserId, setEditUserId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +42,13 @@ export default function HumanAgentsPage() {
       setError(e instanceof Error ? e.message : tc("failedToLoad"));
     }
   }, [token, tc]);
+
+  useEffect(() => {
+    if (!token) return;
+    apiClient<TeamMember[]>("/organizations/members", token)
+      .then(setMembers)
+      .catch(() => setMembers([]));
+  }, [token]);
 
   useEffect(() => {
     load();
@@ -63,10 +76,12 @@ export default function HumanAgentsPage() {
         body: JSON.stringify({
           name: name.trim(),
           phoneNumber: phone.trim(),
+          ...(linkUserId ? { userId: linkUserId } : {}),
         }),
       });
       setName("");
       setPhone("");
+      setLinkUserId("");
     });
   }
 
@@ -79,6 +94,7 @@ export default function HumanAgentsPage() {
         body: JSON.stringify({
           name: editName.trim(),
           phoneNumber: editPhone.trim(),
+          userId: editUserId || null,
         }),
       });
       setEditingId(null);
@@ -125,6 +141,21 @@ export default function HumanAgentsPage() {
             required
           />
         </div>
+        <div className="min-w-52 flex-1">
+          <label className="label">{t("linkLabel")}</label>
+          <select
+            className="input"
+            value={linkUserId}
+            onChange={(e) => setLinkUserId(e.target.value)}
+          >
+            <option value="">{t("noLink")}</option>
+            {members.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.name ?? m.email}
+              </option>
+            ))}
+          </select>
+        </div>
         <button type="submit" disabled={busy} className="btn-primary">
           {t("add")}
         </button>
@@ -166,6 +197,21 @@ export default function HumanAgentsPage() {
                     required
                   />
                 </div>
+                <div className="min-w-52 flex-1">
+                  <label className="label">{t("linkLabel")}</label>
+                  <select
+                    className="input"
+                    value={editUserId}
+                    onChange={(e) => setEditUserId(e.target.value)}
+                  >
+                    <option value="">{t("noLink")}</option>
+                    {members.map((m) => (
+                      <option key={m.userId} value={m.userId}>
+                        {m.name ?? m.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button type="submit" disabled={busy} className="btn-primary">
                   {tc("save")}
                 </button>
@@ -185,6 +231,14 @@ export default function HumanAgentsPage() {
                     +{a.phoneNumber}
                   </div>
                 </div>
+                {a.user && (
+                  <span
+                    className="badge bg-[var(--color-info-bg)] text-[var(--color-info)] text-[10px]"
+                    title={a.user.email}
+                  >
+                    {t("linkedTo", { name: a.user.name ?? a.user.email })}
+                  </span>
+                )}
                 {a.links > 0 && (
                   <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)] text-[10px]">
                     {t("inUse", { count: a.links })}
@@ -196,6 +250,7 @@ export default function HumanAgentsPage() {
                       setEditingId(a.id);
                       setEditName(a.name);
                       setEditPhone(a.phoneNumber);
+                      setEditUserId(a.user?.id ?? "");
                     }}
                     className="btn-ghost text-xs"
                   >

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -13,7 +14,10 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 @Injectable()
 export class MirrorService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly quota: QuotaService,
+  ) {}
 
   // ---- human agents ----
 
@@ -21,12 +25,16 @@ export class MirrorService {
     const reps = await this.prisma.humanAgent.findMany({
       where: { organizationId },
       orderBy: { name: 'asc' },
-      include: { _count: { select: { mirrorLinks: true } } },
+      include: {
+        _count: { select: { mirrorLinks: true } },
+        user: { select: { id: true, name: true, email: true } },
+      },
     });
     return reps.map((r) => ({
       id: r.id,
       name: r.name,
       phoneNumber: r.phoneNumber,
+      user: r.user,
       links: r._count.mirrorLinks,
       createdAt: r.createdAt,
     }));
@@ -34,8 +42,9 @@ export class MirrorService {
 
   async createAgent(
     organizationId: string,
-    dto: { name: string; phoneNumber: string },
+    dto: { name: string; phoneNumber: string; userId?: string | null },
   ) {
+    await this.quota.assertCanAddHumanAgent(organizationId);
     const existing = await this.prisma.humanAgent.findFirst({
       where: { organizationId, phoneNumber: dto.phoneNumber },
     });
@@ -44,11 +53,13 @@ export class MirrorService {
         `That number already belongs to "${existing.name}"`,
       );
     }
+    if (dto.userId) await this.requireLinkable(organizationId, dto.userId);
     return this.prisma.humanAgent.create({
       data: {
         organizationId,
         name: dto.name.trim(),
         phoneNumber: dto.phoneNumber,
+        userId: dto.userId ?? null,
       },
     });
   }
@@ -56,12 +67,15 @@ export class MirrorService {
   async updateAgent(
     organizationId: string,
     id: string,
-    dto: { name?: string; phoneNumber?: string },
+    dto: { name?: string; phoneNumber?: string; userId?: string | null },
   ) {
     const agent = await this.prisma.humanAgent.findFirst({
       where: { id, organizationId },
     });
     if (!agent) throw new NotFoundException('Human agent not found');
+    if (dto.userId) {
+      await this.requireLinkable(organizationId, dto.userId, id);
+    }
     const updated = await this.prisma.humanAgent.update({
       where: { id },
       data: {
@@ -69,6 +83,7 @@ export class MirrorService {
         ...(dto.phoneNumber !== undefined
           ? { phoneNumber: dto.phoneNumber }
           : {}),
+        ...(dto.userId !== undefined ? { userId: dto.userId } : {}),
       },
     });
     // The relay reads the denormalized agentNumber — keep links in sync.
@@ -81,12 +96,41 @@ export class MirrorService {
     return updated;
   }
 
+  /** The link target must be an org member, not already linked elsewhere. */
+  private async requireLinkable(
+    organizationId: string,
+    userId: string,
+    exceptAgentId?: string,
+  ) {
+    const member = await this.prisma.membership.findUnique({
+      where: { userId_organizationId: { userId, organizationId } },
+    });
+    if (!member) {
+      throw new NotFoundException('That user is not a member of this org');
+    }
+    const taken = await this.prisma.humanAgent.findFirst({
+      where: {
+        organizationId,
+        userId,
+        ...(exceptAgentId ? { id: { not: exceptAgentId } } : {}),
+      },
+      select: { name: true },
+    });
+    if (taken) {
+      throw new ConflictException(
+        `That member is already linked to "${taken.name}"`,
+      );
+    }
+  }
+
   async deleteAgent(organizationId: string, id: string) {
     const agent = await this.prisma.humanAgent.findFirst({
       where: { id, organizationId },
     });
     if (!agent) throw new NotFoundException('Human agent not found');
-    const links = await this.prisma.mirrorLink.count({ where: { humanAgentId: id } });
+    const links = await this.prisma.mirrorLink.count({
+      where: { humanAgentId: id },
+    });
     if (links > 0) {
       throw new ConflictException(
         'This human agent is used by a mirror link — delete the link first',

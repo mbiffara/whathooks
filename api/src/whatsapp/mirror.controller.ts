@@ -15,6 +15,7 @@ import {
   IsString,
   Length,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
@@ -31,6 +32,12 @@ class CreateAgentDto {
 
   @Matches(PHONE_RULE, { message: PHONE_MSG })
   phoneNumber!: string;
+
+  // Optional dashboard-account link; null/absent = unlinked.
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  userId?: string | null;
 }
 
 class UpdateAgentDto {
@@ -41,6 +48,12 @@ class UpdateAgentDto {
   @IsOptional()
   @Matches(PHONE_RULE, { message: PHONE_MSG })
   phoneNumber?: string;
+
+  // null clears the link.
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  userId?: string | null;
 }
 
 class CreateLinkDto {

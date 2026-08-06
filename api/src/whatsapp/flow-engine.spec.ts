@@ -440,6 +440,28 @@ describe('FlowEngineService.run', () => {
     expect(second.created[0]).toMatchObject({ agents: [{ id: 'ha2' }] });
   });
 
+  it('linked human agents also claim inbox assignment on handoff', async () => {
+    const t = makeEngine({});
+    t.prisma.humanAgent.findUnique.mockResolvedValue({
+      id: 'ha1',
+      name: 'Agent ha1',
+      phoneNumber: '555ha1',
+      userId: 'user1',
+    } as never);
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('a', 'assignHuman', { humanAgentId: 'ha1' }),
+      ],
+      edges: [edge('t', 'a')],
+    };
+    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    expect(t.updates[0]).toMatchObject({
+      where: { id: 'conv1' },
+      data: { assignedToUserId: 'user1' },
+    });
+  });
+
   it('assignGroup puts every agent in one group and hands off', async () => {
     const t = makeEngine({});
     const graph: FlowGraph = {

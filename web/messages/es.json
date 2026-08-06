@@ -611,7 +611,10 @@
       "phone": "Número de WhatsApp (solo dígitos, sin +)",
       "add": "Agregar agente humano",
       "empty": "Todavía no hay agentes humanos. Agrega a las personas que van a responder a tus leads.",
-      "inUse": "{count, plural, one {usado por # mirror link} other {usado por # mirror links}}"
+      "inUse": "{count, plural, one {usado por # mirror link} other {usado por # mirror links}}",
+      "linkLabel": "Miembro del equipo (opcional)",
+      "noLink": "Sin vincular",
+      "linkedTo": "↳ {name}"
     },
     "flows": {
       "title": "Flows",

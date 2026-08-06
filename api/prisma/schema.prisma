@@ -97,6 +97,7 @@ model User {
   @@index([organizationId])
   sentMessages          Message[]      @relation("SentMessages")
   assignedConversations Conversation[] @relation("AssignedConversations")
+  humanAgents           HumanAgent[]
 }
 
 // Single-use, short-lived tokens for the forgot-password flow. Only the
@@ -299,6 +300,10 @@ model HumanAgent {
   // human agents as org-owned.
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Optional bridge to a dashboard account: linked agents get flow handoffs
+  // mirrored into inbox assignment (assignedToUserId).
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   name           String
   phoneNumber    String // digits with country code, no +
   createdAt      DateTime      @default(now())

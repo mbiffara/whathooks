@@ -368,6 +368,19 @@ export class FlowEngineService {
       },
       update: { status: 'HANDED_OFF', humanAgentId: humans[0].id },
     });
+    // Linked agents bridge into inbox assignment: the conversation shows up
+    // as theirs in the dashboard too (first linked agent wins). Best-effort.
+    const linked = humans.find((h) => h.userId);
+    if (linked?.userId) {
+      await this.prisma.conversation
+        .update({
+          where: { id: ctx.conversationId },
+          data: { assignedToUserId: linked.userId },
+        })
+        .catch((e) =>
+          this.log.warn(`Flow ${flow.id}: handoff assignment failed: ${e}`),
+        );
+    }
     const names = humans.map((h) => h.name).join(', ');
     this.log.log(`Flow ${flow.id}: handed ${ctx.conversationId} to ${names}`);
     return names;

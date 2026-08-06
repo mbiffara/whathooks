@@ -18,6 +18,8 @@ export interface PlanLimits {
   waNumbers: number | null;
   /** Max users in the organization (members incl. owner); null = unlimited. */
   teamMembers: number | null;
+  /** Max human agents (WhatsApp-side reps); null = unlimited. */
+  humanAgents: number | null;
   /** Max webhook endpoints; null = unlimited. */
   webhooks: number | null;
   /**
@@ -37,6 +39,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     historyDays: 30,
     waNumbers: 1,
     teamMembers: 2,
+    humanAgents: 2,
     webhooks: 1,
     priceEnv: 'STRIPE_PRICE_STARTER',
     annualPriceEnv: 'STRIPE_PRICE_STARTER_YEAR',
@@ -47,6 +50,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     historyDays: 90,
     waNumbers: 3,
     teamMembers: 10,
+    humanAgents: 10,
     webhooks: null,
     priceEnv: 'STRIPE_PRICE_PRO',
     annualPriceEnv: 'STRIPE_PRICE_PRO_YEAR',
@@ -57,6 +61,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     historyDays: null,
     waNumbers: 10,
     teamMembers: null,
+    humanAgents: null,
     webhooks: null,
     priceEnv: 'STRIPE_PRICE_BUSINESS',
     annualPriceEnv: 'STRIPE_PRICE_BUSINESS_YEAR',
@@ -67,6 +72,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     historyDays: null,
     waNumbers: null,
     teamMembers: null,
+    humanAgents: null,
     webhooks: null,
   },
 };

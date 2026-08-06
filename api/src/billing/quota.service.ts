@@ -131,6 +131,22 @@ export class QuotaService {
     }
   }
 
+  /** Throw if the org may not add another human agent. */
+  async assertCanAddHumanAgent(organizationId: string): Promise<void> {
+    const org = await this.orgBilling(organizationId);
+    this.assertSubscribed(org);
+    const limit = org.limits.humanAgents;
+    if (limit == null) return;
+    const count = await this.prisma.humanAgent.count({
+      where: { organizationId },
+    });
+    if (count >= limit) {
+      throw new ForbiddenException(
+        `Your plan allows ${limit} human agent(s). Upgrade to add more.`,
+      );
+    }
+  }
+
   /** Throw if the org may not register another webhook endpoint. */
   async assertCanAddWebhook(organizationId: string): Promise<void> {
     const org = await this.orgBilling(organizationId);

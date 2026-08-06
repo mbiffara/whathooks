@@ -25,6 +25,7 @@ import {
 } from './dto/agent.dto';
 
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
+@OrgRoles('MEMBER') // management surface — hidden from OPERATOR
 @Controller('agents')
 export class AgentsController {
   constructor(private readonly agents: AgentsService) {}

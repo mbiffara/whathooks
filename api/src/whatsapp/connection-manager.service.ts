@@ -1314,9 +1314,10 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       });
       const recipients = memberships.filter(
         (m) =>
-          m.role !== 'MEMBER' ||
-          m.sessionIds.length === 0 ||
-          m.sessionIds.includes(sessionId),
+          m.role === 'OWNER' ||
+          m.role === 'ADMIN' ||
+          (m.role === 'MEMBER' &&
+            (m.sessionIds.length === 0 || m.sessionIds.includes(sessionId))),
       );
       const base = this.config
         .get<string>('WEB_ORIGIN', 'http://localhost:3000')
@@ -1413,9 +1414,10 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       const url = `${base}/dashboard/messages?c=${conversationId}`;
       const recipients = memberships.filter(
         (m) =>
-          m.role !== 'MEMBER' ||
-          m.sessionIds.length === 0 ||
-          m.sessionIds.includes(sessionId),
+          m.role === 'OWNER' ||
+          m.role === 'ADMIN' ||
+          (m.role === 'MEMBER' &&
+            (m.sessionIds.length === 0 || m.sessionIds.includes(sessionId))),
       );
       await Promise.all(
         recipients.map((m) =>

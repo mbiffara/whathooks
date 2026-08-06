@@ -94,6 +94,12 @@ export class ConversationsController {
     return this.access.restrictedSessionIds(user, this.orgOf(user));
   }
 
+  /** Operators only act on conversations assigned to them (orgRole is
+   *  stamped by OrgRolesGuard on every request). */
+  private assignedOnly(user: AuthUser): string | null {
+    return user.orgRole === 'OPERATOR' ? user.userId : null;
+  }
+
   private orgOf(user: AuthUser): string {
     if (!user.organizationId)
       throw new BadRequestException('User has no organization');
@@ -126,6 +132,7 @@ export class ConversationsController {
         userId: user.userId,
         tagId: tag,
         allowed,
+        assignedTo: this.assignedOnly(user),
       }),
     );
   }
@@ -133,7 +140,12 @@ export class ConversationsController {
   @Post()
   start(@CurrentUser() user: AuthUser, @Body() body: StartConversationDto) {
     return this.allowedFor(user).then((allowed) =>
-      this.conversations.start(this.orgOf(user), body, allowed),
+      this.conversations.start(
+        this.orgOf(user),
+        body,
+        allowed,
+        this.assignedOnly(user),
+      ),
     );
   }
 
@@ -144,14 +156,25 @@ export class ConversationsController {
     @Body() body: UpdateConversationDto,
   ) {
     return this.allowedFor(user).then((allowed) =>
-      this.conversations.update(this.orgOf(user), id, body, allowed),
+      this.conversations.update(
+        this.orgOf(user),
+        id,
+        body,
+        allowed,
+        this.assignedOnly(user),
+      ),
     );
   }
 
   @Get(':id')
   async get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const allowed = await this.allowedFor(user);
-    return this.conversations.get(this.orgOf(user), id, allowed);
+    return this.conversations.get(
+      this.orgOf(user),
+      id,
+      allowed,
+      this.assignedOnly(user),
+    );
   }
 
   @Get(':id/messages')
@@ -167,6 +190,7 @@ export class ConversationsController {
         id,
         { before, limit: limit ? Number(limit) : undefined },
         allowed,
+        this.assignedOnly(user),
       ),
     );
   }
@@ -184,6 +208,7 @@ export class ConversationsController {
         body.text,
         user.userId,
         allowed,
+        this.assignedOnly(user),
       ),
     );
   }
@@ -191,7 +216,12 @@ export class ConversationsController {
   @Post(':id/read')
   read(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.allowedFor(user).then((allowed) =>
-      this.conversations.markRead(this.orgOf(user), id, allowed),
+      this.conversations.markRead(
+        this.orgOf(user),
+        id,
+        allowed,
+        this.assignedOnly(user),
+      ),
     );
   }
 
@@ -207,6 +237,7 @@ export class ConversationsController {
         id,
         body.paused,
         allowed,
+        this.assignedOnly(user),
       ),
     );
   }
@@ -241,6 +272,7 @@ export class ConversationsController {
         body.text,
         user.userId,
         allowed,
+        this.assignedOnly(user),
       );
     }
     if (!body.text) throw new BadRequestException('Provide text or a file');
@@ -251,6 +283,7 @@ export class ConversationsController {
       body.text,
       user.userId,
       allowed,
+      this.assignedOnly(user),
     );
   }
 }

@@ -1,6 +1,6 @@
 import type { DefaultSession } from "next-auth";
 
-type OrgRole = "OWNER" | "ADMIN" | "MEMBER";
+type OrgRole = "OWNER" | "ADMIN" | "MEMBER" | "OPERATOR";
 
 declare module "next-auth" {
   interface Session {

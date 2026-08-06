@@ -10,7 +10,7 @@ import {
 
 // Invitable/assignable roles. OWNER is excluded on purpose: ownership only
 // moves via the transfer-ownership endpoint.
-const ASSIGNABLE_ROLES = ['ADMIN', 'MEMBER'] as const;
+const ASSIGNABLE_ROLES = ['ADMIN', 'MEMBER', 'OPERATOR'] as const;
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
 export class InviteMemberDto {

@@ -47,7 +47,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user as { organizationId: string | null }
         ).organizationId;
         token.orgRole = (
-          user as { orgRole: "OWNER" | "ADMIN" | "MEMBER" | null }
+          user as { orgRole: "OWNER" | "ADMIN" | "MEMBER" | "OPERATOR" | null }
         ).orgRole;
       }
       // Org switch / invite accept: the client passes the reissued backend
@@ -56,7 +56,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const update = session as {
           accessToken?: string;
           organizationId?: string | null;
-          orgRole?: "OWNER" | "ADMIN" | "MEMBER" | null;
+          orgRole?: "OWNER" | "ADMIN" | "MEMBER" | "OPERATOR" | null;
         };
         if (update.accessToken) token.accessToken = update.accessToken;
         if (update.organizationId !== undefined)
@@ -72,7 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = token.role as "ADMIN" | "CLIENT";
         session.user.organizationId = token.organizationId as string | null;
         session.user.orgRole =
-          (token.orgRole as "OWNER" | "ADMIN" | "MEMBER" | null) ?? null;
+          (token.orgRole as "OWNER" | "ADMIN" | "MEMBER" | "OPERATOR" | null) ?? null;
       }
       return session;
     },

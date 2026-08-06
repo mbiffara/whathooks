@@ -70,6 +70,7 @@ export class SessionsController {
     return this.whatsapp.create(this.orgOf(org), dto.label);
   }
 
+  @OrgRoles('MEMBER') // detail is management; operators only need the list
   @Get(':id')
   async get(
     @ApiOrg() org: string | undefined,
@@ -115,6 +116,7 @@ export class SessionsController {
     return this.whatsapp.logout(this.orgOf(org), id);
   }
 
+  @OrgRoles('MEMBER')
   @Post(':id/test-message')
   async testMessage(
     @ApiOrg() org: string | undefined,

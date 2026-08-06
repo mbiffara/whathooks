@@ -24,7 +24,12 @@ export class SessionAccessService {
       },
       select: { role: true, sessionIds: true },
     });
-    if (!membership || membership.role !== 'MEMBER') return null;
+    if (
+      !membership ||
+      (membership.role !== 'MEMBER' && membership.role !== 'OPERATOR')
+    ) {
+      return null;
+    }
     return membership.sessionIds.length ? membership.sessionIds : null;
   }
 

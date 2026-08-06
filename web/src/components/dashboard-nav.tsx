@@ -148,6 +148,14 @@ interface NavLink {
   adminOnly?: boolean;
 }
 
+/** The inbox toolset — all an OPERATOR gets to see. */
+const OPERATOR_KEYS = new Set<IconName>([
+  "messages",
+  "contacts",
+  "quickReplies",
+  "tags",
+]);
+
 /** Grouped nav: first group has no header. Group keys map to dash.nav.groups. */
 const GROUPS: { key: string | null; links: NavLink[] }[] = [
   {
@@ -195,10 +203,16 @@ export function DashboardNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
+  // Operators are inbox-focused: only the conversation tools show up.
+  const isOperator = !isAdmin && session?.user?.orgRole === "OPERATOR";
   const visibleGroups = GROUPS.map((g) => ({
     ...g,
-    links: g.links.filter((l) => !l.adminOnly || isAdmin),
-  }));
+    links: g.links.filter(
+      (l) =>
+        (!l.adminOnly || isAdmin) &&
+        (!isOperator || OPERATOR_KEYS.has(l.key)),
+    ),
+  })).filter((g) => g.links.length > 0);
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 

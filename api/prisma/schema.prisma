@@ -25,6 +25,7 @@ enum OrgRole {
   OWNER // full control: team, ownership transfer, delete org
   ADMIN // manage sessions, agents, webhooks, API keys, invites
   MEMBER // operate: view resources, read/send messages
+  OPERATOR // inbox only: sees just the conversations assigned to them
 }
 
 // Subscription tier. Limits (messages/month, history window, WA numbers) are
@@ -124,7 +125,8 @@ model Membership {
 
   @@unique([userId, organizationId])
   @@index([organizationId])
-  // Session-level access: empty = all sessions (default); ignored for OWNER/ADMIN.
+  // Session-level access for MEMBER/OPERATOR: empty = all sessions
+  // (default); ignored for OWNER/ADMIN.
   sessionIds String[] @default([])
 }
 

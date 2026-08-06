@@ -332,6 +332,7 @@
       "role": "Role",
       "roleMemberOption": "Member — operate & message",
       "roleAdminOption": "Admin — manage everything",
+      "roleOperatorOption": "Operator — only their assigned conversations",
       "sendInvite": "Send invite",
       "inviteEmailSent": "Invitation for {email} — email sent. You can also share this link directly:",
       "inviteLinkOnly": "Invitation for {email} — email is not configured, share this link (shown once):",
@@ -342,11 +343,17 @@
       "roles": {
         "OWNER": "owner",
         "ADMIN": "admin",
-        "MEMBER": "member"
+        "MEMBER": "member",
+        "OPERATOR": "operator"
       },
       "joined": "joined {date}",
       "memberOpt": "Member",
       "adminOpt": "Admin",
+      "operatorOpt": "Operator",
+      "colMember": "Member",
+      "colEmail": "Email",
+      "colRole": "Role",
+      "colJoined": "Joined",
       "remove": "Remove",
       "confirmRemove": "Remove {email} from the team?",
       "makeOwner": "Make owner",

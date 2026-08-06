@@ -11,7 +11,12 @@ import { AuthUser } from '../common/decorators/current-user.decorator';
 import { ORG_ROLES_KEY } from '../common/decorators/org-roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
-const RANK: Record<OrgRole, number> = { OWNER: 3, ADMIN: 2, MEMBER: 1 };
+const RANK: Record<OrgRole, number> = {
+  OWNER: 3,
+  ADMIN: 2,
+  MEMBER: 1,
+  OPERATOR: 0,
+};
 
 /**
  * Authorizes against the user's Membership in their active organization.

@@ -52,6 +52,8 @@ export class ConversationsService {
       tagId?: string;
       /** Session allow-list for restricted members (null = unrestricted). */
       allowed?: string[] | null;
+      /** Operators only see conversations assigned to this user id. */
+      assignedTo?: string | null;
     },
   ) {
     const q = opts.q?.trim();
@@ -63,6 +65,7 @@ export class ConversationsService {
             ? opts.sessionId
             : { in: opts.allowed }
           : opts.sessionId,
+        ...(opts.assignedTo ? { assignedToUserId: opts.assignedTo } : {}),
         lastMessageAt: { not: null },
         ...(opts.status && opts.status !== 'ALL'
           ? { status: opts.status }
@@ -103,6 +106,7 @@ export class ConversationsService {
     organizationId: string,
     dto: { sessionId: string; to: string },
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
     // 404 (not 403) so restricted members can't probe session existence.
     if (allowed && !allowed.includes(dto.sessionId)) {
@@ -123,6 +127,8 @@ export class ConversationsService {
         sessionId: dto.sessionId,
         remoteJid: jid,
         isGroup: jid.endsWith('@g.us'),
+        // Operators can only see assigned conversations — claim it for them.
+        ...(assignedTo ? { assignedToUserId: assignedTo } : {}),
         // The inbox lists only conversations with lastMessageAt set; stamp it
         // so the empty thread is visible until the first message replaces it.
         lastMessageAt: new Date(),
@@ -130,6 +136,11 @@ export class ConversationsService {
       update: {},
       include: AGENT_INCLUDE,
     });
+    // An operator reopening an existing unassigned thread must still pass
+    // the assignment gate.
+    if (assignedTo && conversation.assignedToUserId !== assignedTo) {
+      throw new NotFoundException('Conversation not found');
+    }
     return this.toConversationDto(conversation);
   }
 
@@ -144,8 +155,15 @@ export class ConversationsService {
       tagIds?: string[];
     },
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
-    await this.requireConversation(organizationId, id, false, allowed);
+    await this.requireConversation(
+      organizationId,
+      id,
+      false,
+      allowed,
+      assignedTo,
+    );
     if (patch.tagIds) {
       const owned = await this.prisma.tag.count({
         where: { id: { in: patch.tagIds }, organizationId },
@@ -185,8 +203,19 @@ export class ConversationsService {
     return this.toConversationDto(updated);
   }
 
-  async get(organizationId: string, id: string, allowed?: string[] | null) {
-    const c = await this.requireConversation(organizationId, id, true, allowed);
+  async get(
+    organizationId: string,
+    id: string,
+    allowed?: string[] | null,
+    assignedTo?: string | null,
+  ) {
+    const c = await this.requireConversation(
+      organizationId,
+      id,
+      true,
+      allowed,
+      assignedTo,
+    );
     return this.toConversationDto(c);
   }
 
@@ -196,8 +225,15 @@ export class ConversationsService {
     id: string,
     paused: boolean,
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
-    await this.requireConversation(organizationId, id, false, allowed);
+    await this.requireConversation(
+      organizationId,
+      id,
+      false,
+      allowed,
+      assignedTo,
+    );
     // A manual toggle has no handoff reason — clear any the agent left behind.
     await this.prisma.conversation.update({
       where: { id },
@@ -241,8 +277,15 @@ export class ConversationsService {
     id: string,
     opts: { before?: string; limit?: number },
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
-    await this.requireConversation(organizationId, id, false, allowed);
+    await this.requireConversation(
+      organizationId,
+      id,
+      false,
+      allowed,
+      assignedTo,
+    );
     // Same retention window the flat message log applies (quota.service).
     const since = await this.quota.historyWindowStart(organizationId);
     const limit = Math.min(opts.limit ?? 40, 100);
@@ -275,8 +318,15 @@ export class ConversationsService {
     organizationId: string,
     id: string,
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
-    await this.requireConversation(organizationId, id, false, allowed);
+    await this.requireConversation(
+      organizationId,
+      id,
+      false,
+      allowed,
+      assignedTo,
+    );
     await this.prisma.conversation.update({
       where: { id },
       data: { unreadCount: 0 },
@@ -290,9 +340,15 @@ export class ConversationsService {
     text: string,
     sentByUserId?: string,
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
     await this.quota.assertCanSend(organizationId);
-    const c = await this.assertSendable(organizationId, id, allowed);
+    const c = await this.assertSendable(
+      organizationId,
+      id,
+      allowed,
+      assignedTo,
+    );
     const r = await this.manager.sendText(c.sessionId, c.remoteJid, text, {
       sentByUserId,
     });
@@ -306,9 +362,15 @@ export class ConversationsService {
     caption?: string,
     sentByUserId?: string,
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
     await this.quota.assertCanSend(organizationId);
-    const c = await this.assertSendable(organizationId, id, allowed);
+    const c = await this.assertSendable(
+      organizationId,
+      id,
+      allowed,
+      assignedTo,
+    );
     const r = await this.manager.sendMedia(
       c.sessionId,
       c.remoteJid,
@@ -330,12 +392,14 @@ export class ConversationsService {
     text: string,
     sentByUserId: string,
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
     const c = await this.requireConversation(
       organizationId,
       id,
       false,
       allowed,
+      assignedTo,
     );
     const m = await this.prisma.message.create({
       data: {
@@ -364,12 +428,14 @@ export class ConversationsService {
     organizationId: string,
     id: string,
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
     const c = await this.requireConversation(
       organizationId,
       id,
       false,
       allowed,
+      assignedTo,
     );
     const session = await this.prisma.waSession.findUnique({
       where: { id: c.sessionId },
@@ -389,12 +455,17 @@ export class ConversationsService {
     id: string,
     withAgent = false,
     allowed?: string[] | null,
+    assignedTo?: string | null,
   ) {
     const c = await this.prisma.conversation.findFirst({
       where: { id, organizationId },
       ...(withAgent ? { include: AGENT_INCLUDE } : {}),
     });
     if (!c) throw new NotFoundException('Conversation not found');
+    // Operators: 404 on conversations not assigned to them (no probing).
+    if (assignedTo && c.assignedToUserId !== assignedTo) {
+      throw new NotFoundException('Conversation not found');
+    }
     // Restricted members: 404 to avoid probing threads on hidden sessions.
     if (allowed && !allowed.includes(c.sessionId)) {
       throw new NotFoundException('Conversation not found');

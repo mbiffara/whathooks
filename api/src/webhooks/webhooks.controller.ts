@@ -19,6 +19,7 @@ import { CreateWebhookDto, UpdateWebhookDto } from './dto/webhook.dto';
 import { WebhooksService } from './webhooks.service';
 
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
+@OrgRoles('MEMBER') // management surface — hidden from OPERATOR
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooks: WebhooksService) {}

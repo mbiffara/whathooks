@@ -73,6 +73,7 @@ class UpdateLinkDto {
 }
 
 @UseGuards(JwtOrApiKeyGuard, OrgRolesGuard)
+@OrgRoles('MEMBER') // management surface — hidden from OPERATOR
 @Controller()
 export class MirrorController {
   constructor(private readonly mirror: MirrorService) {}

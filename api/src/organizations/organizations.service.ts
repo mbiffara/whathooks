@@ -55,9 +55,13 @@ export class OrganizationsService {
       where: { userId_organizationId: { userId, organizationId } },
     });
     if (!membership) throw new NotFoundException('Member not found');
-    if (membership.role !== 'MEMBER' && sessionIds.length > 0) {
+    if (
+      membership.role !== 'MEMBER' &&
+      membership.role !== 'OPERATOR' &&
+      sessionIds.length > 0
+    ) {
       throw new BadRequestException(
-        'Session restrictions only apply to members',
+        'Session restrictions only apply to members and operators',
       );
     }
     if (sessionIds.length > 0) {

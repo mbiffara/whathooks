@@ -684,17 +684,19 @@ function MessagesInbox() {
               <option value="RESOLVED">{t("filterResolved")}</option>
               <option value="ALL">{t("filterAllStatus")}</option>
             </select>
-            <select
-              className="input h-8 flex-1 px-2 py-0 text-xs"
-              value={assignedFilter}
-              onChange={(e) =>
-                setAssignedFilter(e.target.value as typeof assignedFilter)
-              }
-            >
-              <option value="all">{t("filterAllAssigned")}</option>
-              <option value="me">{t("filterMine")}</option>
-              <option value="unassigned">{t("filterUnassigned")}</option>
-            </select>
+            {auth?.user?.orgRole !== "OPERATOR" && (
+              <select
+                className="input h-8 flex-1 px-2 py-0 text-xs"
+                value={assignedFilter}
+                onChange={(e) =>
+                  setAssignedFilter(e.target.value as typeof assignedFilter)
+                }
+              >
+                <option value="all">{t("filterAllAssigned")}</option>
+                <option value="me">{t("filterMine")}</option>
+                <option value="unassigned">{t("filterUnassigned")}</option>
+              </select>
+            )}
           </div>
           {tags.length > 0 && (
             <select

@@ -226,7 +226,7 @@ export interface AdminOrgDetail {
 
 // --- Team / organizations -------------------------------------------------
 
-export type OrgRole = "OWNER" | "ADMIN" | "MEMBER";
+export type OrgRole = "OWNER" | "ADMIN" | "MEMBER" | "OPERATOR";
 
 export interface OrgMembership {
   id: string;

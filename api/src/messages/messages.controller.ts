@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
+import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { ApiKeyGuard } from '../api-keys/api-key.guard';
 import { ApiOrg } from '../common/decorators/org.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -33,6 +34,7 @@ export class MessagesController {
 
   /** Dashboard message log — authenticated with the user session (JWT). */
   @UseGuards(JwtAuthGuard, OrgRolesGuard)
+  @OrgRoles('MEMBER') // management surface — hidden from OPERATOR
   @Get()
   list(
     @CurrentUser() user: AuthUser,

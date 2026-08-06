@@ -332,6 +332,7 @@
       "role": "Rol",
       "roleMemberOption": "Miembro — operar y enviar mensajes",
       "roleAdminOption": "Admin — administrar todo",
+      "roleOperatorOption": "Operador — solo sus conversaciones asignadas",
       "sendInvite": "Enviar invitación",
       "inviteEmailSent": "Invitación para {email} — correo enviado. También puedes compartir este enlace directamente:",
       "inviteLinkOnly": "Invitación para {email} — el correo no está configurado, comparte este enlace (se muestra una sola vez):",
@@ -342,11 +343,17 @@
       "roles": {
         "OWNER": "propietario",
         "ADMIN": "admin",
-        "MEMBER": "miembro"
+        "MEMBER": "miembro",
+        "OPERATOR": "operador"
       },
       "joined": "se unió el {date}",
       "memberOpt": "Miembro",
       "adminOpt": "Admin",
+      "operatorOpt": "Operador",
+      "colMember": "Miembro",
+      "colEmail": "Email",
+      "colRole": "Rol",
+      "colJoined": "Alta",
       "remove": "Quitar",
       "confirmRemove": "¿Quitar a {email} del equipo?",
       "makeOwner": "Hacer propietario",

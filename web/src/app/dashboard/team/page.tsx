@@ -17,6 +17,7 @@ const ROLE_BADGE: Record<OrgRole, string> = {
   OWNER: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
   ADMIN: "bg-[var(--color-info-bg)] text-[var(--color-info)]",
   MEMBER: "bg-[var(--color-neutral-bg)] text-[var(--color-neutral)]",
+  OPERATOR: "bg-[var(--color-chip)] text-[var(--color-muted)]",
 };
 
 export default function TeamPage() {
@@ -37,7 +38,7 @@ export default function TeamPage() {
 
   // invite form
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
+  const [role, setRole] = useState<"ADMIN" | "MEMBER" | "OPERATOR">("MEMBER");
   const [created, setCreated] = useState<InvitationCreated | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -169,10 +170,13 @@ export default function TeamPage() {
             <select
               className="input"
               value={role}
-              onChange={(e) => setRole(e.target.value as "ADMIN" | "MEMBER")}
+              onChange={(e) =>
+                setRole(e.target.value as "ADMIN" | "MEMBER" | "OPERATOR")
+              }
             >
               <option value="MEMBER">{t("roleMemberOption")}</option>
               <option value="ADMIN">{t("roleAdminOption")}</option>
+              <option value="OPERATOR">{t("roleOperatorOption")}</option>
             </select>
           </div>
           <button
@@ -212,110 +216,146 @@ export default function TeamPage() {
         {loading ? (
           <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
         ) : (
-          members.map((m) => {
-            const isSelf = m.userId === myUserId;
-            return (
-              <div
-                key={m.userId}
-                className="card flex flex-wrap items-center justify-between gap-4"
-              >
-                <div>
-                  <div className="font-medium">
-                    {m.name ?? m.email}
-                    {isSelf && (
-                      <span className="ml-2 text-xs text-[var(--color-muted)]">
-                        {t("you")}
-                      </span>
-                    )}
-                    <span className={`ml-2 badge ${ROLE_BADGE[m.role]}`}>
-                      {t(`roles.${m.role}`)}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-sm text-[var(--color-muted)]">
-                    {m.email} ·{" "}
-                    {t("joined", {
-                      date: new Date(m.joinedAt).toLocaleDateString(),
-                    })}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {canManage &&
-                    m.role === "MEMBER" &&
-                    token &&
-                    sessions.length > 0 && (
-                      <MemberSessionAccess
-                        token={token}
-                        userId={m.userId}
-                        sessionIds={m.sessionIds}
-                        sessions={sessions}
-                        onSaved={() => void load()}
-                      />
-                    )}
-                  {isOwner && !isSelf && m.role !== "OWNER" && (
-                    <>
-                      <select
-                        className="input text-sm"
-                        value={m.role}
-                        onChange={(e) =>
-                          run(() =>
-                            apiClient(
-                              `/organizations/members/${m.userId}`,
-                              token,
-                              {
-                                method: "PATCH",
-                                body: JSON.stringify({ role: e.target.value }),
-                              },
-                            ),
-                          )
-                        }
-                      >
-                        <option value="MEMBER">{t("memberOpt")}</option>
-                        <option value="ADMIN">{t("adminOpt")}</option>
-                      </select>
-                      <button
-                        className="btn-danger"
-                        onClick={() => {
-                          if (confirm(t("confirmRemove", { email: m.email })))
-                            run(() =>
-                              apiClient(
-                                `/organizations/members/${m.userId}`,
-                                token,
-                                { method: "DELETE" },
-                              ),
-                            );
-                        }}
-                      >
-                        {t("remove")}
-                      </button>
-                      <button
-                        className="btn-ghost"
-                        onClick={() => {
-                          if (confirm(t("confirmTransfer", { email: m.email })))
-                            run(() =>
-                              apiClient(
-                                "/organizations/transfer-ownership",
-                                token,
-                                {
-                                  method: "POST",
-                                  body: JSON.stringify({ userId: m.userId }),
-                                },
-                              ),
-                            );
-                        }}
-                      >
-                        {t("makeOwner")}
-                      </button>
-                    </>
-                  )}
-                  {isSelf && m.role !== "OWNER" && (
-                    <button className="btn-danger" onClick={leave}>
-                      {t("leave")}
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })
+          <div className="card overflow-x-auto p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
+                  <th className="px-4 py-3 font-medium">{t("colMember")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colEmail")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colRole")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colJoined")}</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((m) => {
+                  const isSelf = m.userId === myUserId;
+                  return (
+                    <tr
+                      key={m.userId}
+                      className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]/50"
+                    >
+                      <td className="px-4 py-3 font-medium">
+                        {m.name ?? m.email}
+                        {isSelf && (
+                          <span className="ml-2 text-xs font-normal text-[var(--color-muted)]">
+                            {t("you")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--color-muted)]">
+                        {m.email}
+                      </td>
+                      <td className="px-4 py-3">
+                        {isOwner && !isSelf && m.role !== "OWNER" ? (
+                          <select
+                            className="input h-8 px-2 py-0 text-sm"
+                            value={m.role}
+                            onChange={(e) =>
+                              run(() =>
+                                apiClient(
+                                  `/organizations/members/${m.userId}`,
+                                  token,
+                                  {
+                                    method: "PATCH",
+                                    body: JSON.stringify({
+                                      role: e.target.value,
+                                    }),
+                                  },
+                                ),
+                              )
+                            }
+                          >
+                            <option value="MEMBER">{t("memberOpt")}</option>
+                            <option value="ADMIN">{t("adminOpt")}</option>
+                            <option value="OPERATOR">{t("operatorOpt")}</option>
+                          </select>
+                        ) : (
+                          <span className={`badge ${ROLE_BADGE[m.role]}`}>
+                            {t(`roles.${m.role}`)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--color-muted)]">
+                        {new Date(m.joinedAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          {canManage &&
+                            (m.role === "MEMBER" || m.role === "OPERATOR") &&
+                            token &&
+                            sessions.length > 0 && (
+                              <MemberSessionAccess
+                                token={token}
+                                userId={m.userId}
+                                sessionIds={m.sessionIds}
+                                sessions={sessions}
+                                onSaved={() => void load()}
+                              />
+                            )}
+                          {isOwner && !isSelf && m.role !== "OWNER" && (
+                            <>
+                              <button
+                                className="btn-danger text-xs"
+                                onClick={() => {
+                                  if (
+                                    confirm(
+                                      t("confirmRemove", { email: m.email }),
+                                    )
+                                  )
+                                    run(() =>
+                                      apiClient(
+                                        `/organizations/members/${m.userId}`,
+                                        token,
+                                        { method: "DELETE" },
+                                      ),
+                                    );
+                                }}
+                              >
+                                {t("remove")}
+                              </button>
+                              <button
+                                className="btn-ghost text-xs"
+                                onClick={() => {
+                                  if (
+                                    confirm(
+                                      t("confirmTransfer", { email: m.email }),
+                                    )
+                                  )
+                                    run(() =>
+                                      apiClient(
+                                        "/organizations/transfer-ownership",
+                                        token,
+                                        {
+                                          method: "POST",
+                                          body: JSON.stringify({
+                                            userId: m.userId,
+                                          }),
+                                        },
+                                      ),
+                                    );
+                                }}
+                              >
+                                {t("makeOwner")}
+                              </button>
+                            </>
+                          )}
+                          {isSelf && m.role !== "OWNER" && (
+                            <button
+                              className="btn-danger text-xs"
+                              onClick={leave}
+                            >
+                              {t("leave")}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

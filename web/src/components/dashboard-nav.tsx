@@ -27,6 +27,7 @@ type IconName =
   | "quickReplies"
   | "tags"
   | "contacts"
+  | "docs"
   | "signOut";
 
 /** Minimal stroke icons (24 viewBox), sized by the parent via width/height. */
@@ -103,6 +104,12 @@ function NavIcon({ name }: { name: IconName }) {
     ),
     admin: <path d="M12 2l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-4z" />,
     quickReplies: <path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z" />,
+    docs: (
+      <>
+        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" />
+        <path d="M14 3v5h5M9 13h6M9 17h6" />
+      </>
+    ),
     contacts: (
       <>
         <rect x="4" y="3" width="16" height="18" rx="2" />
@@ -148,6 +155,8 @@ interface NavLink {
   adminOnly?: boolean;
   /** Render only for org OWNER/ADMIN (and platform admins). */
   orgAdminOnly?: boolean;
+  /** Open in a new tab (external-ish pages like the docs). */
+  newTab?: boolean;
 }
 
 /** The inbox toolset — all an OPERATOR gets to see. */
@@ -186,6 +195,7 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
     links: [
       { href: "/dashboard/api-keys", key: "apiKeys" },
       { href: "/dashboard/logs", key: "logs" },
+      { href: "/docs", key: "docs", newTab: true },
     ],
   },
   {
@@ -288,6 +298,9 @@ export function DashboardNav() {
               <Link
                 key={l.href}
                 href={l.href}
+                {...(l.newTab
+                  ? { target: "_blank", rel: "noreferrer" }
+                  : {})}
                 title={t(l.key)}
                 aria-label={t(l.key)}
                 className={`grid h-9 w-9 place-items-center rounded-lg transition-colors ${
@@ -353,6 +366,9 @@ export function DashboardNav() {
               <Link
                 key={l.href}
                 href={l.href}
+                {...(l.newTab
+                  ? { target: "_blank", rel: "noreferrer" }
+                  : {})}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                   isActive(l.href, l.exact)
                     ? "bg-[var(--color-surface-2)] font-medium text-[var(--color-fg)]"

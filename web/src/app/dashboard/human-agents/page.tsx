@@ -170,109 +170,139 @@ export default function HumanAgentsPage() {
           {t("empty")}
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {agents.map((a) =>
-            editingId === a.id ? (
-              <form
-                key={a.id}
-                onSubmit={saveEdit}
-                className="card flex flex-wrap items-end gap-3"
-              >
-                <div className="min-w-44 flex-1">
-                  <label className="label">{t("name")}</label>
-                  <input
-                    className="input"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="min-w-52 flex-1">
-                  <label className="label">{t("phone")}</label>
-                  <input
-                    className="input"
-                    inputMode="tel"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="min-w-52 flex-1">
-                  <label className="label">{t("linkLabel")}</label>
-                  <select
-                    className="input"
-                    value={editUserId}
-                    onChange={(e) => setEditUserId(e.target.value)}
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
+                <th className="px-4 py-3 font-medium">{t("name")}</th>
+                <th className="px-4 py-3 font-medium">{t("phone")}</th>
+                <th className="px-4 py-3 font-medium">{t("colLinked")}</th>
+                <th className="px-4 py-3 font-medium">{t("colUsage")}</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {agents.map((a) =>
+                editingId === a.id ? (
+                  <tr
+                    key={a.id}
+                    className="border-b border-[var(--color-border)] last:border-0"
                   >
-                    <option value="">{t("noLink")}</option>
-                    {members.map((m) => (
-                      <option key={m.userId} value={m.userId}>
-                        {m.name ?? m.email}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button type="submit" disabled={busy} className="btn-primary">
-                  {tc("save")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingId(null)}
-                  className="btn-ghost"
-                >
-                  {tc("cancel")}
-                </button>
-              </form>
-            ) : (
-              <div key={a.id} className="card flex items-center gap-4">
-                <div className="min-w-0">
-                  <div className="font-medium">{a.name}</div>
-                  <div className="font-mono text-xs text-[var(--color-muted)]">
-                    +{a.phoneNumber}
-                  </div>
-                </div>
-                {a.user && (
-                  <span
-                    className="badge bg-[var(--color-info-bg)] text-[var(--color-info)] text-[10px]"
-                    title={a.user.email}
+                    <td colSpan={5} className="px-4 py-3">
+                      <form
+                        onSubmit={saveEdit}
+                        className="flex flex-wrap items-end gap-3"
+                      >
+                        <div className="min-w-44 flex-1">
+                          <label className="label">{t("name")}</label>
+                          <input
+                            className="input"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="min-w-52 flex-1">
+                          <label className="label">{t("phone")}</label>
+                          <input
+                            className="input"
+                            inputMode="tel"
+                            value={editPhone}
+                            onChange={(e) => setEditPhone(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="min-w-52 flex-1">
+                          <label className="label">{t("linkLabel")}</label>
+                          <select
+                            className="input"
+                            value={editUserId}
+                            onChange={(e) => setEditUserId(e.target.value)}
+                          >
+                            <option value="">{t("noLink")}</option>
+                            {members.map((m) => (
+                              <option key={m.userId} value={m.userId}>
+                                {m.name ?? m.email}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={busy}
+                          className="btn-primary"
+                        >
+                          {tc("save")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="btn-ghost"
+                        >
+                          {tc("cancel")}
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr
+                    key={a.id}
+                    className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]/50"
                   >
-                    {t("linkedTo", { name: a.user.name ?? a.user.email })}
-                  </span>
-                )}
-                {a.links > 0 && (
-                  <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)] text-[10px]">
-                    {t("inUse", { count: a.links })}
-                  </span>
-                )}
-                <div className="ml-auto flex gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingId(a.id);
-                      setEditName(a.name);
-                      setEditPhone(a.phoneNumber);
-                      setEditUserId(a.user?.id ?? "");
-                    }}
-                    className="btn-ghost text-xs"
-                  >
-                    {tc("edit")}
-                  </button>
-                  <button
-                    onClick={() =>
-                      void run(() =>
-                        apiClient(`/human-agents/${a.id}`, token, {
-                          method: "DELETE",
-                        }),
-                      )
-                    }
-                    disabled={busy}
-                    className="btn-danger text-xs"
-                  >
-                    {tc("delete")}
-                  </button>
-                </div>
-              </div>
-            ),
-          )}
+                    <td className="px-4 py-3 font-medium">{a.name}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-muted)]">
+                      +{a.phoneNumber}
+                    </td>
+                    <td className="px-4 py-3">
+                      {a.user ? (
+                        <span
+                          className="badge bg-[var(--color-info-bg)] text-[var(--color-info)] text-[10px]"
+                          title={a.user.email}
+                        >
+                          {a.user.name ?? a.user.email}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-[var(--color-muted)]">
+                          —
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-muted)]">
+                      {a.links > 0 ? t("inUse", { count: a.links }) : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingId(a.id);
+                            setEditName(a.name);
+                            setEditPhone(a.phoneNumber);
+                            setEditUserId(a.user?.id ?? "");
+                          }}
+                          className="btn-ghost text-xs"
+                        >
+                          {tc("edit")}
+                        </button>
+                        <button
+                          onClick={() =>
+                            void run(() =>
+                              apiClient(`/human-agents/${a.id}`, token, {
+                                method: "DELETE",
+                              }),
+                            )
+                          }
+                          disabled={busy}
+                          className="btn-danger text-xs"
+                        >
+                          {tc("delete")}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

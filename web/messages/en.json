@@ -614,7 +614,8 @@
       "inUse": "{count, plural, one {used by # mirror link} other {used by # mirror links}}",
       "linkLabel": "Team member (optional)",
       "noLink": "Not linked",
-      "linkedTo": "↳ {name}"
+      "colLinked": "Team member",
+      "colUsage": "Mirror links"
     },
     "flows": {
       "title": "Flows",

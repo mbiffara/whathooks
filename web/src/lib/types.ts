@@ -7,6 +7,8 @@ export interface WaSession {
   status: WaStatus;
   phoneNumber: string | null;
   agentId: string | null;
+  /** Auto-save inbound DM senders into the org's contact book. */
+  saveContacts: boolean;
   lastConnectedAt: string | null;
   createdAt: string;
   live: boolean;

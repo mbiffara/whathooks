@@ -111,11 +111,20 @@ export class WhatsappService {
     };
   }
 
-  async rename(organizationId: string, id: string, label: string) {
+  async update(
+    organizationId: string,
+    id: string,
+    patch: { label?: string; saveContacts?: boolean },
+  ) {
     await this.requireSession(organizationId, id);
     const session = await this.prisma.waSession.update({
       where: { id },
-      data: { label },
+      data: {
+        ...(patch.label !== undefined ? { label: patch.label } : {}),
+        ...(patch.saveContacts !== undefined
+          ? { saveContacts: patch.saveContacts }
+          : {}),
+      },
     });
     return this.toPublic(session);
   }
@@ -166,6 +175,7 @@ export class WhatsappService {
       status: s.status,
       phoneNumber: s.phoneNumber,
       agentId: s.agentId,
+      saveContacts: s.saveContacts,
       lastConnectedAt: s.lastConnectedAt,
       createdAt: s.createdAt,
       live: this.manager.isLive(s.id),

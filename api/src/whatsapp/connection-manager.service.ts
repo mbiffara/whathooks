@@ -691,6 +691,9 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
+      // Session setting: keep the contact book in sync on every inbound DM.
+      void this.autoSaveContact(sessionId, ctx);
+
       // A mirrored conversation is owned by its human agent — relay and stop.
       const thread = await this.prisma.mirrorThread.findUnique({
         where: { sessionId_leadJid: { sessionId, leadJid: ctx.remoteJid } },
@@ -728,6 +731,23 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       void this.maybeAgentReply(sessionId, ctx.remoteJid, ctx.conversationId);
     } catch (e) {
       this.log.warn(`Automation failed on ${sessionId}: ${e}`);
+    }
+  }
+
+  /** Auto-save the sender as a contact when the session opted in. */
+  private async autoSaveContact(
+    sessionId: string,
+    ctx: InboundAutomationCtx,
+  ): Promise<void> {
+    try {
+      const session = await this.prisma.waSession.findUnique({
+        where: { id: sessionId },
+        select: { saveContacts: true },
+      });
+      if (!session?.saveContacts) return;
+      await this.flowEngine.saveContact(sessionId, ctx);
+    } catch (e) {
+      this.log.warn(`Auto-save contact failed on ${sessionId}: ${e}`);
     }
   }
 

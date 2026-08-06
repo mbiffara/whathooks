@@ -23,7 +23,12 @@ import { WhatsappService } from './whatsapp.service';
     ApiKeysModule,
   ],
   controllers: [SessionsController, PublicConnectController, MirrorController],
-  providers: [ConnectionManagerService, WhatsappService, MirrorService, FlowEngineService],
+  providers: [
+    ConnectionManagerService,
+    WhatsappService,
+    MirrorService,
+    FlowEngineService,
+  ],
   exports: [ConnectionManagerService, WhatsappService, FlowEngineService],
 })
 export class WhatsappModule {}

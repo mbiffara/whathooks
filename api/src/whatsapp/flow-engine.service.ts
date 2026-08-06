@@ -387,11 +387,13 @@ export class FlowEngineService {
   }
 
   /**
-   * Upsert the lead into the org's contact book. First contact creates the
-   * record (dispatching contact.created); later runs only fill a missing
-   * name from the WhatsApp profile (dispatching contact.updated).
+   * Upsert the lead into the org's contact book, remembering which session
+   * they wrote to. First contact creates the record (dispatching
+   * contact.created); later runs only fill a missing name or link a new
+   * session (dispatching contact.updated). Used by the saveContact flow
+   * node and by sessions with the auto-save setting on.
    */
-  private async saveContact(
+  async saveContact(
     sessionId: string,
     ctx: InboundAutomationCtx,
   ): Promise<string> {
@@ -406,25 +408,36 @@ export class FlowEngineService {
     const key = host === 'lid' ? { lid: num } : { phoneNumber: num };
     const existing = await this.prisma.contact.findFirst({
       where: { organizationId, ...key },
+      include: {
+        sessions: { where: { id: sessionId }, select: { id: true } },
+      },
     });
     if (existing) {
-      if (!existing.name && ctx.pushName) {
-        const updated = await this.prisma.contact.update({
-          where: { id: existing.id },
-          data: { name: ctx.pushName },
-        });
-        void this.webhooks.dispatch({
-          organizationId,
-          sessionId,
-          event: 'contact.updated',
-          payload: updated,
-        });
-        return 'updated';
-      }
-      return 'exists';
+      const fillName = !existing.name && ctx.pushName;
+      const linkSession = existing.sessions.length === 0;
+      if (!fillName && !linkSession) return 'exists';
+      const updated = await this.prisma.contact.update({
+        where: { id: existing.id },
+        data: {
+          ...(fillName ? { name: ctx.pushName } : {}),
+          ...(linkSession ? { sessions: { connect: { id: sessionId } } } : {}),
+        },
+      });
+      void this.webhooks.dispatch({
+        organizationId,
+        sessionId,
+        event: 'contact.updated',
+        payload: updated,
+      });
+      return 'updated';
     }
     const created = await this.prisma.contact.create({
-      data: { organizationId, name: ctx.pushName ?? null, ...key },
+      data: {
+        organizationId,
+        name: ctx.pushName ?? null,
+        ...key,
+        sessions: { connect: { id: sessionId } },
+      },
     });
     void this.webhooks.dispatch({
       organizationId,

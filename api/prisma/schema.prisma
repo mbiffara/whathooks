@@ -173,6 +173,9 @@ model WaSession {
   label          String // human label, e.g. "Support line"
   phoneNumber    String? // msisdn once connected
   status         WaSessionStatus @default(PENDING)
+  // Auto-save every inbound DM sender into the org's contact book.
+  saveContacts   Boolean         @default(false)
+  contacts       Contact[]
   qr             String? // latest QR string while status = QR (transient)
   lastConnectedAt DateTime?
   // Set when a "session down / unlinked" alert email went out for the current
@@ -522,6 +525,8 @@ model Contact {
   email          String?
   website        String?
   instagram      String?
+  // Which of the org's numbers this person has written to.
+  sessions       WaSession[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

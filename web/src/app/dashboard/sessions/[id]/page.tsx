@@ -120,6 +120,20 @@ export default function SessionDetailPage() {
     }
   }
 
+  async function toggleSaveContacts(next: boolean) {
+    if (!token) return;
+    setSession((s) => (s ? { ...s, saveContacts: next } : s));
+    try {
+      await apiClient(`/sessions/${id}`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ saveContacts: next }),
+      });
+    } catch (e) {
+      setSession((s) => (s ? { ...s, saveContacts: !next } : s));
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+    }
+  }
+
   async function saveRename(e: React.FormEvent) {
     e.preventDefault();
     if (!token || busy) return;
@@ -290,6 +304,24 @@ export default function SessionDetailPage() {
               {t("agentDisabledWarning")}
             </p>
           )}
+      </div>
+
+      <div className="card">
+        <h2 className="mb-1 font-semibold">{t("saveContactsTitle")}</h2>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={session.saveContacts}
+            onChange={(e) => void toggleSaveContacts(e.target.checked)}
+          />
+          <span>
+            {t("saveContactsLabel")}
+            <span className="block text-xs text-[var(--color-muted)]">
+              {t("saveContactsHint")}
+            </span>
+          </span>
+        </label>
       </div>
 
       {isQr && (

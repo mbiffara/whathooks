@@ -391,8 +391,7 @@ describe('FlowEngineService.run', () => {
       edges: [edge('t', 'c'), edge('c', 'tag', 'out')],
     };
     await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
-    const createArgs = t.prisma.contact.create.mock
-      .calls[0][0] as AnyRecord;
+    const createArgs = t.prisma.contact.create.mock.calls[0][0];
     expect(createArgs.data).toMatchObject({
       organizationId: 'org1',
       phoneNumber: '549111',
@@ -404,8 +403,13 @@ describe('FlowEngineService.run', () => {
     // The walk continued through the out handle.
     expect(t.updates.length).toBeGreaterThan(0);
 
-    // Second run: the contact exists with a name — no create, no dispatch.
-    t.prisma.contact.findFirst.mockResolvedValue({ id: 'c1', name: 'Juan' });
+    // Second run: the contact exists with a name and this session already
+    // linked — no create, no dispatch.
+    t.prisma.contact.findFirst.mockResolvedValue({
+      id: 'c1',
+      name: 'Juan',
+      sessions: [{ id: 's1' }],
+    });
     t.prisma.contact.create.mockClear();
     (t.webhooks.dispatch as jest.Mock).mockClear();
     await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);

@@ -103,6 +103,7 @@ export class ContactsController {
       },
       orderBy: { updatedAt: 'desc' },
       take: 200,
+      include: { sessions: { select: { id: true, label: true } } },
     });
   }
 

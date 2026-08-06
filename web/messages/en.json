@@ -210,6 +210,9 @@
       "noAgent": "No agent (manual replies)",
       "disabledSuffix": " (disabled)",
       "agentDisabledWarning": "This agent is disabled — enable it on the Agents page to auto-reply.",
+      "saveContactsTitle": "Contacts",
+      "saveContactsLabel": "Save contacts automatically",
+      "saveContactsHint": "Every person who writes to this number is added to Contacts (name and number from WhatsApp). Fires the contact.created webhook.",
       "scanToConnect": "Scan to connect",
       "scanInstructions": "Open WhatsApp on your phone → <b>Settings → Linked Devices → Link a device</b>, then scan this code.",
       "qrAlt": "WhatsApp QR code",
@@ -586,6 +589,7 @@
       "needIdentifier": "A phone number or LID is required",
       "searchPlaceholder": "Search by name, phone, company or email…",
       "unnamed": "(no name)",
+      "sessionChip": "Contacted this number",
       "empty": "No contacts yet. Add the \"Save contact\" node to a flow, or create one here."
     },
     "tags": {

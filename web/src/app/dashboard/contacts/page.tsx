@@ -15,6 +15,8 @@ interface Contact {
   email: string | null;
   website: string | null;
   instagram: string | null;
+  /** Sessions (org numbers) this person has written to. */
+  sessions: { id: string; label: string }[];
   updatedAt: string;
 }
 
@@ -275,6 +277,15 @@ export default function ContactsPage() {
                       {c.company}
                     </span>
                   )}
+                  {(c.sessions ?? []).map((s) => (
+                    <span
+                      key={s.id}
+                      className="badge bg-[var(--color-brand)]/10 text-[var(--color-brand)] text-[10px]"
+                      title={t("sessionChip")}
+                    >
+                      {s.label}
+                    </span>
+                  ))}
                 </div>
                 <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-[var(--color-muted)]">
                   {c.email && <span>{c.email}</span>}

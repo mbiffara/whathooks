@@ -84,12 +84,12 @@ export class SessionsController {
 
   @OrgRoles('ADMIN')
   @Patch(':id')
-  rename(
+  update(
     @ApiOrg() org: string | undefined,
     @Param('id') id: string,
     @Body() dto: UpdateSessionDto,
   ) {
-    return this.whatsapp.rename(this.orgOf(org), id, dto.label);
+    return this.whatsapp.update(this.orgOf(org), id, dto);
   }
 
   @OrgRoles('ADMIN')

@@ -257,21 +257,22 @@
       "features": {
         "STARTER": [
           "1 número de WhatsApp",
-          "2 miembros de equipo",
           "5.000 mensajes / mes",
+          "2 miembros · 2 agentes humanos",
+          "1 flow · Agentes IA (tu clave)",
           "Historial de 30 días"
         ],
         "PRO": [
           "3 números de WhatsApp",
-          "10 miembros de equipo y roles",
           "10.000 mensajes / mes",
-          "Historial de 90 días",
-          "Agentes IA"
+          "10 miembros y roles · 10 agentes humanos",
+          "3 flows · Agentes IA con MCP",
+          "Historial de 90 días"
         ],
         "BUSINESS": [
           "10 números de WhatsApp",
-          "Miembros de equipo ilimitados",
           "100.000 mensajes / mes",
+          "Equipo, agentes humanos y flows ilimitados",
           "Historial completo",
           "Soporte prioritario"
         ]
@@ -865,8 +866,10 @@
         "cta": "Prueba Starter gratis",
         "items": [
           "1 número de WhatsApp",
-          "2 miembros de equipo",
           "5.000 mensajes / mes",
+          "2 miembros de equipo · 2 agentes humanos",
+          "1 flow de automatización (beta)",
+          "Agentes IA (con tu propia clave)",
           "1 endpoint de webhook",
           "Historial de mensajes de 30 días",
           "Soporte de la comunidad"
@@ -878,10 +881,11 @@
         "cta": "Prueba Pro gratis",
         "items": [
           "3 números de WhatsApp",
-          "10 miembros de equipo y roles",
           "10.000 mensajes / mes",
+          "10 miembros de equipo y roles",
+          "10 agentes humanos · 3 flows",
+          "Agentes IA con herramientas MCP",
           "Webhooks ilimitados",
-          "Agentes IA (con tu propia clave)",
           "Historial de mensajes de 90 días",
           "Soporte por correo"
         ],
@@ -893,8 +897,9 @@
         "items": [
           "10 números de WhatsApp",
           "100.000 mensajes / mes",
-          "Webhooks y agentes ilimitados",
-          "Miembros de equipo ilimitados",
+          "Equipo, agentes humanos y flows ilimitados",
+          "Agentes IA con herramientas MCP",
+          "Webhooks ilimitados",
           "Historial completo de mensajes",
           "Soporte prioritario"
         ],
@@ -958,6 +963,8 @@
     "events": {
       "messageReceived": "Llegó un mensaje entrante de WhatsApp a una sesión conectada.",
       "sessionStatus": "Una sesión cambió de estado (ej. CONNECTED, DISCONNECTED, LOGGED_OUT).",
+      "contactCreated": "Se guardó un contacto nuevo — por el guardado automático de la sesión, el nodo \"Guardar contacto\" de un flow, o alta manual.",
+      "contactUpdated": "Un contacto existente cambió: datos editados, nombre completado desde WhatsApp, o una nueva sesión vinculada.",
       "sessionQr": "Se generó un nuevo código QR y está esperando ser escaneado."
     },
     "headersTitle": "Encabezados de entrega",
@@ -1106,9 +1113,10 @@
       "tagline": "La misma bandeja — 2 cuentas",
       "items": [
         "Bandeja completa en el dashboard",
-        "2 miembros de equipo",
+        "2 miembros de equipo · 2 agentes humanos",
         "1 número de WhatsApp",
         "5.000 mensajes / mes",
+        "1 flow de automatización (beta)",
         "Webhooks y API incluidos",
         "Historial de 30 días"
       ],
@@ -1120,9 +1128,10 @@
       "tagline": "Todo lo de Starter, más tu equipo",
       "items": [
         "10 miembros de equipo y roles",
+        "10 agentes humanos · 3 flows",
         "3 números de WhatsApp",
         "10.000 mensajes / mes",
-        "Agentes IA (con tu propia clave)",
+        "Agentes IA con herramientas MCP",
         "Historial de 90 días"
       ],
       "cta": "Prueba Pro gratis",

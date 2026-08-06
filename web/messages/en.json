@@ -257,21 +257,22 @@
       "features": {
         "STARTER": [
           "1 WhatsApp number",
-          "2 team members",
           "5,000 messages / month",
+          "2 members · 2 human agents",
+          "1 flow · AI agents (your key)",
           "30-day history"
         ],
         "PRO": [
           "3 WhatsApp numbers",
-          "10 team members & roles",
           "10,000 messages / month",
-          "90-day history",
-          "AI agents"
+          "10 members & roles · 10 human agents",
+          "3 flows · AI agents with MCP",
+          "90-day history"
         ],
         "BUSINESS": [
           "10 WhatsApp numbers",
-          "Unlimited team members",
           "100,000 messages / month",
+          "Unlimited team, human agents & flows",
           "Full history",
           "Priority support"
         ]
@@ -865,8 +866,10 @@
         "cta": "Try Starter free",
         "items": [
           "1 WhatsApp number",
-          "2 team members",
           "5,000 messages / month",
+          "2 team members · 2 human agents",
+          "1 automation flow (beta)",
+          "AI agents (bring your own key)",
           "1 webhook endpoint",
           "30-day message history",
           "Community support"
@@ -878,10 +881,11 @@
         "cta": "Try Pro free",
         "items": [
           "3 WhatsApp numbers",
-          "10 team members & roles",
           "10,000 messages / month",
+          "10 team members & roles",
+          "10 human agents · 3 flows",
+          "AI agents with MCP tools",
           "Unlimited webhooks",
-          "AI agents (bring your own key)",
           "90-day message history",
           "Email support"
         ],
@@ -893,8 +897,9 @@
         "items": [
           "10 WhatsApp numbers",
           "100,000 messages / month",
-          "Unlimited webhooks & agents",
-          "Unlimited team members",
+          "Unlimited team, human agents & flows",
+          "AI agents with MCP tools",
+          "Unlimited webhooks",
           "Full message history",
           "Priority support"
         ],
@@ -958,6 +963,8 @@
     "events": {
       "messageReceived": "An inbound WhatsApp message arrived on a connected session.",
       "sessionStatus": "A session changed status (e.g. CONNECTED, DISCONNECTED, LOGGED_OUT).",
+      "contactCreated": "A new contact was saved — via the session's auto-save setting, a flow's \"Save contact\" node, or manual creation.",
+      "contactUpdated": "An existing contact changed: fields edited, name backfilled from WhatsApp, or a new session linked.",
       "sessionQr": "A new QR code was generated and is waiting to be scanned."
     },
     "headersTitle": "Delivery headers",
@@ -1106,9 +1113,10 @@
       "tagline": "The same inbox — 2 seats",
       "items": [
         "Full dashboard inbox",
-        "2 team members",
+        "2 team members · 2 human agents",
         "1 WhatsApp number",
         "5,000 messages / month",
+        "1 automation flow (beta)",
         "Webhooks & API included",
         "30-day history"
       ],
@@ -1120,9 +1128,10 @@
       "tagline": "Everything in Starter, plus your team",
       "items": [
         "10 team members & roles",
+        "10 human agents · 3 flows",
         "3 WhatsApp numbers",
         "10,000 messages / month",
-        "AI agents (bring your own key)",
+        "AI agents with MCP tools",
         "90-day history"
       ],
       "cta": "Try Pro free",

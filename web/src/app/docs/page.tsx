@@ -28,6 +28,8 @@ const EVENTS = [
   { name: "message.received", key: "messageReceived" },
   { name: "session.status", key: "sessionStatus" },
   { name: "session.qr", key: "sessionQr" },
+  { name: "contact.created", key: "contactCreated" },
+  { name: "contact.updated", key: "contactUpdated" },
 ];
 
 const HEADERS = [

@@ -125,7 +125,7 @@ body {
     @apply rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5;
   }
   .input {
-    @apply w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-fg)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)];
+    @apply w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-fg)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)] focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]/40;
   }
   .label {
     @apply mb-1.5 block text-sm font-medium text-[var(--color-fg)];
@@ -143,5 +143,17 @@ body {
   .logo-boxed {
     filter: var(--logo-boxed-filter);
     mix-blend-mode: var(--logo-boxed-blend);
+  }
+}
+
+/* Respect the user's motion preference: collapse transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

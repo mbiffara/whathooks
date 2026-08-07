@@ -86,6 +86,7 @@ export default function TagsPage() {
           className="input w-64"
           maxLength={30}
           placeholder={t("namePlaceholder")}
+              aria-label={t("namePlaceholder")}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />

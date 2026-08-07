@@ -155,7 +155,7 @@ twq('config','re0yu');`}
                 </div>
 
                 <div className="flex justify-center text-[var(--color-muted)]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M12 4v16m0 0l-5-5m5 5l5-5"
                       stroke="currentColor"
@@ -176,7 +176,7 @@ twq('config','re0yu');`}
                 </div>
 
                 <div className="flex justify-center text-[var(--color-muted)]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M12 4v16m0 0l-5-5m5 5l5-5"
                       stroke="currentColor"
@@ -224,7 +224,7 @@ twq('config','re0yu');`}
                     >
                       {t(key)}
                     </div>
-                    <svg
+                    <svg aria-hidden
                       width="20"
                       height="20"
                       viewBox="0 0 24 24"
@@ -272,7 +272,7 @@ twq('config','re0yu');`}
                 {(["mirrorPoint1", "mirrorPoint2", "mirrorPoint3"] as const).map(
                   (key) => (
                     <li key={key} className="flex items-start gap-2">
-                      <svg
+                      <svg aria-hidden
                         width="16"
                         height="16"
                         viewBox="0 0 24 24"
@@ -541,7 +541,7 @@ twq('config','re0yu');`}
                 <ul className="mt-6 flex flex-col gap-2.5 text-sm">
                   {plan.items.map((item) => (
                     <li key={item} className="flex items-start gap-2">
-                      <svg
+                      <svg aria-hidden
                         width="16"
                         height="16"
                         viewBox="0 0 24 24"

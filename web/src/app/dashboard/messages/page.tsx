@@ -154,6 +154,15 @@ function MessagesInbox() {
     return () => clearTimeout(id);
   }, [search]);
 
+  useEffect(() => {
+    if (!qrOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setQrOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [qrOpen]);
+
   // Load + poll conversations
   const loadConversations = useCallback(async () => {
     if (!token) return;
@@ -669,6 +678,7 @@ function MessagesInbox() {
           <input
             className="input mt-2"
             placeholder={t("searchPlaceholder")}
+              aria-label={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -1006,6 +1016,7 @@ function MessagesInbox() {
                         <input
                           className="input h-7 flex-1 px-2 py-0 text-xs"
                           placeholder={t("newTagPlaceholder")}
+              aria-label={t("newTagPlaceholder")}
                           value={newTagName}
                           onChange={(e) => setNewTagName(e.target.value)}
                           onKeyDown={(e) => {
@@ -1138,6 +1149,8 @@ function MessagesInbox() {
                     disabled={noteMode || !isConnected || sending}
                     className="btn-ghost rounded-lg px-3 py-2 text-sm disabled:opacity-50"
                     aria-label={t("quickReplies")}
+                    aria-haspopup="dialog"
+                    aria-expanded={qrOpen}
                     title={t("quickReplies")}
                   >
                     ⚡
@@ -1211,6 +1224,13 @@ function MessagesInbox() {
                   }`}
                   rows={1}
                   placeholder={
+                    noteMode
+                      ? t("notePlaceholder")
+                      : isConnected
+                        ? t("typeMessage")
+                        : t("numberDisconnected")
+                  }
+              aria-label={
                     noteMode
                       ? t("notePlaceholder")
                       : isConnected

@@ -50,6 +50,15 @@ export default function TeamPage() {
     left: number;
   } | null>(null);
 
+  useEffect(() => {
+    if (!menuFor) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuFor(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuFor]);
+
   const load = useCallback(async () => {
     if (!token) return;
     try {
@@ -327,6 +336,8 @@ export default function TeamPage() {
                               <button
                                 className="btn-ghost px-2 py-1.5 text-xs leading-none"
                                 aria-label={t("rowActions")}
+                                aria-haspopup="menu"
+                                aria-expanded={menuFor === m.userId}
                                 title={t("rowActions")}
                                 onClick={(e) => {
                                   const r =

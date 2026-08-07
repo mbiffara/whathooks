@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChatMessage } from "./types";
 import { clockTime, formatBytes } from "./utils";
 
@@ -69,6 +69,15 @@ export function MessageBubble({
       message.text?.trim(),
   );
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   if (message.source === "NOTE") {
     return (
       <NoteBubble message={message} label={message.sentByName ?? t("note")} />
@@ -89,6 +98,8 @@ export function MessageBubble({
             <button
               onClick={() => setMenuOpen((v) => !v)}
               aria-label={t("messageMenu")}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               className={`absolute -right-2 -top-2 h-6 w-6 place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-xs leading-none text-[var(--color-muted)] shadow-sm hover:text-[var(--color-fg)] ${
                 menuOpen ? "grid" : "hidden group-hover:grid"
               }`}

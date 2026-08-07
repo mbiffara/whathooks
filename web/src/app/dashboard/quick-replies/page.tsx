@@ -88,6 +88,7 @@ export default function QuickRepliesPage() {
             className="input w-56"
             maxLength={60}
             placeholder={t("titlePlaceholder")}
+              aria-label={t("titlePlaceholder")}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -95,6 +96,7 @@ export default function QuickRepliesPage() {
             className="input min-h-16 flex-1"
             maxLength={4096}
             placeholder={t("textPlaceholder")}
+              aria-label={t("textPlaceholder")}
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
@@ -127,6 +129,7 @@ export default function QuickRepliesPage() {
                     className="input w-56"
                     maxLength={60}
                     placeholder={t("titlePlaceholder")}
+              aria-label={t("titlePlaceholder")}
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                   />

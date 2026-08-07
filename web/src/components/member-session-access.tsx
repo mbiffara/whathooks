@@ -3,7 +3,7 @@
 import { apiClient } from "@/lib/client-api";
 import type { WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Per-member session access control (team page, MEMBER rows only).
@@ -33,6 +33,15 @@ export function MemberSessionAccess({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   async function save() {
     if (busy) return;
     setBusy(true);
@@ -58,6 +67,8 @@ export function MemberSessionAccess({
     <div className="relative">
       <button
         className="btn-ghost whitespace-nowrap px-2 py-1 text-xs"
+        aria-haspopup="dialog"
+        aria-expanded={open}
         title={
           sessionIds.length === 0
             ? t("allSessionsAccess")

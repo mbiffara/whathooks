@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "ads-copywriter": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "ads-copywriter/SKILL.md",
+      "computedHash": "143d60166187d611c5ef943ccb440252934306e0ea5e9615ce2a064e5ea4b7f8"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "f3bc47f890f42a44db1007ab390709ec368e4b8c089baee6b0007182236ac474"
+    }
+  }
+}

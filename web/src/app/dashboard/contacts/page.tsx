@@ -154,6 +154,7 @@ export default function ContactsPage() {
               className="input"
               maxLength={120}
               placeholder={t("name")}
+              aria-label={t("name")}
               value={form.name}
               onChange={(e) => field("name", e.target.value)}
             />
@@ -161,6 +162,7 @@ export default function ContactsPage() {
               className="input"
               maxLength={20}
               placeholder={t("phone")}
+              aria-label={t("phone")}
               value={form.phoneNumber}
               onChange={(e) =>
                 field("phoneNumber", e.target.value.replace(/\D/g, ""))
@@ -170,6 +172,7 @@ export default function ContactsPage() {
               className="input"
               maxLength={20}
               placeholder={t("lid")}
+              aria-label={t("lid")}
               value={form.lid}
               onChange={(e) => field("lid", e.target.value.replace(/\D/g, ""))}
             />
@@ -177,6 +180,7 @@ export default function ContactsPage() {
               className="input"
               maxLength={120}
               placeholder={t("company")}
+              aria-label={t("company")}
               value={form.company}
               onChange={(e) => field("company", e.target.value)}
             />
@@ -185,6 +189,7 @@ export default function ContactsPage() {
               type="email"
               maxLength={254}
               placeholder={t("email")}
+              aria-label={t("email")}
               value={form.email}
               onChange={(e) => field("email", e.target.value)}
             />
@@ -192,6 +197,7 @@ export default function ContactsPage() {
               className="input"
               maxLength={254}
               placeholder={t("website")}
+              aria-label={t("website")}
               value={form.website}
               onChange={(e) => field("website", e.target.value)}
             />
@@ -199,6 +205,7 @@ export default function ContactsPage() {
               className="input"
               maxLength={64}
               placeholder={t("instagram")}
+              aria-label={t("instagram")}
               value={form.instagram}
               onChange={(e) => field("instagram", e.target.value)}
             />
@@ -207,6 +214,7 @@ export default function ContactsPage() {
             className="input min-h-16"
             maxLength={4096}
             placeholder={t("notes")}
+              aria-label={t("notes")}
             value={form.notes}
             onChange={(e) => field("notes", e.target.value)}
           />
@@ -245,6 +253,7 @@ export default function ContactsPage() {
       <input
         className="input w-72"
         placeholder={t("searchPlaceholder")}
+              aria-label={t("searchPlaceholder")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />

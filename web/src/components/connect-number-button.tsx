@@ -32,7 +32,13 @@ export function ConnectNumberButton() {
 
   return (
     <>
-      <button className="btn-primary" onClick={() => setOpen(true)}>
+      <button
+        className="btn-primary"
+        // Without a plan the trial is the only next step, so go straight
+        // there: asking for a session name first would stack two modals
+        // in front of a subscription the org has to start anyway.
+        onClick={() => (needsPlan ? setShowUpgrade(true) : setOpen(true))}
+      >
         {t("connectNumber")}
       </button>
       <NewSessionDialog

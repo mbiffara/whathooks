@@ -52,7 +52,11 @@ export default function SessionsPage() {
       </div>
 
       <div>
-        <button className="btn-primary" onClick={() => setNewOpen(true)}>
+        <button
+          className="btn-primary"
+          // Same gate as the overview: no plan, no name prompt first.
+          onClick={() => (needsPlan ? setShowUpgrade(true) : setNewOpen(true))}
+        >
           {t("newSessionTitle")}
         </button>
       </div>

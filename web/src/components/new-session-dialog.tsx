@@ -21,7 +21,11 @@ export function NewSessionDialog({
   open: boolean;
   onClose: () => void;
   token?: string;
-  /** Known-unsubscribed: offer the upgrade without a round-trip to a 403. */
+  /**
+   * Known-unsubscribed. Callers gate on this before opening the dialog, so
+   * this only catches the race where the subscription lookup resolved after
+   * the button was clicked.
+   */
   needsPlan?: boolean;
   onSubscriptionRequired: () => void;
 }) {

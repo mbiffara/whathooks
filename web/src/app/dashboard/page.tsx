@@ -1,3 +1,4 @@
+import { ConnectNumberButton } from "@/components/connect-number-button";
 import { StatusBadge } from "@/components/status-badge";
 import { apiServer } from "@/lib/api";
 import { getTranslations } from "next-intl/server";
@@ -44,9 +45,7 @@ export default async function OverviewPage() {
           <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
         </div>
-        <Link href="/dashboard/sessions" className="btn-primary">
-          {t("connectNumber")}
-        </Link>
+        <ConnectNumberButton />
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

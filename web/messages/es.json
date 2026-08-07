@@ -195,6 +195,8 @@
       "title": "Sesiones de WhatsApp",
       "subtitle": "Cada sesión vincula un número de WhatsApp a whathooks.",
       "newSessionLabel": "Etiqueta de la nueva sesión",
+      "newSessionTitle": "Conectar un número",
+      "newSessionHint": "Poné un nombre a la conexión y después escaneá el QR desde el teléfono dueño del número.",
       "labelPlaceholder": "ej. Línea de soporte",
       "createConnect": "Crear y conectar",
       "creating": "Creando…",

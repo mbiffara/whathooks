@@ -195,6 +195,8 @@
       "title": "WhatsApp Sessions",
       "subtitle": "Each session links one WhatsApp number to whathooks.",
       "newSessionLabel": "New session label",
+      "newSessionTitle": "Connect a number",
+      "newSessionHint": "Name the connection, then scan the QR from the phone that owns the number.",
       "labelPlaceholder": "e.g. Support line",
       "createConnect": "Create & connect",
       "creating": "Creating…",

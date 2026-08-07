@@ -1,13 +1,13 @@
 "use client";
 
+import { NewSessionDialog } from "@/components/new-session-dialog";
 import { StatusBadge } from "@/components/status-badge";
 import { UpgradeModal } from "@/components/upgrade-modal";
-import { apiClient, isSubscriptionRequired } from "@/lib/client-api";
+import { apiClient } from "@/lib/client-api";
 import type { Subscription, WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 export default function SessionsPage() {
@@ -15,11 +15,9 @@ export default function SessionsPage() {
   const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
-  const router = useRouter();
   const [sessions, setSessions] = useState<WaSession[]>([]);
-  const [label, setLabel] = useState("");
+  const [newOpen, setNewOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   // Known-unsubscribed orgs get the upgrade modal on click instead of a
@@ -46,31 +44,6 @@ export default function SessionsPage() {
     load();
   }, [load]);
 
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
-    if (needsPlan) {
-      setShowUpgrade(true);
-      return;
-    }
-    if (!token || !label.trim()) return;
-    setCreating(true);
-    setError(null);
-    try {
-      const created = await apiClient<WaSession>("/sessions", token, {
-        method: "POST",
-        body: JSON.stringify({ label: label.trim() }),
-      });
-      router.push(`/dashboard/sessions/${created.id}`);
-    } catch (e) {
-      if (isSubscriptionRequired(e)) {
-        setShowUpgrade(true);
-      } else {
-        setError(e instanceof Error ? e.message : tc("failedToCreate"));
-      }
-      setCreating(false);
-    }
-  }
-
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -78,29 +51,19 @@ export default function SessionsPage() {
         <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
       </div>
 
-      <form
-        onSubmit={create}
-        className="card flex flex-col gap-3 sm:flex-row sm:items-end"
-      >
-        <div className="flex-1">
-          <label className="label">{t("newSessionLabel")}</label>
-          <input
-            className="input"
-            placeholder={t("labelPlaceholder")}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-        </div>
-        <button
-          type="submit"
-          className="btn-primary"
-          // When a plan is needed, stay clickable so the click can explain
-          // why (upgrade modal) instead of presenting a dead button.
-          disabled={creating || (!needsPlan && !label.trim())}
-        >
-          {creating ? t("creating") : t("createConnect")}
+      <div>
+        <button className="btn-primary" onClick={() => setNewOpen(true)}>
+          {t("newSessionTitle")}
         </button>
-      </form>
+      </div>
+
+      <NewSessionDialog
+        open={newOpen}
+        onClose={() => setNewOpen(false)}
+        token={token}
+        needsPlan={needsPlan}
+        onSubscriptionRequired={() => setShowUpgrade(true)}
+      />
 
       {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 

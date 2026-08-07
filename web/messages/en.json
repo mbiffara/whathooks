@@ -631,6 +631,8 @@
       "notes": "Notes…",
       "needIdentifier": "A phone number or LID is required",
       "searchPlaceholder": "Search by name, phone, company or email…",
+      "filterSession": "Filter by number",
+      "allSessions": "All numbers",
       "unnamed": "(no name)",
       "sessionChip": "Contacted this number",
       "colName": "Name",

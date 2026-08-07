@@ -631,6 +631,8 @@
       "notes": "Notas…",
       "needIdentifier": "Se necesita un teléfono o un LID",
       "searchPlaceholder": "Buscar por nombre, teléfono, empresa o email…",
+      "filterSession": "Filtrar por número",
+      "allSessions": "Todos los números",
       "unnamed": "(sin nombre)",
       "sessionChip": "Escribió a este número",
       "colName": "Nombre",

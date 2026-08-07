@@ -2,6 +2,7 @@
 
 import { Glyph } from "@/components/glyphs";
 import { apiClient } from "@/lib/client-api";
+import type { WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
@@ -65,6 +66,8 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [sessions, setSessions] = useState<WaSession[]>([]);
+  const [sessionFilter, setSessionFilter] = useState("");
   const [form, setForm] = useState<ContactForm>(EMPTY);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -76,17 +79,29 @@ export default function ContactsPage() {
     return () => clearTimeout(id);
   }, [search]);
 
+  // The session list only labels the filter — failing to load it must not
+  // take the page down.
+  useEffect(() => {
+    if (!token) return;
+    apiClient<WaSession[]>("/sessions", token)
+      .then(setSessions)
+      .catch(() => setSessions([]));
+  }, [token]);
+
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const params = debounced.trim()
-        ? `?q=${encodeURIComponent(debounced.trim())}`
-        : "";
-      setContacts(await apiClient<Contact[]>(`/contacts${params}`, token));
+      const params = new URLSearchParams();
+      if (debounced.trim()) params.set("q", debounced.trim());
+      if (sessionFilter) params.set("sessionId", sessionFilter);
+      const qs = params.toString();
+      setContacts(
+        await apiClient<Contact[]>(`/contacts${qs ? `?${qs}` : ""}`, token),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : tc("failedToLoad"));
     }
-  }, [token, debounced, tc]);
+  }, [token, debounced, sessionFilter, tc]);
 
   useEffect(() => {
     load();
@@ -131,21 +146,9 @@ export default function ContactsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
-        </div>
-        <button
-          onClick={() => {
-            setEditingId(null);
-            setForm(EMPTY);
-            setFormOpen((v) => !v);
-          }}
-          className="btn-primary text-sm"
-        >
-          {t("add")}
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
       </div>
 
       {formOpen && (
@@ -251,13 +254,39 @@ export default function ContactsPage() {
         </form>
       )}
 
-      <input
-        className="input w-72"
-        placeholder={t("searchPlaceholder")}
-        aria-label={t("searchPlaceholder")}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          className="input w-72"
+          placeholder={t("searchPlaceholder")}
+          aria-label={t("searchPlaceholder")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          className="input w-52"
+          value={sessionFilter}
+          onChange={(e) => setSessionFilter(e.target.value)}
+          aria-label={t("filterSession")}
+        >
+          <option value="">{t("allSessions")}</option>
+          {sessions.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => {
+            setEditingId(null);
+            setForm(EMPTY);
+            setFormOpen((v) => !v);
+          }}
+          className="btn-primary ml-auto inline-flex items-center gap-1.5 text-sm"
+        >
+          <Glyph name="userPlus" size={16} />
+          {t("add")}
+        </button>
+      </div>
 
       {contacts === null ? (
         <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>

@@ -85,11 +85,18 @@ export class ContactsController {
   }
 
   @Get()
-  list(@CurrentUser() user: AuthUser, @Query('q') q?: string) {
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query('q') q?: string,
+    /** Only people who have written to this session (org number). */
+    @Query('sessionId') sessionId?: string,
+  ) {
     const needle = q?.trim();
     return this.prisma.contact.findMany({
       where: {
         organizationId: this.orgOf(user),
+        // Org scope above already prevents reading another org's sessions.
+        ...(sessionId ? { sessions: { some: { id: sessionId } } } : {}),
         ...(needle
           ? {
               OR: [

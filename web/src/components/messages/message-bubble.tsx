@@ -43,6 +43,9 @@ function senderLabel(
       return message.senderName
         ? `👥 ${message.senderName} · ${t("mirror")}`
         : `👥 ${t("mirror")}`;
+    case "DEVICE":
+      // Typed on the phone or another linked device, not through whathooks.
+      return `📱 ${t("device")}`;
     case "HUMAN":
       // Attribution: which teammate replied (older rows predate tracking).
       return message.sentByName ?? null;

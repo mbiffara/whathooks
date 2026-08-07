@@ -25,6 +25,7 @@ export type MessageSource =
   | "API"
   | "AGENT"
   | "MIRROR"
+  | "DEVICE"
   | "NOTE";
 
 export interface ConversationTag {

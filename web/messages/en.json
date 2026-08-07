@@ -527,6 +527,7 @@
         "unsupported": "Unsupported message",
         "note": "Note",
         "mirror": "Mirror",
+        "device": "From phone",
         "messageMenu": "Message options",
         "saveQuickReply": "Save as quick reply",
         "notDelivered": "Not delivered"

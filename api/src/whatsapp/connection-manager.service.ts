@@ -71,11 +71,21 @@ export interface InboundAutomationCtx {
   media?: { buffer: Buffer; mimeType: string; fileName?: string | null };
 }
 
+// How long a sent waMessageId stays in the own-send set. Only needs to
+// outlive the gap between the socket returning and the row being written.
+const OWN_SEND_TTL_MS = 60_000;
+
 @Injectable()
 export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(ConnectionManagerService.name);
   private readonly sessions = new Map<string, LiveSession>();
   private readonly groupNames = new Map<string, string>(); // jid -> subject
+  // waMessageIds this process just sent, with their expiry. WhatsApp echoes
+  // our own sends back through messages.upsert, and that echo can beat the
+  // persistMessage write, so a database lookup alone would double-store them.
+  // Entries are recorded the instant the socket returns an id; anything that
+  // outlives the TTL is caught by the waMessageId lookup instead.
+  private readonly ownSends = new Map<string, number>();
   // Consecutive reconnect failures per session (drives backoff; reset on open).
   private readonly reconnectAttempts = new Map<string, number>();
   // Mirror-link config per session, cached briefly (looked up per message).
@@ -518,7 +528,6 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   ) {
     if (upsert.type !== 'notify') return;
     for (const msg of upsert.messages) {
-      if (msg.key.fromMe) continue;
       if (!msg.message) {
         // Decryption failed (missing sender key — common in LID groups):
         // Baileys emits a CIPHERTEXT stub and asks the sender to re-send.
@@ -533,10 +542,124 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         continue;
       }
       try {
-        await this.handleInbound(sessionId, msg);
+        // fromMe covers both our own sends echoed back and messages typed on
+        // the phone or another linked device — handleOwnDevice tells them
+        // apart and only stores the latter.
+        if (msg.key.fromMe) await this.handleOwnDevice(sessionId, msg);
+        else await this.handleInbound(sessionId, msg);
       } catch (e) {
         this.log.error(`Inbound handling failed for ${sessionId}: ${e}`);
       }
+    }
+  }
+
+  /**
+   * A message this account sent from somewhere else: the phone, WhatsApp Web,
+   * another linked device. WhatsApp echoes the messages *we* send here too,
+   * so those are filtered out first (in-memory for the ones this process just
+   * sent, then by waMessageId for anything older). What is left is a human
+   * answering from their phone: it is stored so the inbox shows the full
+   * thread, but no automation runs — a person already handled the thread.
+   */
+  private async handleOwnDevice(sessionId: string, msg: WAMessage) {
+    const waMessageId = msg.key.id ?? null;
+    if (waMessageId && this.isOwnSend(waMessageId)) return;
+
+    // Reactions attach to the target row, same as inbound ones.
+    const reaction = msg.message?.reactionMessage;
+    if (reaction) {
+      await this.applyReaction(sessionId, {
+        targetWaMessageId: reaction.key?.id ?? null,
+        emoji: reaction.text ?? '',
+        reactor: 'me',
+        reactorName: null,
+      });
+      return;
+    }
+    // Survives a restart, and catches an echo that raced the send's write.
+    if (waMessageId) {
+      const existing = await this.prisma.message.findFirst({
+        where: { sessionId, waMessageId },
+        select: { id: true },
+      });
+      if (existing) return;
+    }
+
+    const organizationId = await this.orgIdOf(sessionId);
+    const remoteJid = msg.key.remoteJid ?? 'unknown';
+    const isGroup = remoteJid.endsWith('@g.us');
+    const described = describeMessage(msg);
+    await this.persistMessage({
+      sessionId,
+      organizationId,
+      remoteJid,
+      // pushName here is the connected account's own name, never the
+      // contact's — only a group subject is safe to write.
+      name: isGroup ? await this.groupSubject(sessionId, remoteJid) : null,
+      direction: MessageDirection.OUTBOUND,
+      fromMe: true,
+      source: MessageSource.DEVICE,
+      type: described.type,
+      text: described.text,
+      waMessageId,
+      status: MessageStatus.SENT,
+      timestamp: msg.messageTimestamp
+        ? new Date(Number(msg.messageTimestamp) * 1000)
+        : new Date(),
+      raw: JSON.parse(JSON.stringify(msg.message)),
+      media: await this.stageMedia(sessionId, msg, described),
+      incrementUnread: false,
+    });
+    this.log.log(
+      `Stored device-sent message on ${sessionId} in ${remoteJid} ` +
+        `(waMessageId ${waMessageId ?? 'none'})`,
+    );
+  }
+
+  /** Remember a waMessageId we just sent, so its echo is not stored twice. */
+  private markOwnSend(waMessageId: string | null | undefined): void {
+    if (!waMessageId) return;
+    const now = Date.now();
+    if (this.ownSends.size > 500) {
+      for (const [id, expires] of this.ownSends) {
+        if (expires < now) this.ownSends.delete(id);
+      }
+    }
+    this.ownSends.set(waMessageId, now + OWN_SEND_TTL_MS);
+  }
+
+  private isOwnSend(waMessageId: string): boolean {
+    const expires = this.ownSends.get(waMessageId);
+    if (expires === undefined) return false;
+    if (expires < Date.now()) {
+      this.ownSends.delete(waMessageId);
+      return false;
+    }
+    return true;
+  }
+
+  /** Download a message's media and stage it for storage. Best-effort. */
+  private async stageMedia(
+    sessionId: string,
+    msg: WAMessage,
+    described: ReturnType<typeof describeMessage>,
+  ): Promise<StagedMedia | undefined> {
+    if (!described.media) return undefined;
+    try {
+      const buffer = await downloadMediaMessage(
+        msg,
+        'buffer',
+        {},
+        {
+          logger,
+          reuploadRequest:
+            this.sessions.get(sessionId)!.sock.updateMediaMessage,
+        },
+      );
+      return { ...described.media, buffer };
+    } catch (e) {
+      this.log.warn(`Media download failed for ${sessionId}: ${e}`);
+      return undefined;
     }
   }
 
@@ -567,25 +690,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       ? new Date(Number(msg.messageTimestamp) * 1000)
       : new Date();
 
-    // Download media (if any) and stage it for storage.
-    let media: StagedMedia | undefined;
-    if (described.media) {
-      try {
-        const buffer = await downloadMediaMessage(
-          msg,
-          'buffer',
-          {},
-          {
-            logger,
-            reuploadRequest:
-              this.sessions.get(sessionId)!.sock.updateMediaMessage,
-          },
-        );
-        media = { ...described.media, buffer };
-      } catch (e) {
-        this.log.warn(`Media download failed for ${sessionId}: ${e}`);
-      }
-    }
+    const media = await this.stageMedia(sessionId, msg, described);
 
     const result = await this.persistMessage({
       sessionId,
@@ -1242,6 +1347,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       text,
       ...(opts.mentions?.length ? { mentions: opts.mentions } : {}),
     });
+    this.markOwnSend(sent?.key?.id);
     const organizationId = await this.orgIdOf(sessionId);
 
     const result = await this.persistMessage({
@@ -1288,6 +1394,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     const kind = mediaKind(file.mimeType);
     const content = buildBaileysMedia(kind, file, caption);
     const sent = await live.sock.sendMessage(jid, content);
+    this.markOwnSend(sent?.key?.id);
     const organizationId = await this.orgIdOf(sessionId);
 
     const result = await this.persistMessage({

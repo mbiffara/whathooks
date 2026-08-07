@@ -332,6 +332,38 @@ export class ConversationsService {
     return this.get(organizationId, id, allowed, assignedTo);
   }
 
+  /**
+   * Save this conversation's contact into the address book. The inbox offers
+   * this when the session does not auto-save; the outcome distinguishes a new
+   * contact from one that already existed so the UI can say which happened.
+   */
+  async saveContact(
+    organizationId: string,
+    id: string,
+    allowed?: string[] | null,
+    assignedTo?: string | null,
+  ) {
+    const c = await this.requireConversation(
+      organizationId,
+      id,
+      false,
+      allowed,
+      assignedTo,
+    );
+    if (c.isGroup) {
+      throw new BadRequestException('Groups are not saved as contacts');
+    }
+    const outcome = await this.flowEngine.saveContactFor(c.sessionId, {
+      remoteJid: c.remoteJid,
+      phoneNumber: c.phoneNumber,
+      name: c.name,
+    });
+    if (outcome === 'error') {
+      throw new BadRequestException('This conversation has no saveable number');
+    }
+    return { outcome };
+  }
+
   /** The mirror thread owning this conversation, if any. */
   private mirrorFor(c: { sessionId: string; remoteJid: string }) {
     return this.prisma.mirrorThread.findUnique({

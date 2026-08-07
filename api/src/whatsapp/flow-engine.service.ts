@@ -397,6 +397,23 @@ export class FlowEngineService {
     sessionId: string,
     ctx: InboundAutomationCtx,
   ): Promise<string> {
+    return this.saveContactFor(sessionId, {
+      remoteJid: ctx.remoteJid,
+      phoneNumber: ctx.phoneNumber ?? null,
+      name: ctx.pushName,
+    });
+  }
+
+  /**
+   * Save (or top up) the contact behind one WhatsApp identity. Shared by the
+   * flow node, the session's auto-save and the inbox button, so all three
+   * agree on identity matching and on what counts as an update.
+   */
+  async saveContactFor(
+    sessionId: string,
+    who: { remoteJid: string; phoneNumber: string | null; name: string | null },
+  ): Promise<string> {
+    const ctx = { ...who, pushName: who.name };
     const session = await this.prisma.waSession.findUnique({
       where: { id: sessionId },
       select: { organizationId: true },

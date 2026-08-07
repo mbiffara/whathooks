@@ -110,6 +110,13 @@ function MessagesInbox() {
   const [mirrorError, setMirrorError] = useState<string | null>(null);
   const [unlinkOpen, setUnlinkOpen] = useState(false);
 
+  // Manual contact save, offered when the session does not auto-save.
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactSaved, setContactSaved] = useState<{
+    conversationId: string;
+    outcome: string;
+  } | null>(null);
+
   // "New conversation" dialog.
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [newConvSession, setNewConvSession] = useState("");
@@ -446,6 +453,26 @@ function MessagesInbox() {
     const humanAgent = members.find((m) => m.userId === userId)?.humanAgent;
     if (!humanAgent || updated.isGroup || updated.mirror) return;
     openMirrorPrompt(updated.id, humanAgent);
+  }
+
+  async function saveContact() {
+    if (!token || !selectedConv || savingContact) return;
+    setSavingContact(true);
+    try {
+      const res = await apiClient<{ outcome: string }>(
+        `/conversations/${selectedConv.id}/contact`,
+        token,
+        { method: "POST" },
+      );
+      setContactSaved({
+        conversationId: selectedConv.id,
+        outcome: res.outcome,
+      });
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+    } finally {
+      setSavingContact(false);
+    }
   }
 
   async function createMirror() {
@@ -1101,6 +1128,26 @@ function MessagesInbox() {
                     </button>
                   </span>
                 )}
+                {/* Sessions that auto-save already have the contact. */}
+                {!selectedConv.isGroup &&
+                  selectedSession &&
+                  !selectedSession.saveContacts &&
+                  (contactSaved?.conversationId === selectedConv.id ? (
+                    <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
+                      {contactSaved.outcome === "created"
+                        ? t("contactSaved")
+                        : t("contactExists")}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={saveContact}
+                      disabled={savingContact}
+                      className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
+                      title={t("saveContactHint")}
+                    >
+                      {savingContact ? tc("loading") : t("saveContact")}
+                    </button>
+                  ))}
                 {assigneeHumanAgent && (
                   <button
                     onClick={() =>

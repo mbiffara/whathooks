@@ -252,6 +252,19 @@ export class ConversationsController {
     );
   }
 
+  /** Save the contact by hand, for sessions that don't auto-save them. */
+  @Post(':id/contact')
+  saveContact(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.saveContact(
+        this.orgOf(user),
+        id,
+        allowed,
+        this.assignedOnly(user),
+      ),
+    );
+  }
+
   /** Hand the thread to a human agent over WhatsApp (mirror group). */
   @Post(':id/mirror')
   createMirror(

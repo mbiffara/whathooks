@@ -313,7 +313,7 @@ export default function TeamPage() {
                           {isOwner && !isSelf && m.role !== "OWNER" && (
                             <>
                               <button
-                                className="btn-danger px-2 py-1.5 text-xs"
+                                className="btn-danger inline-flex h-8 w-8 items-center justify-center rounded-lg p-0"
                                 aria-label={t("remove")}
                                 title={t("remove")}
                                 onClick={() => {
@@ -331,10 +331,10 @@ export default function TeamPage() {
                                     );
                                 }}
                               >
-                                <Glyph name="trash" size={14} />
+                                <Glyph name="trash" size={16} />
                               </button>
                               <button
-                                className="btn-ghost px-2 py-1.5 text-xs leading-none"
+                                className="btn-ghost inline-flex h-8 w-8 items-center justify-center rounded-lg p-0"
                                 aria-label={t("rowActions")}
                                 aria-haspopup="menu"
                                 aria-expanded={menuFor === m.userId}
@@ -351,13 +351,13 @@ export default function TeamPage() {
                                   );
                                 }}
                               >
-                                ⋯
+                                <Glyph name="moreVertical" size={16} />
                               </button>
                             </>
                           )}
                           {isSelf && m.role !== "OWNER" && (
                             <button
-                              className="btn-danger text-xs"
+                              className="btn-danger inline-flex h-8 items-center rounded-lg px-3 py-0 text-xs"
                               onClick={leave}
                             >
                               {t("leave")}
@@ -376,7 +376,10 @@ export default function TeamPage() {
 
       {menuFor && menuAnchor && (
         <>
-          <div className="fixed inset-0 z-20" onClick={() => setMenuFor(null)} />
+          <div
+            className="fixed inset-0 z-20"
+            onClick={() => setMenuFor(null)}
+          />
           <div
             className="fixed z-30 w-48 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg"
             style={{ top: menuAnchor.top, left: menuAnchor.left }}

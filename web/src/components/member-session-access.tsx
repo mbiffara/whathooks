@@ -66,7 +66,7 @@ export function MemberSessionAccess({
   return (
     <div className="relative">
       <button
-        className="btn-ghost whitespace-nowrap px-2 py-1 text-xs"
+        className="btn-ghost inline-flex h-8 items-center whitespace-nowrap rounded-lg px-3 py-0 text-xs"
         aria-haspopup="dialog"
         aria-expanded={open}
         title={

@@ -66,3 +66,8 @@ jobs:
           WH_WEB_ORIGIN: ${{ secrets.WH_WEB_ORIGIN }}
           WH_CERT_ARN: ${{ secrets.WH_CERT_ARN }}
           WH_DOMAIN_NAME: ${{ secrets.WH_DOMAIN_NAME }}
+          # Optional: complete ARN of the included-AI OpenAI key secret, and
+          # the Stripe price id for the 10M token pack. Absent = the feature
+          # stays dark rather than breaking the deploy.
+          WH_INCLUDED_AI_SECRET_ARN: ${{ secrets.WH_INCLUDED_AI_SECRET_ARN }}
+          WH_PRICE_TOKENS_10M: ${{ secrets.WH_PRICE_TOKENS_10M }}

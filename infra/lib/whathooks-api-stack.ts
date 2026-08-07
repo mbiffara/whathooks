@@ -146,12 +146,17 @@ export class WhathooksApiStack extends cdk.Stack {
     //     --name whathooks/included-ai-openai-key \
     //     --secret-string 'sk-proj-...' --region us-east-1 \
     //     --query ARN --output text
-    const includedAiKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
-      this,
-      'IncludedAiOpenAiKey',
-      process.env.WH_INCLUDED_AI_SECRET_ARN ??
-        'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/included-ai-openai-key-REPLACE',
-    );
+    // Optional on purpose: until the secret exists the stack must still
+    // deploy, so agents on "included tokens" simply have no key and log that
+    // they cannot run. A hard-coded placeholder ARN fails synth instead.
+    const includedAiSecretArn = process.env.WH_INCLUDED_AI_SECRET_ARN;
+    const includedAiKeySecret = includedAiSecretArn
+      ? secretsmanager.Secret.fromSecretCompleteArn(
+          this,
+          'IncludedAiOpenAiKey',
+          includedAiSecretArn,
+        )
+      : undefined;
     // X (Twitter) Conversion API pixel token — server-side ad attribution.
     const xPixelTokenSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
@@ -257,8 +262,12 @@ export class WhathooksApiStack extends cdk.Stack {
           ecs.Secret.fromSecretsManager(stripeWebhookSecret),
         RESEND_API_KEY: ecs.Secret.fromSecretsManager(resendApiKeySecret),
         X_PIXEL_TOKEN: ecs.Secret.fromSecretsManager(xPixelTokenSecret),
-        INCLUDED_AI_OPENAI_KEY:
-          ecs.Secret.fromSecretsManager(includedAiKeySecret),
+        ...(includedAiKeySecret
+          ? {
+              INCLUDED_AI_OPENAI_KEY:
+                ecs.Secret.fromSecretsManager(includedAiKeySecret),
+            }
+          : {}),
       },
     });
 

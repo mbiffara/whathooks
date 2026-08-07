@@ -91,7 +91,7 @@ export async function POST(req: Request) {
   }
 
   const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const model = openai(process.env.FLOW_ASSISTANT_MODEL ?? "gpt-5.4-mini");
+  const model = openai(process.env.FLOW_ASSISTANT_MODEL ?? "gpt-5.6-luna");
   const system = systemPrompt(refs, body.locale ?? "es");
 
   let feedback = "";

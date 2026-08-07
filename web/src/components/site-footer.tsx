@@ -9,19 +9,19 @@ export function SiteFooter() {
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 text-sm text-[var(--color-muted)] sm:flex-row sm:items-center sm:justify-between">
         <Logo />
         <div className="flex gap-5">
-          <Link href="/docs" className="hover:text-[var(--color-fg)]">
+          <Link prefetch={false} href="/docs" className="hover:text-[var(--color-fg)]">
             {t("docs")}
           </Link>
-          <Link href="/teams" className="hover:text-[var(--color-fg)]">
+          <Link prefetch={false} href="/teams" className="hover:text-[var(--color-fg)]">
             {t("forTeams")}
           </Link>
-          <Link href="/signin" className="hover:text-[var(--color-fg)]">
+          <Link prefetch={false} href="/signin" className="hover:text-[var(--color-fg)]">
             {t("signIn")}
           </Link>
-          <Link href="/terms" className="hover:text-[var(--color-fg)]">
+          <Link prefetch={false} href="/terms" className="hover:text-[var(--color-fg)]">
             {t("terms")}
           </Link>
-          <Link href="/privacy" className="hover:text-[var(--color-fg)]">
+          <Link prefetch={false} href="/privacy" className="hover:text-[var(--color-fg)]">
             {t("privacy")}
           </Link>
         </div>

@@ -262,6 +262,7 @@ export function DashboardNav() {
   const rail = (
     <aside className="flex w-14 shrink-0 flex-col items-center border-r border-[var(--color-border)] bg-[var(--color-surface)] py-4">
       <Link
+        prefetch={false}
         href="/dashboard"
         className="grid h-8 w-8 place-items-center"
         aria-label={t("overview")}
@@ -306,6 +307,7 @@ export function DashboardNav() {
           >
             {group.links.map((l) => (
               <Link
+                prefetch={false}
                 key={l.href}
                 href={l.href}
                 {...(l.newTab
@@ -326,6 +328,7 @@ export function DashboardNav() {
         ))}
         {isAdmin && (
           <Link
+            prefetch={false}
             href="/admin"
             title={t("admin")}
             aria-label={t("admin")}
@@ -374,6 +377,7 @@ export function DashboardNav() {
             )}
             {group.links.map((l) => (
               <Link
+                prefetch={false}
                 key={l.href}
                 href={l.href}
                 {...(l.newTab
@@ -393,6 +397,7 @@ export function DashboardNav() {
         ))}
         {isAdmin && (
           <Link
+            prefetch={false}
             href="/admin"
             className={`mt-3 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
               pathname.startsWith("/admin")

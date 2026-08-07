@@ -69,7 +69,10 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SessionProvider>
+        {/* Refetching on focus re-reads the same JWT cookie without renewing
+            the API access token, so it buys nothing and costs one request per
+            tab-back on a dashboard people leave open all day. */}
+        <SessionProvider refetchOnWindowFocus={false}>
           <NextIntlClientProvider>{children}</NextIntlClientProvider>
         </SessionProvider>
       </body>

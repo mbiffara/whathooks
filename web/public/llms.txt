@@ -1,10 +1,12 @@
-# whathooks — WhatsApp as a webhook
+# whathooks — WhatsApp automation on your own number
 
-> whathooks connects a WhatsApp number to your stack: scan a QR to link the
-> number, receive every inbound message as a signed JSON webhook, and send
-> replies through a REST API. No WhatsApp Business API approval process.
-> This file is the complete integration reference, written for AI coding
-> agents and humans alike.
+> whathooks turns a WhatsApp number into an automated channel: AI agents
+> reply in your voice, visual flows route every message, humans take over
+> from their own WhatsApp, and everything is also available as a signed
+> webhook + REST API. Numbers connect by QR scan; no WhatsApp Business API
+> approval process. This file is the complete integration reference,
+> written for AI coding agents and humans alike.
+> Machine-readable pricing: https://www.whathooks.app/pricing.md
 
 Base URL (production): `https://api.whathooks.app/v1`
 Web dashboard: `https://www.whathooks.app`
@@ -67,6 +69,10 @@ Events:
 - `message.received` — an inbound WhatsApp message arrived.
 - `session.status` — a session changed status.
 - `session.qr` — a new QR code was generated.
+- `contact.created` — a contact was saved (session auto-save, a flow's
+  "Save contact" node, or manual creation in the dashboard).
+- `contact.updated` — a contact changed (fields edited, name backfilled
+  from WhatsApp, or a new session linked).
 
 Webhooks can be scoped to one session or receive events from all sessions.
 
@@ -150,7 +156,8 @@ The webhook secret is shown once when the webhook is created.
 ### Payload mapping (optional)
 
 A webhook can carry `payloadMapping` rules that reshape `data` before
-delivery: rename fields (`source` dot paths like `data.from`, also reaching
+delivery, keyed per event (`{ "message.received": [rules], "contact.created":
+[rules] }`; events without rules deliver their full payload): rename fields (`source` dot paths like `data.from`, also reaching
 `event`, `sessionId`, `timestamp`), format dates (`dateFormat`: `iso`,
 `unix`, `unix_ms`, or a UTC pattern like `yyyy-MM-dd HH:mm`), and inject
 fixed values (`value`). With rules set, `data` contains ONLY mapped fields;
@@ -261,20 +268,36 @@ WhatsApp groups but stops all relaying.
 
 ## Plans
 
-Paid plans with a 7-day free trial (card required): Starter $8.99/mo
-(1 number, 2 team members, 5,000 messages/mo), Pro $24.99/mo (3 numbers,
-10 team members, 10,000 messages/mo, AI agents), Business $79.99/mo
-(10 numbers, unlimited team members, 100,000 messages/mo). Annual billing
-available on every plan at 10× the monthly price (2 months free): Starter
-$89.90/yr, Pro $249.90/yr, Business $799.90/yr. Message caps
-count inbound + outbound. During a trial: 300 messages
-(WhatsApp numbers follow the plan).
+Paid plans with a 7-day free trial (card required). AI agents (bring your
+own Anthropic/OpenAI key) are included on every plan; MCP tools need Pro+.
+Starter $8.99/mo: 1 number, 5,000 messages/mo, 2 team members, 2 human
+agents, 1 flow, 1 webhook, 30-day history. Pro $24.99/mo: 3 numbers,
+10,000 messages/mo, 10 team members, 10 human agents, 3 flows, unlimited
+webhooks, 90-day history. Business $79.99/mo: 10 numbers, 100,000
+messages/mo, unlimited team/human agents/flows/webhooks, full history.
+Annual billing on every plan at 10x monthly (2 months free): $89.90 /
+$249.90 / $799.90 per year. Message caps count inbound + outbound. During
+a trial: 300 messages (numbers follow the plan). Full machine-readable
+breakdown: https://www.whathooks.app/pricing.md
 
 ## Product extras (dashboard)
 
 - Shared team inbox: multiple team members answer the same number from the
-  web dashboard, with roles (owner/admin/member), full history, tags,
-  internal notes, assignment, and per-member session access restrictions.
+  web dashboard, with roles (owner/admin/member/operator — operators only
+  see conversations assigned to them), full history, tags, internal notes,
+  quick replies (saved canned responses), assignment, and per-member
+  session access restrictions.
+- Flows (beta): a visual routing editor per session. Nodes: keyword match,
+  AI intent classification, AI agent reply with handoff, assign to one
+  human / round-robin / a shared team group (any member replies as the
+  brand), tag conversation, assign teammate, save contact, trigger webhook.
+  Handoffs can copy the conversation history into the mirror group. A runs
+  panel records each message's path. An AI assistant drafts a flow from a
+  plain-language description.
+- Contacts: an org-wide address book (name, phone/LID, company, email,
+  website, Instagram, notes) tracking which numbers each person wrote to.
+  Filled by the "Save contact" flow node, per-session auto-save, or
+  manually; changes fire the contact.* webhooks.
 - AI agents: bring-your-own-key (Anthropic or OpenAI) auto-responders per
   session, with human handoff. MCP tool support on Anthropic agents (Pro+).
   Knowledge documents (PDF/TXT/MD/CSV, up to 5 docs / 100k characters per

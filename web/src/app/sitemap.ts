@@ -5,7 +5,10 @@ const BASE = "https://www.whathooks.app";
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${BASE}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${BASE}/automation`, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE}/teams`, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${BASE}/developers`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${BASE}/getting-started`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE}/docs`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE}/signup`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/signin`, changeFrequency: "monthly", priority: 0.3 },

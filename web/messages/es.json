@@ -544,21 +544,21 @@
       "reopen": "Reabrir",
       "resolved": "Resuelta",
       "deleteConversation": "Eliminar",
-      "confirmDelete": "¿Eliminar esta conversación? Se borran los mensajes, el estado del flow y el enrutamiento espejo, para que el próximo mensaje empiece de cero. No se puede deshacer.",
+      "confirmDelete": "¿Eliminar esta conversación? Se borran los mensajes, el estado del flow y el mirror link, para que el próximo mensaje empiece de cero. No se puede deshacer.",
       "mirrorPromptTitle": "¿Responder desde WhatsApp?",
-      "mirrorPromptBody": "{name} también es agente humano de WhatsApp. Podés crear un grupo espejo privado para que responda esta conversación desde su propio teléfono. El contacto siempre ve tu número de la empresa.",
+      "mirrorPromptBody": "{name} también es agente humano de WhatsApp. Podés crear un mirror link privado para que responda esta conversación desde su propio teléfono. El contacto siempre ve tu número de la empresa.",
       "mirrorCopyHistory": "Copiar la conversación hasta ahora",
       "mirrorCopyHistoryHint": "Envía los últimos mensajes al grupo como contexto.",
       "mirrorPromptSkip": "Ahora no",
-      "mirrorPromptConfirm": "Crear grupo espejo",
-      "mirrorAdd": "Espejo",
-      "mirrorBadge": "Espejo: {name}",
-      "mirrorBadgeUnknown": "Con espejo",
-      "mirrorBadgeHint": "Un agente humano responde desde WhatsApp. Los agentes y flows de la sesión no intervienen en esta conversación hasta que quites el espejo.",
-      "mirrorRemove": "Quitar espejo",
-      "mirrorRemoveTitle": "¿Quitar el espejo?",
+      "mirrorPromptConfirm": "Crear mirror link",
+      "mirrorAdd": "Mirror link",
+      "mirrorBadge": "Mirror link: {name}",
+      "mirrorBadgeUnknown": "Con mirror link",
+      "mirrorBadgeHint": "Un agente humano responde desde WhatsApp. Los agentes y flows de la sesión no intervienen en esta conversación hasta que remuevas el mirror link.",
+      "mirrorRemove": "Remover mirror link",
+      "mirrorRemoveTitle": "¿Remover el mirror link?",
       "mirrorRemoveBody": "Tu número sale del grupo y las respuestas dejan de reenviarse al contacto. Los agentes y flows vuelven a manejar la conversación.",
-      "mirrorRemoveConfirm": "Quitar espejo",
+      "mirrorRemoveConfirm": "Remover mirror link",
       "filterAllTags": "Todas las etiquetas",
       "addTag": "+ Etiqueta",
       "newTagPlaceholder": "Nombre de la etiqueta…",
@@ -577,9 +577,9 @@
     },
     "mirror": {
       "title": "Mirror Link",
-      "activeTitle": "Conversaciones con espejo",
-      "activeSubtitle": "Todas las conversaciones que un agente humano está respondiendo por WhatsApp, sin importar qué creó el espejo: un mirror link, un traspaso de un flow o la bandeja de entrada.",
-      "noThreads": "No hay conversaciones con espejo en este momento.",
+      "activeTitle": "Conversaciones con mirror link",
+      "activeSubtitle": "Todas las conversaciones que un agente humano está respondiendo por WhatsApp, sin importar cómo se creó el mirror link: desde la configuración de abajo, un traspaso de un flow o la bandeja de entrada.",
+      "noThreads": "No hay conversaciones con mirror link en este momento.",
       "colContact": "Contacto",
       "colAgents": "Responde",
       "colGroup": "Grupo",
@@ -588,8 +588,8 @@
       "openConversation": "Abrir conversación",
       "unknownAgent": "Número sin vincular",
       "fromLinkHint": "Lo creó el mirror link de esta sesión, así que se vuelve a abrir con el próximo mensaje del contacto. Desactivá o eliminá el link de abajo para evitarlo.",
-      "removeThread": "Quitar espejo",
-      "confirmRemoveThread": "¿Quitar este espejo? Tu número sale del grupo y las respuestas dejan de reenviarse al contacto. Los agentes y flows vuelven a manejar la conversación.",
+      "removeThread": "Remover mirror link",
+      "confirmRemoveThread": "¿Remover este mirror link? Tu número sale del grupo y las respuestas dejan de reenviarse al contacto. Los agentes y flows vuelven a manejar la conversación.",
       "linksTitle": "Mirror links",
       "subtitle": "Protege tus leads: los mensajes directos a un número espejado se reenvían a un grupo privado con uno de tus agentes humanos. El agente responde en el grupo y el lead lo recibe como un chat normal. El agente nunca ve el número del lead. Los cambios tardan hasta 30 segundos en aplicarse.",
       "sessionLabel": "Sesión",
@@ -773,7 +773,7 @@
         },
         "assignGroup": {
           "title": "Grupo de agentes",
-          "hint": "Crea el grupo espejo del lead con todos los agentes seleccionados. Cualquiera puede responder como la marca. Termina el flow."
+          "hint": "Crea el mirror link del lead con todos los agentes seleccionados. Cualquiera puede responder como la marca. Termina el flow."
         },
         "saveContact": {
           "title": "Guardar contacto",
@@ -834,7 +834,7 @@
     "storyLead": "“¡Hola! ¿Tienen mesa para 4 el sábado?”",
     "storyAiTag": "Agente IA · responde al instante",
     "storyAi": "“¡Hola! Sí, ¿a qué hora te gustaría? 😊”",
-    "storyHumanTag": "Grupo espejo · tu equipo entra",
+    "storyHumanTag": "Mirror link · tu equipo entra",
     "storyHuman": "Marcelo confirma la reserva desde su propio WhatsApp. El lead lo recibe como tu marca.",
     "notJustApi": "La bandeja del equipo, incluida",
     "notJustApiDesc": "Cada conversación vive en un dashboard compartido: asignaciones, etiquetas, notas internas y respuestas rápidas para todo tu equipo.",
@@ -875,7 +875,7 @@
     "flowsChip2": "Panel de ejecuciones para depurar",
     "flowsChip3": "Incluido en todos los planes",
     "mirrorTitle": "Tu equipo atiende desde su propio WhatsApp",
-    "mirrorDesc": "Cuando un lead necesita a una persona, whathooks crea un grupo espejo en WhatsApp con tu agente. Sin cuentas, sin contraseñas, sin apps nuevas. Solo su número.",
+    "mirrorDesc": "Cuando un lead necesita a una persona, whathooks crea un mirror link en WhatsApp con tu agente. Sin cuentas, sin contraseñas, sin apps nuevas. Solo su número.",
     "mirrorPoint1": "El agente responde desde su teléfono y el lead lo recibe como tu marca",
     "mirrorPoint2": "El lead nunca ve el número personal del agente",
     "mirrorPoint3": "Vincúlalo a un miembro del equipo y la conversación queda asignada en la bandeja",
@@ -898,7 +898,7 @@
         "desc": "Enruta cada mensaje con nodos: palabras clave, intención con IA, derivaciones, etiquetas y webhooks."
       },
       {
-        "title": "Grupos espejo",
+        "title": "Mirror links",
         "desc": "Deriva leads a una persona real sin que salga de WhatsApp. Responde como la marca desde su propio teléfono."
       },
       {
@@ -1019,10 +1019,10 @@
           ]
         },
         "humanAgents": {
-          "title": "5. Agentes humanos y grupos espejo",
+          "title": "5. Agentes humanos y mirror links",
           "paragraphs": [
             "Un agente humano es una persona real que atiende desde su propio WhatsApp. Sin cuenta ni contraseña: solo su número.",
-            "Cuando un lead se deriva a un humano, whathooks crea un grupo espejo en WhatsApp con esa persona. Todo lo que el lead escribe aparece en el grupo, y lo que el agente responde le llega al lead como tu marca. El lead nunca ve el número personal del agente."
+            "Cuando un lead se deriva a un humano, whathooks crea un mirror link en WhatsApp con esa persona. Todo lo que el lead escribe aparece en el grupo, y lo que el agente responde le llega al lead como tu marca. El lead nunca ve el número personal del agente."
           ],
           "items": [
             "Vincula un agente humano con un miembro del equipo para que las derivaciones también le asignen la conversación en la bandeja."
@@ -1078,7 +1078,7 @@
         },
         "handoff": {
           "title": "Derivación a humanos por WhatsApp",
-          "desc": "Grupos espejo: tu agente responde desde su propio teléfono y el lead lo recibe como tu marca.",
+          "desc": "Mirror links: tu agente responde desde su propio teléfono y el lead lo recibe como tu marca.",
           "points": [
             "Un agente fijo, por turnos (round-robin) o un grupo con varios",
             "Copia el historial de la conversación al derivar",

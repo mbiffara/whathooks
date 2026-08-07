@@ -105,6 +105,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@layer base {
+  /* Tailwind v4's preflight gives buttons cursor: default. Every enabled
+     button in this app is clickable, so opt back in globally instead of
+     per component (the .btn classes already did it for themselves). */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
 @layer components {
   .btn,
   .btn-primary,

@@ -241,6 +241,27 @@
       "shareRevoke": "Revoke",
       "shareExpires": "The link works for 24 hours. Generating a new one invalidates the previous link; revoking disables it immediately."
     },
+    "tokens": {
+      "title": "AI tokens",
+      "subtitle": "Used by agents running on included tokens. Agents on your own key are unmetered.",
+      "monthly": "Monthly allowance",
+      "monthlyNote": "Resets on the 1st. Unused monthly tokens do not carry over.",
+      "purchased": "Purchased balance",
+      "purchasedNote": "Never expires. Only spent once the monthly allowance runs out.",
+      "buy": "Buy 10M tokens",
+      "opening": "Opening…",
+      "unlimited": "Unlimited",
+      "lowWarning": "Less than 10% of this month's tokens left. When they run out your agents hand conversations to a person instead of replying.",
+      "breakdown": "Usage breakdown",
+      "byDay": "By day",
+      "byAgent": "By agent",
+      "noUsage": "No included-token usage yet.",
+      "alertTitle": "Your AI tokens are running low",
+      "alertBody": "Agents on included tokens stop replying when the allowance runs out.",
+      "alertCta": "Buy tokens",
+      "purchasesTitle": "Token purchases",
+      "purchaseRow": "{tokens} tokens"
+    },
     "billing": {
       "title": "Billing",
       "subtitle": "Manage your subscription and see this month's usage.",

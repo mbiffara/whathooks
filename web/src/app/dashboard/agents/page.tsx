@@ -3,6 +3,7 @@
 import { AgentKnowledge } from "@/components/agent-knowledge";
 import { apiClient } from "@/lib/client-api";
 import Link from "next/link";
+import { AiTokensCard } from "@/components/ai-tokens-card";
 import {
   AGENT_MODELS,
   INCLUDED_AI_MODEL,
@@ -86,6 +87,7 @@ export default function AgentsPage() {
   const t = useTranslations("dash.agents");
   const tc = useTranslations("common");
   const { data: auth } = useSession();
+  const isOwner = auth?.user?.orgRole === "OWNER";
   const token = auth?.accessToken;
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,6 +200,8 @@ export default function AgentsPage() {
           <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
         </div>
+
+        <AiTokensCard isOwner={isOwner} />
         {!draft && (
           <button
             onClick={() =>

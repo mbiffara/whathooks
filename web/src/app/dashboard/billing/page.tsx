@@ -1,6 +1,8 @@
 "use client";
 
+import { AiTokensCard } from "@/components/ai-tokens-card";
 import { apiClient } from "@/lib/client-api";
+import type { AiTokenPurchase } from "@/lib/types";
 import {
   PLAN_PRICING,
   type PurchasablePlan,
@@ -16,6 +18,7 @@ const PLAN_ORDER: PurchasablePlan[] = ["STARTER", "PRO", "BUSINESS"];
 function BillingContent() {
   const t = useTranslations("dash.billing");
   const tc = useTranslations("common");
+  const tt = useTranslations("dash.tokens");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const isOwner = auth?.user?.orgRole === "OWNER";
@@ -26,6 +29,7 @@ function BillingContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [purchases, setPurchases] = useState<AiTokenPurchase[]>([]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -42,6 +46,13 @@ function BillingContent() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!token) return;
+    apiClient<AiTokenPurchase[]>("/billing/ai-tokens/purchases", token)
+      .then(setPurchases)
+      .catch(() => setPurchases([]));
+  }, [token]);
 
   const [billingInterval, setBillingInterval] = useState<"month" | "year">(
     "month",
@@ -165,6 +176,41 @@ function BillingContent() {
               </div>
             )}
           </section>
+
+          <section className="mt-6">
+            <AiTokensCard isOwner={isOwner} />
+          </section>
+
+          {purchases.length > 0 && (
+            <section className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+              <h2 className="font-semibold">{tt("purchasesTitle")}</h2>
+              <table className="mt-3 w-full text-sm">
+                <tbody>
+                  {purchases.map((p) => (
+                    <tr
+                      key={p.id}
+                      className="border-b border-[var(--color-border)] last:border-0"
+                    >
+                      <td className="py-2">
+                        {tt("purchaseRow", {
+                          tokens: p.tokens.toLocaleString(),
+                        })}
+                      </td>
+                      <td className="py-2 text-[var(--color-muted)]">
+                        {new Date(p.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-2 text-right tabular-nums">
+                        {(p.amountCents / 100).toLocaleString(undefined, {
+                          style: "currency",
+                          currency: p.currency.toUpperCase(),
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
 
           {/* Plans */}
           {sub.plan === "SPONSORED" ? (

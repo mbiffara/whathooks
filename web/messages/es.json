@@ -241,6 +241,27 @@
       "shareRevoke": "Revocar",
       "shareExpires": "El enlace funciona por 24 horas. Generar uno nuevo invalida el anterior; revocarlo lo desactiva de inmediato."
     },
+    "tokens": {
+      "title": "Tokens de IA",
+      "subtitle": "Los usan los agentes con tokens incluidos. Los que usan tu propia clave no se miden.",
+      "monthly": "Asignación mensual",
+      "monthlyNote": "Se renueva el día 1. Los tokens mensuales sin usar no se acumulan.",
+      "purchased": "Saldo comprado",
+      "purchasedNote": "No vence. Se usa solo cuando se agota la asignación mensual.",
+      "buy": "Comprar 10M tokens",
+      "opening": "Abriendo…",
+      "unlimited": "Ilimitado",
+      "lowWarning": "Queda menos del 10% de los tokens del mes. Cuando se agoten, tus agentes derivan las conversaciones a una persona en vez de responder.",
+      "breakdown": "Detalle de uso",
+      "byDay": "Por día",
+      "byAgent": "Por agente",
+      "noUsage": "Todavía no hay uso de tokens incluidos.",
+      "alertTitle": "Te quedan pocos tokens de IA",
+      "alertBody": "Los agentes con tokens incluidos dejan de responder cuando se agota la asignación.",
+      "alertCta": "Comprar tokens",
+      "purchasesTitle": "Compras de tokens",
+      "purchaseRow": "{tokens} tokens"
+    },
     "billing": {
       "title": "Facturación",
       "subtitle": "Administra tu suscripción y revisa el uso de este mes.",

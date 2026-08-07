@@ -1,3 +1,4 @@
+import { AiTokensAlert } from "@/components/ai-tokens-alert";
 import { ConnectNumberButton } from "@/components/connect-number-button";
 import { StatusBadge } from "@/components/status-badge";
 import { apiServer } from "@/lib/api";
@@ -47,6 +48,8 @@ export default async function OverviewPage() {
         </div>
         <ConnectNumberButton />
       </div>
+
+      <AiTokensAlert />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {stats.map((s) => (

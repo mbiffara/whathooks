@@ -72,6 +72,26 @@ export const AGENT_MODELS: Record<
   ],
 };
 
+/** Included-AI balance plus the usage breakdowns. */
+export interface AiTokenReport {
+  /** This month's plan allowance; resets on the 1st and never carries over. */
+  included: { used: number; limit: number | null };
+  /** Purchased tokens still unspent. These do carry over. */
+  paid: number;
+  /** At or below the warning threshold with no purchased tokens to fall back on. */
+  low: boolean;
+  byDay: { day: string; tokens: number }[];
+  byAgent: { name: string; tokens: number }[];
+}
+
+export interface AiTokenPurchase {
+  id: string;
+  tokens: number;
+  amountCents: number;
+  currency: string;
+  createdAt: string;
+}
+
 /** The model included-AI agents run on, billed to whathooks. */
 export const INCLUDED_AI_MODEL = "gpt-5.6-luna";
 

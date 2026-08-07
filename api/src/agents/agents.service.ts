@@ -11,6 +11,7 @@ import {
   AgentProviderName,
   CreateAgentDto,
   DEFAULT_MODEL,
+  INCLUDED_AI_MODEL,
   McpServerDto,
   UpdateAgentDto,
 } from './dto/agent.dto';
@@ -37,11 +38,9 @@ async function extractText(file: {
   fileName: string;
 }): Promise<string> {
   const lower = file.fileName.toLowerCase();
-  const isPdf =
-    file.mimeType === 'application/pdf' || lower.endsWith('.pdf');
+  const isPdf = file.mimeType === 'application/pdf' || lower.endsWith('.pdf');
   const isText =
-    file.mimeType.startsWith('text/') ||
-    /\.(txt|md|markdown|csv)$/.test(lower);
+    file.mimeType.startsWith('text/') || /\.(txt|md|markdown|csv)$/.test(lower);
   if (isPdf) {
     try {
       const parsed = await pdfParse(file.buffer);
@@ -91,14 +90,24 @@ export class AgentsService {
 
   async create(organizationId: string, dto: CreateAgentDto) {
     this.ensureEncryption();
-    const provider: AgentProviderName = dto.provider ?? 'ANTHROPIC';
+    const included = dto.useIncludedAi === true;
+    // Included AI is the platform's OpenAI account on one fixed model, so it
+    // overrides provider/model rather than trusting whatever was posted.
+    const provider: AgentProviderName = included
+      ? 'OPENAI'
+      : (dto.provider ?? 'ANTHROPIC');
+    if (!included && !dto.apiKey?.trim()) {
+      throw new BadRequestException(
+        'Provide an API key, or use the included AI tokens',
+      );
+    }
     const mcpServers = await this.mcpServersInput(
       organizationId,
       provider,
       dto.mcpServers,
       [],
     );
-    const apiKey = dto.apiKey.trim();
+    const apiKey = dto.apiKey?.trim() ?? '';
     const agent = await this.prisma.agent.create({
       data: {
         mcpServers,
@@ -107,9 +116,12 @@ export class AgentsService {
         soul: dto.soul,
         instructions: dto.instructions,
         provider,
-        model: dto.model?.trim() || DEFAULT_MODEL[provider],
-        apiKeyCiphertext: this.encryption.encrypt(apiKey),
-        apiKeyHint: this.encryption.hint(apiKey),
+        model: included
+          ? INCLUDED_AI_MODEL
+          : dto.model?.trim() || DEFAULT_MODEL[provider],
+        useIncludedAi: included,
+        apiKeyCiphertext: included ? null : this.encryption.encrypt(apiKey),
+        apiKeyHint: included ? null : this.encryption.hint(apiKey),
         maxTokens: dto.maxTokens ?? 1024,
         allowAutoStop: dto.allowAutoStop ?? false,
         replyDelayMinSeconds: dto.replyDelayMinSeconds ?? 0,
@@ -131,7 +143,15 @@ export class AgentsService {
 
   async update(organizationId: string, id: string, dto: UpdateAgentDto) {
     const existing = await this.require(organizationId, id);
-    const provider = dto.provider ?? existing.provider;
+    const included = dto.useIncludedAi ?? existing.useIncludedAi;
+    // Included AI pins the provider and model, so a switch to it overrides
+    // whatever else the patch asked for.
+    const provider = included ? 'OPENAI' : (dto.provider ?? existing.provider);
+    if (!included && !dto.apiKey?.trim() && !existing.apiKeyCiphertext) {
+      throw new BadRequestException(
+        'Switching off included AI needs an API key of your own',
+      );
+    }
 
     const existingServers = isAgentMcpServers(existing.mcpServers)
       ? existing.mcpServers
@@ -155,13 +175,20 @@ export class AgentsService {
     // If the provider changed and no explicit model was given, reset to the new
     // provider's default (an Anthropic model can't run on OpenAI, and vice versa).
     let model = dto.model?.trim();
-    if (!model && dto.provider && dto.provider !== existing.provider) {
+    if (included) {
+      model = INCLUDED_AI_MODEL;
+    } else if (!model && dto.provider && dto.provider !== existing.provider) {
       model = DEFAULT_MODEL[provider];
     }
 
-    let apiKeyCiphertext: string | undefined;
-    let apiKeyHint: string | undefined;
-    if (dto.apiKey) {
+    // Turning included AI on clears the stored key; turning it off requires
+    // one, checked above.
+    let apiKeyCiphertext: string | null | undefined;
+    let apiKeyHint: string | null | undefined;
+    if (included) {
+      apiKeyCiphertext = null;
+      apiKeyHint = null;
+    } else if (dto.apiKey) {
       this.ensureEncryption();
       const apiKey = dto.apiKey.trim();
       apiKeyCiphertext = this.encryption.encrypt(apiKey);
@@ -187,7 +214,8 @@ export class AgentsService {
         name: dto.name,
         soul: dto.soul,
         instructions: dto.instructions,
-        provider: dto.provider,
+        provider: included ? 'OPENAI' : dto.provider,
+        useIncludedAi: dto.useIncludedAi,
         model,
         apiKeyCiphertext,
         apiKeyHint,
@@ -406,6 +434,7 @@ export class AgentsService {
       instructions: a.instructions,
       provider: a.provider,
       model: a.model,
+      useIncludedAi: a.useIncludedAi,
       apiKeyHint: a.apiKeyHint, // never the ciphertext or the key itself
       mcpServers: isAgentMcpServers(a.mcpServers)
         ? a.mcpServers.map((s) => ({

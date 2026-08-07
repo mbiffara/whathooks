@@ -67,14 +67,9 @@ function BillingContent() {
     return <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>;
   }
 
-  const unlimited = sub?.usage.limit == null;
   // Never subscribed before (status is only ever set once a subscription
   // exists) — checkout will grant the 7-day trial, so the CTA can say so.
   const trialEligible = !!sub && !sub.subscribed && sub.status === null;
-  const usagePct =
-    sub && sub.usage.limit != null
-      ? Math.min(100, Math.round((sub.usage.used / sub.usage.limit) * 100))
-      : 0;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -153,30 +148,20 @@ function BillingContent() {
             </div>
 
             {sub.subscribed && (
-              <div className="mt-5">
-                <div className="mb-1 flex justify-between text-xs text-[var(--color-muted)]">
-                  <span>{t("messagesThisMonth")}</span>
-                  <span>
-                    {sub.usage.used.toLocaleString()} /{" "}
-                    {unlimited
-                      ? t("unlimited")
-                      : sub.usage.limit!.toLocaleString()}
-                  </span>
-                </div>
-                {!unlimited && (
-                  <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
-                    <div
-                      className={`h-full rounded-full ${
-                        usagePct >= 100
-                          ? "bg-red-500"
-                          : usagePct >= 80
-                            ? "bg-amber-500"
-                            : "bg-[var(--color-brand)]"
-                      }`}
-                      style={{ width: `${usagePct}%` }}
-                    />
-                  </div>
-                )}
+              <div className="mt-5 flex flex-col gap-4">
+                <Meter
+                  label={t("messagesThisMonth")}
+                  used={sub.usage.used}
+                  limit={sub.usage.limit}
+                  unlimitedLabel={t("unlimited")}
+                />
+                <Meter
+                  label={t("aiTokensThisMonth")}
+                  used={sub.aiTokens.used}
+                  limit={sub.aiTokens.limit}
+                  unlimitedLabel={t("unlimited")}
+                  note={t("aiTokensNote")}
+                />
               </div>
             )}
           </section>
@@ -309,5 +294,51 @@ export default function BillingPage() {
     <Suspense fallback={null}>
       <BillingContent />
     </Suspense>
+  );
+}
+
+/** Usage bar shared by the message and AI-token quotas. */
+function Meter({
+  label,
+  used,
+  limit,
+  unlimitedLabel,
+  note,
+}: {
+  label: string;
+  used: number;
+  limit: number | null;
+  unlimitedLabel: string;
+  note?: string;
+}) {
+  const pct =
+    limit == null ? 0 : Math.min(100, Math.round((used / limit) * 100));
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-xs text-[var(--color-muted)]">
+        <span>{label}</span>
+        <span>
+          {used.toLocaleString()} /{" "}
+          {limit == null ? unlimitedLabel : limit.toLocaleString()}
+        </span>
+      </div>
+      {limit != null && (
+        <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+          <div
+            className={`h-full rounded-full ${
+              pct >= 100
+                ? "bg-red-500"
+                : pct >= 80
+                  ? "bg-amber-500"
+                  : "bg-[var(--color-brand)]"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+      {note && (
+        <p className="mt-1 text-[10px] text-[var(--color-muted)]">{note}</p>
+      )}
+    </div>
   );
 }

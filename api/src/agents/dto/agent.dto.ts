@@ -44,13 +44,16 @@ export type AgentProviderName = (typeof AGENT_PROVIDERS)[number];
 // models work without a backend change; these drive the frontend picker).
 export const AGENT_MODELS: Record<AgentProviderName, string[]> = {
   ANTHROPIC: ['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
-  OPENAI: ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-nano'],
+  OPENAI: ['gpt-5.6-luna', 'gpt-5.6-terra'],
 };
 
 export const DEFAULT_MODEL: Record<AgentProviderName, string> = {
   ANTHROPIC: 'claude-opus-4-8',
-  OPENAI: 'gpt-5.5',
+  OPENAI: 'gpt-5.6-luna',
 };
+
+/** The only model included-AI agents may run on (billed to the platform). */
+export const INCLUDED_AI_MODEL = 'gpt-5.6-luna';
 
 export class CreateAgentDto {
   @IsString()
@@ -78,10 +81,17 @@ export class CreateAgentDto {
   @MaxLength(120)
   model?: string;
 
+  /** Required unless useIncludedAi is set — the service enforces the pairing. */
+  @IsOptional()
   @IsString()
   @MinLength(8)
   @MaxLength(400)
-  apiKey!: string;
+  apiKey?: string;
+
+  /** Run on the platform's OpenAI account against the plan's allowance. */
+  @IsOptional()
+  @IsBoolean()
+  useIncludedAi?: boolean;
 
   @IsOptional()
   @IsInt()
@@ -187,6 +197,10 @@ export class UpdateAgentDto {
   @MinLength(8)
   @MaxLength(400)
   apiKey?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  useIncludedAi?: boolean;
 
   @IsOptional()
   @IsInt()

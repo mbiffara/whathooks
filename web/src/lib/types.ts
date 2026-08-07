@@ -31,7 +31,10 @@ export interface Agent {
   instructions: string;
   provider: AgentProvider;
   model: string;
-  apiKeyHint: string;
+  /** Runs on whathooks' OpenAI account against the plan's token allowance. */
+  useIncludedAi: boolean;
+  /** Null for included-AI agents, which store no key of their own. */
+  apiKeyHint: string | null;
   mcpServers: AgentMcpServer[];
   maxTokens: number;
   allowAutoStop: boolean;
@@ -64,12 +67,13 @@ export const AGENT_MODELS: Record<
     { id: "claude-haiku-4-5", label: "Claude Haiku 4.5 — fastest & cheapest" },
   ],
   OPENAI: [
-    { id: "gpt-5.5", label: "GPT-5.5 — most capable" },
-    { id: "gpt-5.4", label: "GPT-5.4 — more affordable" },
-    { id: "gpt-5.4-mini", label: "GPT-5.4 mini — fast & cheap" },
-    { id: "gpt-5.4-nano", label: "GPT-5.4 nano — cheapest, high-volume" },
+    { id: "gpt-5.6-luna", label: "GPT-5.6 Luna — balanced" },
+    { id: "gpt-5.6-terra", label: "GPT-5.6 Terra — most capable" },
   ],
 };
+
+/** The model included-AI agents run on, billed to whathooks. */
+export const INCLUDED_AI_MODEL = "gpt-5.6-luna";
 
 export interface WaSessionDetail extends WaSession {
   qr: string | null;
@@ -292,6 +296,8 @@ export interface Subscription {
   currentPeriodEnd: string | null;
   hasCustomer: boolean;
   usage: { used: number; limit: number | null };
+  /** Included-AI tokens burnt this month against the plan's allowance. */
+  aiTokens: { used: number; limit: number | null };
 }
 
 export const PLAN_PRICING: Record<

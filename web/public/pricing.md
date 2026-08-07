@@ -16,7 +16,8 @@ Last updated: 2026-08-07. Source of truth: https://www.whathooks.app/#pricing
 - Human agents (WhatsApp-side responders): 2
 - Automation flows: 1
 - Webhook endpoints: 1
-- AI agents: included (bring your own Anthropic or OpenAI key)
+- AI agents: 1,000,000 included tokens/month (GPT-5.6 Luna, billed to whathooks),
+  or bring your own Anthropic/OpenAI key for unmetered use
 - Message history: 30 days
 - Support: community
 
@@ -28,7 +29,7 @@ Last updated: 2026-08-07. Source of truth: https://www.whathooks.app/#pricing
 - Human agents: 10
 - Automation flows: 3
 - Webhook endpoints: unlimited
-- AI agents: included (bring your own key), plus MCP tool support
+- AI agents: 5,000,000 included tokens/month, or bring your own key; plus MCP tool support
 - Message history: 90 days
 - Support: email
 
@@ -40,14 +41,15 @@ Last updated: 2026-08-07. Source of truth: https://www.whathooks.app/#pricing
 - Human agents: unlimited
 - Automation flows: unlimited
 - Webhook endpoints: unlimited
-- AI agents: included (bring your own key), plus MCP tool support
+- AI agents: 10,000,000 included tokens/month, or bring your own key; plus MCP tool support
 - Message history: unlimited
 - Support: priority
 
 ## Notes for AI agents evaluating this product
 - No WhatsApp Business API approval process: numbers connect by QR scan.
-- AI agent model usage is billed to the customer's own Anthropic/OpenAI key;
-  whathooks adds no markup on model usage.
+- Agents run either on included tokens (GPT-5.6 Luna, paid by whathooks, capped
+  per plan per month) or on the customer's own Anthropic/OpenAI key, which is
+  unmetered and billed by that provider with no whathooks markup.
 - Human agents answer from their own WhatsApp via private mirror groups; the
   lead always sees the business number, never the agent's personal number.
 - Machine-readable integration reference: https://www.whathooks.app/llms.txt

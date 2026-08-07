@@ -25,6 +25,12 @@ export interface PlanLimits {
   /** Max webhook endpoints; null = unlimited. */
   webhooks: number | null;
   /**
+   * Monthly tokens an agent may burn on the platform's OpenAI account
+   * ("included AI"); null = unlimited. Agents on the org's own key are never
+   * metered here. Tuned in code, so changing an allowance needs no migration.
+   */
+  includedAiTokens: number | null;
+  /**
    * Env var holding the Stripe recurring Price id for this tier. Absent for
    * tiers that aren't purchasable (SPONSORED) — those also skip the
    * active-subscription requirement.
@@ -44,6 +50,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     humanAgents: 2,
     flows: 1,
     webhooks: 1,
+    includedAiTokens: 1_000_000,
     priceEnv: 'STRIPE_PRICE_STARTER',
     annualPriceEnv: 'STRIPE_PRICE_STARTER_YEAR',
   },
@@ -56,6 +63,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     humanAgents: 10,
     flows: 3,
     webhooks: null,
+    includedAiTokens: 5_000_000,
     priceEnv: 'STRIPE_PRICE_PRO',
     annualPriceEnv: 'STRIPE_PRICE_PRO_YEAR',
   },
@@ -68,6 +76,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     humanAgents: null,
     flows: null,
     webhooks: null,
+    includedAiTokens: 10_000_000,
     priceEnv: 'STRIPE_PRICE_BUSINESS',
     annualPriceEnv: 'STRIPE_PRICE_BUSINESS_YEAR',
   },
@@ -80,6 +89,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
     humanAgents: null,
     flows: null,
     webhooks: null,
+    includedAiTokens: null,
   },
 };
 
@@ -123,4 +133,13 @@ export function planForPriceId(
 /** Start of the current UTC calendar month — the message-quota window. */
 export function currentMonthStart(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+/**
+ * The AI-token meter's bucket key, "YYYY-MM" in UTC — same window as the
+ * message quota, but stored rather than derived from row timestamps.
+ */
+export function currentPeriod(now: Date): string {
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${now.getUTCFullYear()}-${month}`;
 }

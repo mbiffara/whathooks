@@ -80,6 +80,7 @@ export class BillingService {
     });
     if (!org) throw new NotFoundException('Organization not found');
     const usage = await this.quota.messageUsage(organizationId);
+    const aiTokens = await this.quota.aiTokenUsage(organizationId);
     // `plan` alone is not "has a plan": new orgs default to STARTER with no
     // subscription. `subscribed` is the truth the UI should key off.
     const subscribed =
@@ -94,6 +95,7 @@ export class BillingService {
       currentPeriodEnd: org.currentPeriodEnd,
       hasCustomer: Boolean(org.stripeCustomerId),
       usage,
+      aiTokens,
     };
   }
 

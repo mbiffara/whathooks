@@ -10,6 +10,7 @@ import {
   PLANS,
   TRIAL_LIMITS,
   currentMonthStart,
+  currentPeriod,
   planRequiresSubscription,
 } from './plans';
 
@@ -97,6 +98,50 @@ export class QuotaService {
       },
     });
     return { used, limit: limits.messagesPerMonth };
+  }
+
+  /**
+   * Included-AI tokens burnt this month, against the plan's allowance.
+   * Unlike messages this cannot be counted from existing rows, so runs
+   * record it as they go (see recordAiTokens).
+   */
+  async aiTokenUsage(
+    organizationId: string,
+  ): Promise<{ used: number; limit: number | null }> {
+    const { limits } = await this.orgBilling(organizationId);
+    const row = await this.prisma.aiTokenUsage.findUnique({
+      where: {
+        organizationId_period: {
+          organizationId,
+          period: currentPeriod(new Date()),
+        },
+      },
+      select: { tokens: true },
+    });
+    return { used: row?.tokens ?? 0, limit: limits.includedAiTokens };
+  }
+
+  /** True when the org still has included-AI budget for this month. */
+  async hasIncludedAiBudget(organizationId: string): Promise<boolean> {
+    const { used, limit } = await this.aiTokenUsage(organizationId);
+    return limit == null || used < limit;
+  }
+
+  /**
+   * Add a run's tokens to this month's meter. Best-effort by design: a reply
+   * has already been generated and paid for by the time this is called, so a
+   * failure here must never surface to the caller.
+   */
+  async recordAiTokens(organizationId: string, tokens: number): Promise<void> {
+    if (tokens <= 0) return;
+    const period = currentPeriod(new Date());
+    await this.prisma.aiTokenUsage
+      .upsert({
+        where: { organizationId_period: { organizationId, period } },
+        create: { organizationId, period, tokens },
+        update: { tokens: { increment: tokens } },
+      })
+      .catch(() => undefined);
   }
 
   /** Throw if the org may not send: no live subscription, or over the cap. */

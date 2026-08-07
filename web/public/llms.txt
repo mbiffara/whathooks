@@ -269,7 +269,8 @@ WhatsApp groups but stops all relaying.
 ## Plans
 
 Paid plans with a 7-day free trial (card required). AI agents (bring your
-own Anthropic/OpenAI key) are included on every plan; MCP tools need Pro+.
+included tokens, or your own Anthropic/OpenAI key) are on every plan;
+MCP tools need Pro+.
 Starter $8.99/mo: 1 number, 5,000 messages/mo, 2 team members, 2 human
 agents, 1 flow, 1 webhook, 30-day history. Pro $24.99/mo: 3 numbers,
 10,000 messages/mo, 10 team members, 10 human agents, 3 flows, unlimited
@@ -298,8 +299,10 @@ breakdown: https://www.whathooks.app/pricing.md
   website, Instagram, notes) tracking which numbers each person wrote to.
   Filled by the "Save contact" flow node, per-session auto-save, or
   manually; changes fire the contact.* webhooks.
-- AI agents: bring-your-own-key (Anthropic or OpenAI) auto-responders per
-  session, with human handoff. MCP tool support on Anthropic agents (Pro+).
+- AI agents: auto-responders per session with human handoff. Each agent runs
+  either on included tokens (GPT-5.6 Luna, paid by whathooks: 1M/5M/10M per
+  month on Starter/Pro/Business) or on your own Anthropic/OpenAI key, which is
+  unmetered. MCP tool support on Anthropic agents (Pro+).
   Knowledge documents (PDF/TXT/MD/CSV, up to 5 docs / 100k characters per
   agent) ground the agent's answers in your own content. Built-in tools:
   `handoff_to_human` (optional; pauses the agent for an operator) and

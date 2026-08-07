@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/client-api";
 import Link from "next/link";
 import {
   AGENT_MODELS,
+  INCLUDED_AI_MODEL,
   AGENT_PROVIDERS,
   type Agent,
   type AgentProvider,
@@ -30,7 +31,9 @@ type Draft = {
   provider: AgentProvider;
   model: string;
   apiKey: string; // blank on edit = keep existing
-  apiKeyHint?: string;
+  apiKeyHint?: string | null;
+  /** Run on whathooks' tokens instead of the org's own key. */
+  useIncludedAi: boolean;
   allowAutoStop: boolean;
   notifyOnHandoff: boolean;
   replyDelayMinSeconds: number;
@@ -62,6 +65,7 @@ const EMPTY: Draft = {
   provider: "ANTHROPIC",
   model: AGENT_MODELS.ANTHROPIC[0].id,
   apiKey: "",
+  useIncludedAi: false,
   allowAutoStop: false,
   notifyOnHandoff: false,
   replyDelayMinSeconds: 0,
@@ -136,7 +140,10 @@ export default function AgentsPage() {
         enabled: draft.enabled,
       };
       // Only send the key when the user entered one (blank = keep existing).
-      if (draft.apiKey.trim()) payload.apiKey = draft.apiKey.trim();
+      payload.useIncludedAi = draft.useIncludedAi;
+      if (!draft.useIncludedAi && draft.apiKey.trim()) {
+        payload.apiKey = draft.apiKey.trim();
+      }
       // MCP servers: send the list only when the editor was usable, so a
       // Starter org editing an agent never silently clears stored servers.
       // Switching to OpenAI clears them explicitly (MCP is Anthropic-only).
@@ -255,144 +262,189 @@ export default function AgentsPage() {
               💡 {t("notifyOwnerHint")}
             </p>
           </div>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-40">
-              <label className="label">{t("provider")}</label>
-              <select
-                className="input"
-                value={draft.provider}
-                onChange={(e) => {
-                  const provider = e.target.value as AgentProvider;
-                  // Reset the model to the new provider's default.
-                  setDraft({
-                    ...draft,
-                    provider,
-                    model: AGENT_MODELS[provider][0].id,
-                  });
-                }}
-              >
-                {AGENT_PROVIDERS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1 min-w-40">
-              <label className="label">{t("model")}</label>
-              <select
-                className="input"
-                value={draft.model}
-                onChange={(e) => setDraft({ ...draft, model: e.target.value })}
-              >
-                {/* Keep an existing agent's stored model selectable even if it's
-                    no longer in our suggested list, so editing doesn't reset it. */}
-                {!AGENT_MODELS[draft.provider].some(
-                  (m) => m.id === draft.model,
-                ) &&
-                  draft.model && (
-                    <option value={draft.model}>
-                      {t("modelCurrent", { model: draft.model })}
-                    </option>
-                  )}
-                {AGENT_MODELS[draft.provider].map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
           <div>
-            <label className="label flex items-center gap-2">
-              <span>
-                {t("apiKey")}{" "}
-                <span className="text-[var(--color-muted)]">
-                  {draft.provider === "OPENAI" ? "— OpenAI" : "— Anthropic"}
-                </span>
-              </span>
-              <span className="relative">
+            <label className="label">{t("aiSource")}</label>
+            <div
+              role="group"
+              aria-label={t("aiSource")}
+              className="mt-1 inline-flex rounded-full bg-[var(--color-surface-2)] p-1"
+            >
+              {[false, true].map((included) => (
                 <button
+                  key={String(included)}
                   type="button"
-                  onClick={() => setKeyHelpOpen((v) => !v)}
-                  className="grid h-4 w-4 place-items-center rounded-full border border-[var(--color-border)] text-[10px] text-[var(--color-muted)] hover:text-[var(--color-fg)]"
-                  aria-label={t("apiKeyHelp")}
-                  title={t("apiKeyHelp")}
-                >
-                  ?
-                </button>
-                {keyHelpOpen && (
-                  <>
-                    <span
-                      className="fixed inset-0 z-20"
-                      onClick={() => setKeyHelpOpen(false)}
-                    />
-                    <span className="absolute left-0 top-6 z-30 block w-80 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 font-normal shadow-lg">
-                      <span className="block text-sm font-semibold">
-                        {t("apiKeyHelpTitle")}
-                      </span>
-                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-[var(--color-muted)]">
-                        {(
-                          t.raw(
-                            draft.provider === "OPENAI"
-                              ? "openaiSteps"
-                              : "anthropicSteps",
-                          ) as string[]
-                        ).map((step) => (
-                          <li key={step}>{step}</li>
-                        ))}
-                      </ol>
-                      <a
-                        href={
-                          draft.provider === "OPENAI"
-                            ? "https://platform.openai.com/api-keys"
-                            : "https://console.anthropic.com/settings/keys"
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 block text-xs font-medium text-[var(--color-brand)] hover:underline"
-                      >
-                        {t("openConsole", {
-                          provider:
-                            draft.provider === "OPENAI"
-                              ? "OpenAI"
-                              : "Anthropic",
-                        })}
-                      </a>
-                      <span className="mt-1.5 block text-[10px] text-[var(--color-muted)]">
-                        {t("byokNote", {
-                          provider:
-                            draft.provider === "OPENAI"
-                              ? "OpenAI"
-                              : "Anthropic",
-                        })}
-                      </span>
-                    </span>
-                  </>
-                )}
-              </span>
-            </label>
-            <input
-              className="input"
-              type="password"
-              autoComplete="off"
-              value={draft.apiKey}
-              onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
-              placeholder={
-                draft.id
-                  ? t("apiKeyKeepPlaceholder", {
-                      hint: draft.apiKeyHint ?? "•••",
+                  aria-pressed={draft.useIncludedAi === included}
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      useIncludedAi: included,
+                      // Included AI is one fixed OpenAI model.
+                      ...(included
+                        ? {
+                            provider: "OPENAI" as AgentProvider,
+                            model: INCLUDED_AI_MODEL,
+                          }
+                        : {}),
                     })
-                  : draft.provider === "OPENAI"
-                    ? "sk-…"
-                    : "sk-ant-…"
-              }
-              required={!draft.id}
-            />
-            <p className="mt-1 text-xs text-[var(--color-muted)]">
-              {t("apiKeyStoredNote")}
+                  }
+                  className={`inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold transition-colors ${
+                    draft.useIncludedAi === included
+                      ? "bg-[var(--color-surface)] text-[var(--color-fg)] shadow-sm"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                  }`}
+                >
+                  {included ? t("aiIncluded") : t("aiOwnKey")}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-[var(--color-muted)]">
+              {draft.useIncludedAi ? t("aiIncludedHint") : t("aiOwnKeyHint")}
             </p>
           </div>
+          {!draft.useIncludedAi && (
+            <div className="flex flex-wrap gap-4">
+              <div className="flex-1 min-w-40">
+                <label className="label">{t("provider")}</label>
+                <select
+                  className="input"
+                  value={draft.provider}
+                  onChange={(e) => {
+                    const provider = e.target.value as AgentProvider;
+                    // Reset the model to the new provider's default.
+                    setDraft({
+                      ...draft,
+                      provider,
+                      model: AGENT_MODELS[provider][0].id,
+                    });
+                  }}
+                >
+                  {AGENT_PROVIDERS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 min-w-40">
+                <label className="label">{t("model")}</label>
+                <select
+                  className="input"
+                  value={draft.model}
+                  onChange={(e) =>
+                    setDraft({ ...draft, model: e.target.value })
+                  }
+                >
+                  {/* Keep an existing agent's stored model selectable even if it's
+                    no longer in our suggested list, so editing doesn't reset it. */}
+                  {!AGENT_MODELS[draft.provider].some(
+                    (m) => m.id === draft.model,
+                  ) &&
+                    draft.model && (
+                      <option value={draft.model}>
+                        {t("modelCurrent", { model: draft.model })}
+                      </option>
+                    )}
+                  {AGENT_MODELS[draft.provider].map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+          {!draft.useIncludedAi && (
+            <div>
+              <label className="label flex items-center gap-2">
+                <span>
+                  {t("apiKey")}{" "}
+                  <span className="text-[var(--color-muted)]">
+                    {draft.provider === "OPENAI" ? "— OpenAI" : "— Anthropic"}
+                  </span>
+                </span>
+                <span className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setKeyHelpOpen((v) => !v)}
+                    className="grid h-4 w-4 place-items-center rounded-full border border-[var(--color-border)] text-[10px] text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                    aria-label={t("apiKeyHelp")}
+                    title={t("apiKeyHelp")}
+                  >
+                    ?
+                  </button>
+                  {keyHelpOpen && (
+                    <>
+                      <span
+                        className="fixed inset-0 z-20"
+                        onClick={() => setKeyHelpOpen(false)}
+                      />
+                      <span className="absolute left-0 top-6 z-30 block w-80 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 font-normal shadow-lg">
+                        <span className="block text-sm font-semibold">
+                          {t("apiKeyHelpTitle")}
+                        </span>
+                        <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-[var(--color-muted)]">
+                          {(
+                            t.raw(
+                              draft.provider === "OPENAI"
+                                ? "openaiSteps"
+                                : "anthropicSteps",
+                            ) as string[]
+                          ).map((step) => (
+                            <li key={step}>{step}</li>
+                          ))}
+                        </ol>
+                        <a
+                          href={
+                            draft.provider === "OPENAI"
+                              ? "https://platform.openai.com/api-keys"
+                              : "https://console.anthropic.com/settings/keys"
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 block text-xs font-medium text-[var(--color-brand)] hover:underline"
+                        >
+                          {t("openConsole", {
+                            provider:
+                              draft.provider === "OPENAI"
+                                ? "OpenAI"
+                                : "Anthropic",
+                          })}
+                        </a>
+                        <span className="mt-1.5 block text-[10px] text-[var(--color-muted)]">
+                          {t("byokNote", {
+                            provider:
+                              draft.provider === "OPENAI"
+                                ? "OpenAI"
+                                : "Anthropic",
+                          })}
+                        </span>
+                      </span>
+                    </>
+                  )}
+                </span>
+              </label>
+              <input
+                className="input"
+                type="password"
+                autoComplete="off"
+                value={draft.apiKey}
+                onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
+                placeholder={
+                  draft.id
+                    ? t("apiKeyKeepPlaceholder", {
+                        hint: draft.apiKeyHint ?? "•••",
+                      })
+                    : draft.provider === "OPENAI"
+                      ? "sk-…"
+                      : "sk-ant-…"
+                }
+                required={!draft.id && !draft.useIncludedAi}
+              />
+              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                {t("apiKeyStoredNote")}
+              </p>
+            </div>
+          )}
           <div>
             <label className="label">
               {t("replyDelay")}{" "}
@@ -815,6 +867,7 @@ export default function AgentsPage() {
                       model: a.model,
                       apiKey: "",
                       apiKeyHint: a.apiKeyHint,
+                      useIncludedAi: a.useIncludedAi,
                       allowAutoStop: a.allowAutoStop,
                       notifyOnHandoff: a.notifyOnHandoff,
                       replyDelayMinSeconds: a.replyDelayMinSeconds,
@@ -844,9 +897,7 @@ export default function AgentsPage() {
                   }
                   className="btn-ghost"
                 >
-                  {knowledgeId === a.id
-                    ? tc("close")
-                    : t("knowledge.button")}
+                  {knowledgeId === a.id ? tc("close") : t("knowledge.button")}
                 </button>
                 <button onClick={() => remove(a.id)} className="btn-danger">
                   {tc("delete")}

@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Injectable, Logger } from '@nestjs/common';
 import { Agent } from '@prisma/client';
 import OpenAI from 'openai';
+import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from './encryption.service';
 import { AgentMcpServer, isAgentMcpServers } from './mcp-servers';
@@ -15,6 +16,12 @@ const MCP_BETA = 'mcp-client-2025-11-20';
 type Turn = { role: 'user' | 'assistant'; text: string };
 
 /** Outcome of a run: a reply to send (if any) and whether the agent handed off. */
+/**
+ * Handoff reason when the org's monthly included-AI allowance is spent. The
+ * inbox renders this in the agent-paused badge.
+ */
+export const AI_TOKENS_EXHAUSTED = 'Monthly AI token allowance used up';
+
 export interface AgentReply {
   text: string | null;
   handoff: boolean;
@@ -75,11 +82,51 @@ export class AgentRunnerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly encryption: EncryptionService,
+    private readonly quota: QuotaService,
   ) {}
 
   /** Agents can only run if we can decrypt their stored API keys. */
   isConfigured(): boolean {
     return this.encryption.isConfigured();
+  }
+
+  /**
+   * The key an agent runs on. Included-AI agents use the platform's OpenAI
+   * account and are metered against the plan's monthly allowance; everyone
+   * else decrypts their own. `exhausted` is the caller's cue to hand the
+   * conversation to a human rather than fail silently.
+   */
+  private async credentials(
+    agent: Agent,
+  ): Promise<
+    { apiKey: string; metered: boolean } | { exhausted: true } | null
+  > {
+    if (agent.useIncludedAi) {
+      const apiKey = process.env.INCLUDED_AI_OPENAI_KEY;
+      if (!apiKey) {
+        this.log.error(
+          `Agent "${agent.name}" uses included AI but INCLUDED_AI_OPENAI_KEY is not set`,
+        );
+        return null;
+      }
+      if (!(await this.quota.hasIncludedAiBudget(agent.organizationId))) {
+        return { exhausted: true };
+      }
+      return { apiKey, metered: true };
+    }
+    if (!agent.apiKeyCiphertext) {
+      this.log.error(`Agent "${agent.name}" has no API key configured`);
+      return null;
+    }
+    try {
+      return {
+        apiKey: this.encryption.decrypt(agent.apiKeyCiphertext),
+        metered: false,
+      };
+    } catch (e) {
+      this.log.error(`Agent "${agent.name}": could not decrypt API key: ${e}`);
+      return null;
+    }
   }
 
   /** Generate a reply for the latest message in a conversation, or null. */
@@ -89,13 +136,14 @@ export class AgentRunnerService {
   ): Promise<AgentReply | null> {
     if (!this.encryption.isConfigured()) return null;
 
-    let apiKey: string;
-    try {
-      apiKey = this.encryption.decrypt(agent.apiKeyCiphertext);
-    } catch (e) {
-      this.log.error(`Agent "${agent.name}": could not decrypt API key: ${e}`);
-      return null;
+    const creds = await this.credentials(agent);
+    if (!creds) return null;
+    if ('exhausted' in creds) {
+      // Out of included tokens: hand over instead of going quiet, so the
+      // inbox shows why nobody answered.
+      return { text: null, handoff: true, reason: AI_TOKENS_EXHAUSTED };
     }
+    const { apiKey, metered } = creds;
 
     const convo = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -119,10 +167,12 @@ export class AgentRunnerService {
       knowledge,
     );
     try {
-      if (agent.provider === 'OPENAI') {
-        return await this.replyOpenAI(agent, apiKey, system, turns);
-      }
-      return await this.replyAnthropic(agent, apiKey, system, turns);
+      // Included AI is OpenAI-only; the provider column is irrelevant there.
+      const reply =
+        agent.provider === 'OPENAI' || metered
+          ? await this.replyOpenAI(agent, apiKey, system, turns, metered)
+          : await this.replyAnthropic(agent, apiKey, system, turns);
+      return reply;
     } catch (e) {
       this.log.error(`Agent "${agent.name}" reply failed: ${e}`);
       return null;
@@ -140,9 +190,13 @@ export class AgentRunnerService {
     intents: Array<{ key: string; label: string; description?: string }>,
   ): Promise<string | null> {
     if (!this.encryption.isConfigured() || intents.length === 0) return null;
+    const creds = await this.credentials(agent);
+    // No credentials or no budget: callers treat null as "fallback".
+    if (!creds || 'exhausted' in creds) return null;
+    const metered = creds.metered;
     let apiKey: string;
     try {
-      apiKey = this.encryption.decrypt(agent.apiKeyCiphertext);
+      apiKey = creds.apiKey;
     } catch {
       return null;
     }
@@ -165,7 +219,8 @@ export class AgentRunnerService {
 
     try {
       let raw: string;
-      if (agent.provider === 'OPENAI') {
+      // Included AI is OpenAI-only, whatever the provider column says.
+      if (agent.provider === 'OPENAI' || metered) {
         const client = new OpenAI({ apiKey });
         const res = await client.chat.completions.create({
           model: agent.model,
@@ -174,6 +229,13 @@ export class AgentRunnerService {
             ...turns.map((t) => ({ role: t.role, content: t.text }) as const),
           ],
         });
+        // Classification burns tokens too — meter it like a reply.
+        if (metered) {
+          await this.quota.recordAiTokens(
+            agent.organizationId,
+            res.usage?.total_tokens ?? 0,
+          );
+        }
         raw = res.choices[0]?.message?.content ?? '';
       } else {
         const client = new Anthropic({ apiKey });
@@ -349,6 +411,7 @@ export class AgentRunnerService {
     apiKey: string,
     system: string,
     turns: Turn[],
+    metered = false,
   ): Promise<AgentReply> {
     const client = new OpenAI({ apiKey });
     const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
@@ -381,6 +444,13 @@ export class AgentRunnerService {
       ],
       ...(tools.length ? { tools, tool_choice: 'auto' as const } : {}),
     });
+
+    if (metered) {
+      await this.quota.recordAiTokens(
+        agent.organizationId,
+        response.usage?.total_tokens ?? 0,
+      );
+    }
 
     const message = response.choices[0]?.message;
     let handoff = false;
@@ -437,9 +507,7 @@ function extractAnthropicReply(
 function cachedSystem(
   system: string,
 ): Array<{ type: 'text'; text: string; cache_control: { type: 'ephemeral' } }> {
-  return [
-    { type: 'text', text: system, cache_control: { type: 'ephemeral' } },
-  ];
+  return [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }];
 }
 
 /**

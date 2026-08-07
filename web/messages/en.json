@@ -16,7 +16,7 @@
     "failedToCreate": "Failed to create"
   },
   "meta": {
-    "title": "whathooks — Your WhatsApp answers itself",
+    "title": "whathooks | Your WhatsApp answers itself",
     "description": "Connect your number with a QR: AI replies, your team steps in from WhatsApp when it matters. Team inbox, contacts, flows and API included."
   },
   "nav": {
@@ -60,7 +60,7 @@
     "resetIntro": "Enter your account email and we'll send you a link to choose a new password.",
     "sendResetLink": "Send reset link",
     "sending": "Sending…",
-    "resetSent": "If an account exists for <b>{email}</b>, we sent a reset link. Check your inbox — the link is valid for 1 hour.",
+    "resetSent": "If an account exists for <b>{email}</b>, we sent a reset link. Check your inbox. The link is valid for 1 hour.",
     "backToSignIn": "Back to sign in",
     "chooseNewPassword": "Choose a new password",
     "newPassword": "New password",
@@ -165,7 +165,7 @@
       "keyName": "Key name",
       "keyNamePlaceholder": "e.g. Production server",
       "generateKey": "Generate key",
-      "newKeyNotice": "Your new API key — copy it now, it won’t be shown again:",
+      "newKeyNotice": "Your new API key. Copy it now, it won’t be shown again:",
       "revoked": "revoked",
       "lastUsed": "Last used {date}",
       "neverUsed": "Never used",
@@ -182,7 +182,7 @@
     },
     "upgrade": {
       "title": "Start your free trial",
-      "body": "{action} requires an active subscription. Pick a plan to continue — new subscriptions start with a 7-day free trial, and you can cancel anytime.",
+      "body": "{action} requires an active subscription. Pick a plan to continue. New subscriptions start with a 7-day free trial, and you can cancel anytime.",
       "defaultAction": "This action",
       "notNow": "Not now",
       "viewPlans": "START FREE TRIAL"
@@ -214,7 +214,7 @@
       "aiAgentHint": "Assign an agent to auto-reply to incoming 1:1 messages on this number.",
       "noAgent": "No agent (manual replies)",
       "disabledSuffix": " (disabled)",
-      "agentDisabledWarning": "This agent is disabled — enable it on the Agents page to auto-reply.",
+      "agentDisabledWarning": "This agent is disabled. Enable it on the Agents page to auto-reply.",
       "saveContactsTitle": "Contacts",
       "saveContactsLabel": "Save contacts automatically",
       "saveContactsHint": "Every person who writes to this number is added to Contacts (name and number from WhatsApp). Fires the contact.created webhook.",
@@ -229,9 +229,9 @@
       "messagePlaceholder": "Your message",
       "send": "Send",
       "rename": "Rename",
-      "coldSendWarning": "WhatsApp restricts messaging numbers that never wrote to you — a test to a complete stranger may not be delivered. Use a number that has already texted this session, or start the chat from the phone first.",
+      "coldSendWarning": "WhatsApp restricts messaging numbers that never wrote to you. A test to a complete stranger may not be delivered. Use a number that has already texted this session, or start the chat from the phone first.",
       "shareTitle": "Share the connection link",
-      "shareHint": "Send this link to whoever has the phone — they can scan the QR from their browser, no whathooks account needed.",
+      "shareHint": "Send this link to whoever has the phone. They can scan the QR from their browser, no whathooks account needed.",
       "shareCreate": "Generate link",
       "shareCopy": "Copy",
       "shareCopied": "Copied!",
@@ -241,19 +241,19 @@
     "billing": {
       "title": "Billing",
       "subtitle": "Manage your subscription and see this month's usage.",
-      "checkoutSuccess": "Payment received — your subscription is active.",
-      "checkoutCancel": "Checkout canceled — no changes were made.",
+      "checkoutSuccess": "Payment received. Your subscription is active.",
+      "checkoutCancel": "Checkout canceled. No changes were made.",
       "currentPlan": "Current plan",
       "noActivePlan": "No active plan",
       "perMonth": "/mo",
       "statusLine": "Status: {status}",
       "renews": "renews {date}",
-      "pickPlanHint": "Pick a plan below — first-time subscriptions start with a 7-day free trial.",
+      "pickPlanHint": "Pick a plan below. First-time subscriptions start with a 7-day free trial.",
       "manageBilling": "Manage billing",
       "opening": "Opening…",
       "messagesThisMonth": "Messages this month",
       "unlimited": "Unlimited",
-      "sponsoredNote": "You're on a sponsored plan with unlimited usage — no subscription needed.",
+      "sponsoredNote": "You're on a sponsored plan with unlimited usage. No subscription needed.",
       "ownerOnly": "Only the organization owner can change the plan.",
       "current": "Current",
       "currentPlanBtn": "Current plan",
@@ -299,7 +299,7 @@
       "allSessions": "All sessions",
       "customizePayload": "Customize payload (optional)",
       "addWebhook": "Add webhook",
-      "secretNotice": "Signing secret — copy it now, it won’t be shown again:",
+      "secretNotice": "Signing secret. Copy it now, it won’t be shown again:",
       "noWebhooks": "No webhooks yet.",
       "customPayload": "custom payload · {count, plural, one {# field} other {# fields}}",
       "secretHint": "secret {hint}",
@@ -308,7 +308,7 @@
       "failedToSaveMapping": "Failed to save mapping",
       "kindField": "field",
       "mappingFor": "Mapping for {event}",
-      "mappingEventsHint": "Each event maps separately — events without rules deliver their complete payload.",
+      "mappingEventsHint": "Each event maps separately. Events without rules deliver their complete payload.",
       "kindFixed": "fixed value",
       "dateFormatPlaceholder": "date format (optional)",
       "dateFormatTitle": "iso, unix, unix_ms, or a pattern like yyyy-MM-dd HH:mm",
@@ -319,7 +319,7 @@
       "upgradeAction": "Adding a webhook",
       "deliveries": "Deliveries",
       "noDeliveries": "No deliveries yet. If you expected one, check the webhook is enabled, subscribes to the right events, and isn't scoped to a different session.",
-      "deliveriesHint": "Delivery attempts, newest first — 50 per page, up to 1,000 back.",
+      "deliveriesHint": "Delivery attempts, newest first. 50 per page, up to 1,000 back.",
       "refresh": "Refresh",
       "deliveryTime": "Time",
       "deliveryEvent": "Event",
@@ -339,12 +339,12 @@
       "inviteByEmail": "Invite by email",
       "emailPlaceholder": "teammate@company.com",
       "role": "Role",
-      "roleMemberOption": "Member — operate & message",
-      "roleAdminOption": "Admin — manage everything",
-      "roleOperatorOption": "Operator — only their assigned conversations",
+      "roleMemberOption": "Member: operate & message",
+      "roleAdminOption": "Admin: manage everything",
+      "roleOperatorOption": "Operator: only their assigned conversations",
       "sendInvite": "Send invite",
-      "inviteEmailSent": "Invitation for {email} — email sent. You can also share this link directly:",
-      "inviteLinkOnly": "Invitation for {email} — email is not configured, share this link (shown once):",
+      "inviteEmailSent": "Invitation for {email}. Email sent. You can also share this link directly:",
+      "inviteLinkOnly": "Invitation for {email}. Email is not configured, share this link (shown once):",
       "copy": "Copy",
       "copied": "Copied!",
       "members": "Members",
@@ -392,10 +392,10 @@
       "name": "Name",
       "namePlaceholder": "e.g. Support Bot",
       "soul": "Soul",
-      "soulSuffix": "— personality",
+      "soulSuffix": "· personality",
       "soulPlaceholder": "Who is this agent? Tone, character, voice. e.g. A warm, concise support rep for Acme who loves helping.",
       "instructions": "Instructions",
-      "instructionsSuffix": "— behavior",
+      "instructionsSuffix": "· behavior",
       "instructionsPlaceholder": "What should it do and not do? e.g. Answer product and pricing questions. Never quote a refund policy; offer to connect a human instead.",
       "provider": "Provider",
       "model": "Model",
@@ -404,7 +404,7 @@
       "apiKeyKeepPlaceholder": "Leave blank to keep current key ({hint})",
       "apiKeyStoredNote": "Stored encrypted. Used only to generate this agent’s replies.",
       "replyDelay": "Reply delay",
-      "replyDelaySuffix": "— seconds (0 = instant)",
+      "replyDelaySuffix": "· seconds (0 = instant)",
       "minDelayAria": "Minimum delay seconds",
       "maxDelayAria": "Maximum delay seconds",
       "to": "to",
@@ -412,11 +412,11 @@
       "allowAutoStop": "Allow auto-stop",
       "allowAutoStopNote": "Give the agent a tool to pause itself on a conversation (hand off to a human) when it doesn’t know how to answer. You resume it from the conversation.",
       "mcpTools": "MCP tools",
-      "mcpSuffix": "— Anthropic agents only",
+      "mcpSuffix": "· Anthropic agents only",
       "mcpOpenaiNote": "MCP tools aren’t available for OpenAI agents yet. Switch the provider to Anthropic to connect MCP servers.",
       "mcpOpenaiClearWarning": " Saving will remove this agent’s configured MCP servers.",
-      "mcpUpgrade": "Give your agent tools via MCP servers — available on the Pro plan and higher. <link>Upgrade in Billing</link>.",
-      "mcpNote": "The agent can call tools on these MCP servers while replying (connections are made by Anthropic, billed to your API key). Only add servers you trust — tools act on whatever your contacts write.",
+      "mcpUpgrade": "Give your agent tools via MCP servers. Available on the Pro plan and higher. <link>Upgrade in Billing</link>.",
+      "mcpNote": "The agent can call tools on these MCP servers while replying (connections are made by Anthropic, billed to your API key). Only add servers you trust. Tools act on whatever your contacts write.",
       "mcpNamePlaceholder": "name (e.g. linear)",
       "mcpTokenUnchanged": "token unchanged ({hint})",
       "mcpTokenOptional": "auth token (optional)",
@@ -434,18 +434,18 @@
         "Create an account at console.anthropic.com",
         "Add a payment method under Settings → Billing",
         "Go to Settings → API Keys and create a key (it starts with sk-ant-…)",
-        "Paste it here — we store it encrypted and only use it for this agent's replies"
+        "Paste it here. We store it encrypted and only use it for this agent's replies"
       ],
       "openaiSteps": [
         "Create an account at platform.openai.com",
         "Add a payment method under Settings → Billing",
         "Go to API keys and create a new secret key (it starts with sk-…)",
-        "Paste it here — we store it encrypted and only use it for this agent's replies"
+        "Paste it here. We store it encrypted and only use it for this agent's replies"
       ],
       "openConsole": "Open {provider} console ↗",
-      "byokNote": "You pay {provider} directly for usage — whathooks adds no markup.",
+      "byokNote": "You pay {provider} directly for usage, with no whathooks markup.",
       "activeHours": "Active hours",
-      "activeHoursSuffix": "— when the agent replies",
+      "activeHoursSuffix": "· when the agent replies",
       "alwaysOn": "Always on",
       "scheduled": "Scheduled",
       "scheduleDaysLabel": "Days",
@@ -463,18 +463,18 @@
       "timezone": "Timezone",
       "scheduleHint": "Outside these hours the agent stays quiet and your team replies. An end time earlier than the start crosses midnight.",
       "scheduleSummary": "{days} · {start}–{end}",
-      "unlinkedWarning": "Enabled but not linked to any session — open a session and assign this agent under 'AI Agent'.",
+      "unlinkedWarning": "Enabled but not linked to any session. Open a session and assign this agent under 'AI Agent'.",
       "goToSessions": "Go to sessions",
       "notifyOnHandoff": "Email the team on handoff",
       "notifyOnHandoffNote": "When the agent pauses itself, everyone with access to this session gets an email linking to the conversation.",
       "knowledge": {
         "button": "Knowledge",
-        "hint": "Reference documents the agent uses to answer (price lists, FAQs, policies). Text is extracted and given to the agent with every reply — up to 5 documents / 100,000 characters.",
+        "hint": "Reference documents the agent uses to answer (price lists, FAQs, policies). Text is extracted and given to the agent with every reply. Up to 5 documents / 100,000 characters.",
         "empty": "No documents yet. Upload a PDF, .txt, .md or .csv.",
         "upload": "Add document",
         "usage": "{docs}/5 documents · {chars}/100,000 characters"
       },
-      "notifyOwnerHint": "The agent also has a notify_owner tool that emails the account owner. Mention it in the instructions to use it — e.g. \"when someone asks for a quote, use notify_owner with their details\"."
+      "notifyOwnerHint": "The agent also has a notify_owner tool that emails the account owner. Mention it in the instructions to use it. E.g. \"when someone asks for a quote, use notify_owner with their details\"."
     },
     "messages": {
       "title": "Messages",
@@ -484,7 +484,7 @@
       "selectConversation": "Select a conversation",
       "agentDisabled": "🤖 {name} · disabled",
       "agentHandedOff": "⏸ Agent handed off: {reason}",
-      "agentPausedManual": "⏸ Agent paused — replying manually",
+      "agentPausedManual": "⏸ Agent paused. Replying manually",
       "resumeAgent": "Resume {name}",
       "agentGroupReplies": "🤖 {name} · replies when @mentioned",
       "agentResponding": "🤖 {name} is responding",
@@ -492,7 +492,7 @@
       "loadOlder": "Load older",
       "loadingMessages": "Loading messages…",
       "noMessages": "No messages yet.",
-      "disconnectedNote": "This number is disconnected — messages can't be sent.",
+      "disconnectedNote": "This number is disconnected. Messages can't be sent.",
       "sendingAction": "Sending messages",
       "removeFile": "Remove file",
       "attachFile": "Attach file",
@@ -550,25 +550,25 @@
       "createTag": "Create",
       "modeReply": "Reply",
       "modeNote": "Note",
-      "notePlaceholder": "Internal note — the contact won't see this…",
+      "notePlaceholder": "Internal note. The contact won't see this…",
       "addNote": "Add note",
       "newConversation": "New conversation",
       "newConvSession": "From session",
       "newConvNumber": "WhatsApp number",
-      "newConvNumberHint": "Digits with country code (no +), e.g. 5491155551234 — we'll verify it's on WhatsApp.",
+      "newConvNumberHint": "Digits with country code (no +), e.g. 5491155551234. We'll verify it's on WhatsApp.",
       "newConvStart": "Start conversation",
       "newConvNoSessions": "You need a connected WhatsApp number to start a conversation. Connect one in Sessions first.",
       "newConvColdWarning": "WhatsApp restricts messaging numbers that never wrote to you: the first message to a complete stranger may not be delivered. It works reliably with people who already texted this number, or whose chat exists on the phone."
     },
     "mirror": {
       "title": "Mirror Link",
-      "subtitle": "Protect your leads: DMs to a mirrored number are relayed into a private group with one of your human agents. The agent replies in the group and the lead receives it as a normal chat — the agent never sees the lead's number. Changes take up to 30 seconds to apply.",
+      "subtitle": "Protect your leads: DMs to a mirrored number are relayed into a private group with one of your human agents. The agent replies in the group and the lead receives it as a normal chat. The agent never sees the lead's number. Changes take up to 30 seconds to apply.",
       "sessionLabel": "Session",
       "selectSession": "Select a session…",
       "agentLabel": "Human agent",
       "selectAgent": "Select a human agent…",
       "prefixLabel": "Group name prefix",
-      "prefixHint": "Groups are named \"<prefix> #1\", \"<prefix> #2\"… — e.g. \"ConsultasWeb\" creates \"ConsultasWeb #1\". Default: \"🔒 Lead\".",
+      "prefixHint": "Groups are named \"<prefix> #1\", \"<prefix> #2\"… E.g. \"ConsultasWeb\" creates \"ConsultasWeb #1\". Default: \"🔒 Lead\".",
       "addAgentFirst": "Add a human agent first",
       "createLink": "Create mirror link",
       "noLinks": "No mirror links yet. Create one to start protecting your leads.",
@@ -583,7 +583,7 @@
     },
     "contacts": {
       "title": "Contacts",
-      "subtitle": "People your number talks to — saved by the \"Save contact\" flow node or added by hand. contact.created / contact.updated webhooks fire on changes.",
+      "subtitle": "People your number talks to. Saved by the \"Save contact\" flow node or added by hand. contact.created / contact.updated webhooks fire on changes.",
       "add": "Add contact",
       "name": "Name",
       "phone": "Phone (digits, with country code)",
@@ -617,7 +617,7 @@
     },
     "humanAgents": {
       "title": "Human agents",
-      "subtitle": "The people on your team who answer chats from their own WhatsApp — used by <mirror>Mirror Link</mirror> to route leads without revealing their numbers.",
+      "subtitle": "The people on your team who answer chats from their own WhatsApp. Used by <mirror>Mirror Link</mirror> to route leads without revealing their numbers.",
       "name": "Name",
       "phone": "WhatsApp number (digits, no +)",
       "add": "Add human agent",
@@ -643,7 +643,7 @@
       "templates": {
         "blank": {
           "title": "Blank",
-          "desc": "Just the trigger — build from scratch."
+          "desc": "Just the trigger. Build from scratch."
         },
         "ai-until-handoff": {
           "title": "AI until handoff",
@@ -667,7 +667,7 @@
       "saveFirst": "Save first",
       "runs": "Runs",
       "runsHint": "Every execution of this flow. Click a run to highlight the path it took on the canvas.",
-      "noRuns": "No runs yet — enable the flow and message the session.",
+      "noRuns": "No runs yet. Enable the flow and message the session.",
       "noSteps": "no steps (trigger not connected)",
       "addNode": "Add node",
       "deleteNode": "Delete node",
@@ -690,12 +690,12 @@
       "noteLabel": "Note (sent in the payload)",
       "copyHistory": "Copy the conversation history into the group",
       "assistantTitle": "Create your flow with AI",
-      "assistantHint": "Describe what should happen to each message — the AI drafts it and you review before saving.",
+      "assistantHint": "Describe what should happen to each message. The AI drafts it and you review before saving.",
       "assistantPlaceholder": "E.g.: if they ask about prices, have the AI answer with the list; if they ask for a person, hand off to Marcelo with the conversation history…",
       "assistantGenerate": "Generate draft",
       "assistantGenerating": "Generating…",
       "assistantDismiss": "I'd rather build it by hand",
-      "assistantError": "Couldn't generate the flow — try again or adjust the description.",
+      "assistantError": "Couldn't generate the flow. Try again or adjust the description.",
       "assistantNotConfigured": "The AI assistant isn't configured in this environment.",
       "groupAgentsLabel": "Human agents in the group",
       "tagLabel": "Tag",
@@ -744,7 +744,7 @@
         },
         "assignGroup": {
           "title": "Team group",
-          "hint": "Creates the lead's mirror group with every selected human agent — anyone in it can reply as the brand. Ends the flow."
+          "hint": "Creates the lead's mirror group with every selected human agent. Anyone in it can reply as the brand. Ends the flow."
         },
         "saveContact": {
           "title": "Save contact",
@@ -754,7 +754,7 @@
       "draft": "Draft",
       "noSession": "No session",
       "assignSession": "Assign a session…",
-      "removeSession": "— No session (draft) —",
+      "removeSession": "No session (draft)",
       "conflictTitle": "Session in use",
       "conflictBody": "\"{session}\" is already assigned to the flow \"{flow}\". Reassigning will detach that flow and disable it.",
       "confirmReassign": "Reassign session",
@@ -794,9 +794,8 @@
     }
   },
   "landing": {
-    "badge": "Your own number · No Business API approval",
     "heroTitle": "Your WhatsApp <brand>answers itself</brand>.",
-    "heroSubtitle": "AI replies in your voice, and your team steps in from their own WhatsApp when it matters — all on the number you already have. Connect it with a QR scan: no Business API, no waiting.",
+    "heroSubtitle": "AI replies in your voice, and your team steps in from their own WhatsApp when it matters. All on the number you already have. Connect it with a QR scan: no Business API, no waiting.",
     "connectCta": "Connect your WhatsApp",
     "heroGuideCta": "See the getting-started guide",
     "readDocs": "Read the docs",
@@ -805,19 +804,19 @@
     "storyLeadTag": "Lead message",
     "storyLead": "“Hi! Do you have a table for 4 on Saturday?”",
     "storyAiTag": "AI agent · instant reply",
-    "storyAi": "“Hi! Yes — what time works for you? 😊”",
+    "storyAi": "“Hi! Yes, what time works for you? 😊”",
     "storyHumanTag": "Mirror group · your team steps in",
-    "storyHuman": "Marcelo confirms the booking from his own WhatsApp — the lead receives it as your brand.",
+    "storyHuman": "Marcelo confirms the booking from his own WhatsApp. The lead receives it as your brand.",
     "notJustApi": "The team inbox, included",
     "notJustApiDesc": "Every conversation lives in a shared dashboard: assignments, tags, internal notes and quick replies for your whole team.",
     "inboxTitle": "A built-in inbox",
-    "inboxDesc": "Send and receive messages right from the dashboard — full conversation history, media, and replies in real time. No code required to talk to your customers.",
+    "inboxDesc": "Send and receive messages right from the dashboard. Full conversation history, media, and replies in real time. No code required to talk to your customers.",
     "chatIn": "Hi! Is my order shipped yet?",
-    "chatOut": "Yes — it shipped this morning! 🎉",
+    "chatOut": "Yes. It shipped this morning! 🎉",
     "typeReply": "Type a reply…",
     "sendBtn": "Send",
     "teamsTitle": "Built for teams",
-    "teamsDesc": "Invite your whole team into one organization with roles — owners handle billing, admins manage numbers and webhooks, members work the inbox. Everyone shares the same numbers and history.",
+    "teamsDesc": "Invite your whole team into one organization with roles. Owners handle billing, admins manage numbers and webhooks, members work the inbox. Everyone shares the same numbers and history.",
     "roleOwner": "Owner",
     "roleAdmin": "Admin",
     "roleMember": "Member",
@@ -830,14 +829,14 @@
       },
       {
         "title": "Enable an AI agent or pick a flow template",
-        "desc": "Define its character with your instructions and documents — bring your own Anthropic or OpenAI key and reply instantly."
+        "desc": "Define its character with your instructions and documents. Bring your own Anthropic or OpenAI key and reply instantly."
       },
       {
         "title": "Your team steps in when it matters",
-        "desc": "The flow hands the conversation to a human on WhatsApp or assigns it in the inbox — with the full context of the chat."
+        "desc": "The flow hands the conversation to a human on WhatsApp or assigns it in the inbox. With the full context of the chat."
       }
     ],
-    "flowsTitle": "Design the journey — no code",
+    "flowsTitle": "Design the journey. No code",
     "flowsDesc": "Flows is your visual router: decide what happens to every message by connecting nodes. Start from a template and watch each message's path in the runs panel.",
     "flowNode1": "Message received",
     "flowNode2": "Keyword match?",
@@ -847,19 +846,19 @@
     "flowsChip2": "Runs panel for debugging",
     "flowsChip3": "Included in every plan",
     "mirrorTitle": "Your team answers from their own WhatsApp",
-    "mirrorDesc": "When a lead needs a person, whathooks creates a mirror group on WhatsApp with your agent. No accounts, no passwords, no new apps — just their number.",
+    "mirrorDesc": "When a lead needs a person, whathooks creates a mirror group on WhatsApp with your agent. No accounts, no passwords, no new apps. Just their number.",
     "mirrorPoint1": "The agent replies from their phone and the lead receives it as your brand",
     "mirrorPoint2": "The lead never sees the agent's personal number",
     "mirrorPoint3": "Link them to a team member and the conversation gets assigned in the inbox",
     "mirrorGroupName": "🔒 Lead #12",
     "mirrorMsg1": "Juan: Do you have a table for 4?",
     "mirrorMsg1Tag": "lead message, relayed to the group",
-    "mirrorMsg2": "Yes — does 9pm work?",
+    "mirrorMsg2": "Yes. Does 9pm work?",
     "mirrorMsg2Tag": "Marcelo, from his WhatsApp",
     "mirrorMsg3": "The lead receives the reply as your brand ✓",
     "devPageCta": "Developer page",
     "featuresTitle": "Everything you need to run WhatsApp support",
-    "featuresDesc": "AI, humans and organization — handled in one place.",
+    "featuresDesc": "AI, humans and organization. Handled in one place.",
     "features": [
       {
         "title": "AI agents with your own key",
@@ -871,7 +870,7 @@
       },
       {
         "title": "Mirror groups",
-        "desc": "Hand leads to a real person without leaving WhatsApp — they answer as the brand from their own phone."
+        "desc": "Hand leads to a real person without leaving WhatsApp. They answer as the brand from their own phone."
       },
       {
         "title": "Automatic contacts",
@@ -943,13 +942,13 @@
     },
     "pricingFootnote": "Message limits count both inbound and outbound messages. Need more? <link>Talk to us</link>.",
     "ctaTitle": "Put your WhatsApp to work today",
-    "ctaDesc": "Scan a QR, enable an agent, and let your number answer — with your team one tap away. No Business API approval required.",
+    "ctaDesc": "Scan a QR, enable an agent, and let your number answer. With your team one tap away. No Business API approval required.",
     "trialNote": "7-day free trial",
-    "annualNote": "or {price}/year — 2 months free"
+    "annualNote": "or {price}/year. 2 months free"
   },
   "guide": {
       "title": "Getting started",
-      "intro": "Everything you need to put your WhatsApp to work — no code required. In ten minutes you'll connect your number, organize your inbox, and leave the automation running.",
+      "intro": "Everything you need to put your WhatsApp to work. No code required. In ten minutes you'll connect your number, organize your inbox, and leave the automation running.",
       "sections": {
         "connect": {
           "title": "1. Connect your number",
@@ -976,14 +975,14 @@
           "title": "3. Contacts",
           "paragraphs": [
             "Contacts is your address book: WhatsApp name and number, plus company, email, website, Instagram and notes. It fills itself if you enable auto-save on a session, or from a flow via the \"Save contact\" node.",
-            "Each contact shows which of your numbers they've written to — useful when sales and support run on separate lines."
+            "Each contact shows which of your numbers they've written to. Useful when sales and support run on separate lines."
           ],
           "items": []
         },
         "aiAgents": {
           "title": "4. AI agents",
           "paragraphs": [
-            "An AI agent replies for you in your own voice: define its character and instructions, upload reference documents, and use your own Anthropic or OpenAI key — you control the model cost.",
+            "An AI agent replies for you in your own voice: define its character and instructions, upload reference documents, and use your own Anthropic or OpenAI key. You control the model cost.",
             "Assign it to a session and it answers inbound messages. It can pause itself and alert you when a conversation needs a human, and you can pause or resume it per conversation from the inbox."
           ],
           "items": [
@@ -993,8 +992,8 @@
         "humanAgents": {
           "title": "5. Human agents & mirror groups",
           "paragraphs": [
-            "A human agent is a real person answering from their own WhatsApp — no account or password needed: just their number.",
-            "When a lead is handed to a human, whathooks creates a mirror group on WhatsApp with that person. Everything the lead writes appears in the group, and whatever the agent replies reaches the lead as your brand — the lead never sees the agent's personal number."
+            "A human agent is a real person answering from their own WhatsApp. No account or password needed: just their number.",
+            "When a lead is handed to a human, whathooks creates a mirror group on WhatsApp with that person. Everything the lead writes appears in the group, and whatever the agent replies reaches the lead as your brand. The lead never sees the agent's personal number."
           ],
           "items": [
             "Link a human agent to a team member so handoffs also assign the conversation to them in the inbox."
@@ -1013,16 +1012,16 @@
         "team": {
           "title": "7. Your team & roles",
           "paragraphs": [
-            "Invite your team from the Team section. Roles define what each person sees: Admin manages everything; Member works the inbox (optionally limited to certain sessions); Operator only sees the conversations you assign to them — ideal for support staff."
+            "Invite your team from the Team section. Roles define what each person sees: Admin manages everything; Member works the inbox (optionally limited to certain sessions); Operator only sees the conversations you assign to them. Ideal for support staff."
           ],
           "items": []
         }
       },
-      "outro": "Everything above works without code. If you also want to integrate your systems — receive every message or contact in your backend, or send via API — check the",
+      "outro": "Everything above works without code. If you also want to integrate your systems. Receive every message or contact in your backend, or send via API. Check the",
       "outroDocsLink": "developer documentation"
     },
     "automation": {
-      "title": "Automate your WhatsApp — end to end",
+      "title": "Automate your WhatsApp. End to end",
       "intro": "AI replies instantly, flows route every message, and your team steps in from their own WhatsApp when it matters. All on the number you already have, no Business API.",
       "cta": "Start free",
       "guideCta": "See the getting-started guide",
@@ -1032,7 +1031,7 @@
       "blocks": {
         "flows": {
           "title": "Visual flows",
-          "desc": "Decide what happens to every message by connecting nodes — no code.",
+          "desc": "Decide what happens to every message by connecting nodes. No code.",
           "points": [
             "Keywords and AI intent classification",
             "Tags, contacts, assignments and webhooks as actions",
@@ -1043,7 +1042,7 @@
           "title": "AI agents with your own key",
           "desc": "Define its character and instructions, upload documents, and let it reply in your voice.",
           "points": [
-            "Anthropic or OpenAI — you pick the model and control the cost",
+            "Anthropic or OpenAI. You pick the model and control the cost",
             "Pauses itself and alerts you when a human is needed",
             "Schedules and per-conversation pausing"
           ]
@@ -1069,13 +1068,13 @@
       }
     },
     "developers": {
-      "title": "WhatsApp as a webhook — for developers",
+      "title": "WhatsApp as a webhook. For developers",
       "intro": "Connect a real number with a QR scan. Every message reaches your endpoint signed, and you reply with a POST. No Business API, no mandatory SDKs.",
       "docsCta": "Read the docs",
       "signupCta": "Create an account",
       "inboundTitle": "Inbound → your webhook",
       "sendTitle": "Outbound → our API",
-      "eventsNote": "Available events: message.received, session.status, session.qr, contact.created and contact.updated — payloads and signatures in the",
+      "eventsNote": "Available events: message.received, session.status, session.qr, contact.created and contact.updated. Payloads and signatures in the",
       "eventsNoteLink": "technical docs",
       "cards": {
         "webhooks": {
@@ -1088,7 +1087,7 @@
         },
         "mapping": {
           "title": "Payloads shaped your way, per event",
-          "desc": "Rename fields, format dates and inject fixed values from the dashboard — separate rules for messages and contacts."
+          "desc": "Rename fields, format dates and inject fixed values from the dashboard. Separate rules for messages and contacts."
         },
         "keys": {
           "title": "Everything else is already handled",
@@ -1138,7 +1137,7 @@
       "LOGGED_OUT": "The device was unlinked; a new QR scan is required."
     },
     "embedTitle": "Embed the QR in your product",
-    "embedDesc": "Sessions are fully manageable with an API key, so your product can onboard users without ever showing them the whathooks dashboard: create a session, then render the pairing QR in your own UI. <pill>GET /v1/sessions/:id</pill> returns <pill>qrDataUrl</pill> — a ready-to-embed PNG data URI (<imgtag></imgtag>). QR codes rotate, so poll the session while it's in the <pill>QR</pill> status or subscribe to <pill>session.qr</pill> webhooks for fresh codes, and watch for <pill>CONNECTED</pill> to dismiss the QR.",
+    "embedDesc": "Sessions are fully manageable with an API key, so your product can onboard users without ever showing them the whathooks dashboard: create a session, then render the pairing QR in your own UI. <pill>GET /v1/sessions/:id</pill> returns <pill>qrDataUrl</pill>. A ready-to-embed PNG data URI (<imgtag></imgtag>). QR codes rotate, so poll the session while it's in the <pill>QR</pill> status or subscribe to <pill>session.qr</pill> webhooks for fresh codes, and watch for <pill>CONNECTED</pill> to dismiss the QR.",
     "webhooksTitle": "Webhooks",
     "webhooksIntro": "When something happens on a session, we POST a JSON body to your configured webhook URL.",
     "eventsTitle": "Events",
@@ -1147,7 +1146,7 @@
     "events": {
       "messageReceived": "An inbound WhatsApp message arrived on a connected session.",
       "sessionStatus": "A session changed status (e.g. CONNECTED, DISCONNECTED, LOGGED_OUT).",
-      "contactCreated": "A new contact was saved — via the session's auto-save setting, a flow's \"Save contact\" node, or manual creation.",
+      "contactCreated": "A new contact was saved. Via the session's auto-save setting, a flow's \"Save contact\" node, or manual creation.",
       "contactUpdated": "An existing contact changed: fields edited, name backfilled from WhatsApp, or a new session linked.",
       "sessionQr": "A new QR code was generated and is waiting to be scanned."
     },
@@ -1162,7 +1161,7 @@
     "envelopeTitle": "Payload envelope",
     "envelopeDesc": "Every delivery body shares the same envelope: <envtag></envtag>. Below is a full <pill>message.received</pill> delivery:",
     "customizeTitle": "Customize the payload",
-    "customizeDesc": "Optionally give a webhook <em>mapping rules</em> to reshape <pill>data</pill> to match your system: rename fields, format dates, and inject fixed values. When rules are set, <pill>data</pill> contains <hl>only</hl> the fields you map — the envelope stays the same. Each rule has a <pill>target</pill> (output name) and either a <pill>source</pill> (dot path like <pill>data.from</pill>, also reaching <pill>event</pill>, <pill>sessionId</pill>, <pill>timestamp</pill>) or a fixed <pill>value</pill>. Add <pill>dateFormat</pill> to a source rule to format it as a date: <pill>iso</pill>, <pill>unix</pill>, <pill>unix_ms</pill>, or a UTC pattern using <pill>yyyy MM dd HH mm ss</pill>. Configure it on the webhook in the dashboard, or pass <pill>payloadMapping</pill> when creating one via API.",
+    "customizeDesc": "Optionally give a webhook <em>mapping rules</em> to reshape <pill>data</pill> to match your system: rename fields, format dates, and inject fixed values. When rules are set, <pill>data</pill> contains <hl>only</hl> the fields you map. The envelope stays the same. Each rule has a <pill>target</pill> (output name) and either a <pill>source</pill> (dot path like <pill>data.from</pill>, also reaching <pill>event</pill>, <pill>sessionId</pill>, <pill>timestamp</pill>) or a fixed <pill>value</pill>. Add <pill>dateFormat</pill> to a source rule to format it as a date: <pill>iso</pill>, <pill>unix</pill>, <pill>unix_ms</pill>, or a UTC pattern using <pill>yyyy MM dd HH mm ss</pill>. Configure it on the webhook in the dashboard, or pass <pill>payloadMapping</pill> when creating one via API.",
     "signatureTitle": "Signature verification",
     "signatureDesc": "Verify each delivery by computing an HMAC-SHA256 of the <hl>raw</hl> request body using your webhook secret, then comparing it to the <pill>X-Whathooks-Signature</pill> header. Always compare with a constant-time function.",
     "sendingTitle": "Sending messages",
@@ -1183,19 +1182,19 @@
     "err401": "Missing or invalid credentials (JWT or API key).",
     "err400": "The session is not <pill>CONNECTED</pill>, or the request body is invalid.",
     "errWebhooksLabel": "Webhooks",
-    "errWebhooks": "Delivery requests time out after 10 seconds. For now we make a single delivery attempt per event — automatic retries are coming.",
+    "errWebhooks": "Delivery requests time out after 10 seconds. For now we make a single delivery attempt per event. Automatic retries are coming.",
     "agentsCallout": "Building with an AI coding agent? Give it the whole API in one markdown file: <link>whathooks.app/llms.txt</link>",
     "payloadNotes": "<pill>type</pill> is uppercase (<pill>TEXT</pill>, <pill>IMAGE</pill>, <pill>AUDIO</pill>, <pill>VIDEO</pill>, <pill>DOCUMENT</pill>, <pill>STICKER</pill>, <pill>LOCATION</pill>, <pill>CONTACT</pill>, <pill>UNKNOWN</pill>). <pill>data.timestamp</pill> is unix seconds (the WhatsApp message time); the envelope <pill>timestamp</pill> is the ISO delivery time.",
-    "mediaDesc": "For media messages, <pill>media</pill> carries a signed download link (expires after 1 hour — download promptly, or re-fetch the message via <pill>GET /v1/messages</pill> for a fresh link). <pill>text</pill> holds the caption, if any:"
+    "mediaDesc": "For media messages, <pill>media</pill> carries a signed download link (expires after 1 hour. Download promptly, or re-fetch the message via <pill>GET /v1/messages</pill> for a fresh link). <pill>text</pill> holds the caption, if any:"
   },
   "teams": {
     "meta": {
-      "title": "whathooks for teams — one WhatsApp inbox for everyone",
-      "description": "Put your whole team behind one WhatsApp number. A shared inbox with full history, roles, and real-time replies from the dashboard — no code required."
+      "title": "whathooks for teams. One WhatsApp inbox for everyone",
+      "description": "Put your whole team behind one WhatsApp number. A shared inbox with full history, roles, and real-time replies from the dashboard. No code required."
     },
     "eyebrow": "whathooks for teams",
     "heroTitle": "One number. <brand>Whole team.</brand>",
-    "heroSubtitle": "Your business WhatsApp shouldn't live in someone's pocket. Connect your number once and let support, sales, and ops answer from a shared inbox — same number, full history, real time.",
+    "heroSubtitle": "Your business WhatsApp shouldn't live in someone's pocket. Connect your number once and let support, sales, and ops answer from a shared inbox. Same number, full history, real time.",
     "ctaPrimary": "Get your team in",
     "ctaSecondary": "See how it works",
     "heroNote": "7-day free trial · No Business API approval · Cancel anytime",
@@ -1210,7 +1209,7 @@
     "threadIn1": "Hi! Is my order shipped yet?",
     "threadOut1": "Checking right now, one sec 👀",
     "threadOut1Author": "Luis · Support",
-    "threadOut2": "Yes! It shipped this morning — tracking link coming your way.",
+    "threadOut2": "Yes! It shipped this morning. Tracking link coming your way.",
     "threadOut2Author": "Marta · Sales",
     "typingLabel": "Reply as your team…",
     "sendLabel": "Send",
@@ -1240,7 +1239,7 @@
       },
       {
         "title": "Assign & resolve",
-        "desc": "Every conversation gets an owner and a status. Filter by Mine, Unassigned, or Resolved — nothing slips through."
+        "desc": "Every conversation gets an owner and a status. Filter by Mine, Unassigned, or Resolved. Nothing slips through."
       },
       {
         "title": "Tags & internal notes",
@@ -1260,7 +1259,7 @@
       },
       {
         "title": "More numbers as you grow",
-        "desc": "Run support, sales, and ops on separate numbers — one inbox, filterable by number."
+        "desc": "Run support, sales, and ops on separate numbers. One inbox, filterable by number."
       },
       {
         "title": "An API when you need it",
@@ -1268,14 +1267,14 @@
       },
       {
         "title": "Per-member access",
-        "desc": "Scope each teammate to specific numbers — support sees the support line, sales sees sales. Owners see everything."
+        "desc": "Scope each teammate to specific numbers. Support sees the support line, sales sees sales. Owners see everything."
       }
     ],
     "howTitle": "Live in three steps",
     "how": [
       {
         "title": "Scan a QR",
-        "desc": "Connect your existing WhatsApp number from the dashboard — no Business API paperwork, no waiting."
+        "desc": "Connect your existing WhatsApp number from the dashboard. No Business API paperwork, no waiting."
       },
       {
         "title": "Invite your team",
@@ -1288,13 +1287,13 @@
     ],
     "pricingTitle": "Pick your starting point",
     "ctaTitle": "Get the phone out of the workflow",
-    "ctaSubtitle": "Connect your number, invite the team, and answer WhatsApp like the rest of your tools — together, from the browser.",
+    "ctaSubtitle": "Connect your number, invite the team, and answer WhatsApp like the rest of your tools. Together, from the browser.",
     "ctaButton": "Create your team inbox",
-    "pricingSubtitle": "Every plan includes the shared inbox — the tier sets how many of you can work it. Both start with a 7-day free trial.",
+    "pricingSubtitle": "Every plan includes the shared inbox. The tier sets how many of you can work it. Both start with a 7-day free trial.",
     "pricingStarter": {
       "name": "Starter",
       "price": "$8.99",
-      "tagline": "The same inbox — 2 seats",
+      "tagline": "The same inbox. 2 seats",
       "items": [
         "Full dashboard inbox",
         "2 team members · 2 human agents",
@@ -1322,7 +1321,7 @@
       "badge": "For teams"
     },
     "perMonth": "per month",
-    "pricingFootnote": "Start on Starter and upgrade to Pro whenever the team is ready — nothing to migrate.",
+    "pricingFootnote": "Start on Starter and upgrade to Pro whenever the team is ready. Nothing to migrate.",
     "trialNote": "7-day free trial",
     "threadNote": "Note · Luis: VIP client, has priority 🔒 Only your team sees this"
   },
@@ -1335,7 +1334,7 @@
     "step3": "Point the camera at this QR code.",
     "waitingQr": "Generating QR code…",
     "qrAlt": "WhatsApp QR code",
-    "qrRefreshes": "The code refreshes automatically — keep this page open until it confirms.",
+    "qrRefreshes": "The code refreshes automatically. Keep this page open until it confirms.",
     "connectedTitle": "Connected!",
     "connectedBody": "\"{label}\" is now linked. You can close this page.",
     "expiredTitle": "This link is invalid or has expired",

@@ -116,11 +116,7 @@ twq('config','re0yu');`}
         <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
           <div className="grid items-center gap-14 md:grid-cols-2">
             <div>
-              <span className="badge border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-brand)]" />
-                {t("badge")}
-              </span>
-              <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
                 {t.rich("heroTitle", {
                   brand: (c) => (
                     <span className="text-[var(--color-brand)]">{c}</span>

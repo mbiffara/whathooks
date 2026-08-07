@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { Linkify } from "./linkify";
 import type { ChatMessage } from "./types";
 import { clockTime, formatBytes } from "./utils";
 
@@ -18,7 +19,7 @@ function NoteBubble({
           🗒 {label}
         </div>
         <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-fg)]">
-          {message.text}
+          <Linkify text={message.text ?? ""} />
         </p>
         <div className="mt-1 text-right text-[10px] text-[var(--color-muted)]">
           {clockTime(message.timestamp)}
@@ -183,7 +184,7 @@ export function MessageBubble({
           />
           {message.text ? (
             <p className="mt-1 whitespace-pre-wrap break-words text-sm text-[var(--color-fg)]">
-              {message.text}
+              <Linkify text={message.text} />
             </p>
           ) : null}
         </div>
@@ -196,7 +197,7 @@ export function MessageBubble({
           <video src={media.url} controls className="max-w-xs rounded-lg" />
           {message.text ? (
             <p className="mt-1 whitespace-pre-wrap break-words text-sm text-[var(--color-fg)]">
-              {message.text}
+              <Linkify text={message.text} />
             </p>
           ) : null}
         </div>
@@ -234,7 +235,7 @@ export function MessageBubble({
     if (message.type === "TEXT") {
       return (
         <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-fg)]">
-          {message.text}
+          <Linkify text={message.text ?? ""} />
         </p>
       );
     }

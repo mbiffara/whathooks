@@ -64,6 +64,9 @@ export function OnboardingWizard() {
   const [label, setLabel] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Which step the user clicked open, overriding the derived one. Never
+  // points past the furthest reachable step, so later steps stay locked.
+  const [openOverride, setOpenOverride] = useState<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -116,6 +119,7 @@ export function OnboardingWizard() {
   function choose(p: Purpose) {
     localStorage.setItem(PURPOSE_KEY, p);
     setPurpose(p);
+    setOpenOverride(null); // resume wherever the derived flow is now
   }
 
   async function connect(e: React.FormEvent) {
@@ -160,9 +164,12 @@ export function OnboardingWizard() {
     },
     { key: "win", title: firstWinTitle(purpose), done: firstWinDone() },
   ];
-  // The first unfinished step is the open one; earlier ones collapse to a tick.
-  const currentIndex = steps.findIndex((s) => !s.done);
-  const current = currentIndex === -1 ? steps.length : currentIndex;
+  // The first unfinished step is the open one; earlier ones collapse to a
+  // tick but stay clickable, so a finished step can be revisited.
+  const firstUnfinished = steps.findIndex((s) => !s.done);
+  const furthest = firstUnfinished === -1 ? steps.length : firstUnfinished;
+  const current =
+    openOverride !== null && openOverride <= furthest ? openOverride : furthest;
 
   function firstWinDone(): boolean {
     if (!connected) return false;
@@ -185,7 +192,13 @@ export function OnboardingWizard() {
               step.done ? "border-[var(--color-brand)]/40" : ""
             }`}
           >
-            <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={i > furthest}
+              onClick={() => setOpenOverride(i)}
+              aria-expanded={open}
+              className="flex w-full items-center gap-3 text-left disabled:cursor-default"
+            >
               <span
                 className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${
                   step.done
@@ -196,7 +209,14 @@ export function OnboardingWizard() {
                 {step.done ? <Glyph name="check" size={14} /> : i + 1}
               </span>
               <h2 className="font-semibold">{step.title}</h2>
-            </div>
+              {i <= furthest && !open && (
+                <Glyph
+                  name="chevronRight"
+                  size={14}
+                  className="ml-auto text-[var(--color-muted)]"
+                />
+              )}
+            </button>
 
             {open && step.key === "purpose" && (
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -204,7 +224,12 @@ export function OnboardingWizard() {
                   <button
                     key={p.key}
                     onClick={() => choose(p.key)}
-                    className="rounded-xl border border-[var(--color-border)] p-4 text-left transition-colors hover:border-[var(--color-brand)]"
+                    aria-pressed={purpose === p.key}
+                    className={`rounded-xl border p-4 text-left transition-colors ${
+                      purpose === p.key
+                        ? "border-[var(--color-brand)] bg-[var(--color-brand)]/10"
+                        : "border-[var(--color-border)] hover:border-[var(--color-brand)]"
+                    }`}
                   >
                     <div className="font-medium">{p.title}</div>
                     <div className="mt-1 text-xs text-[var(--color-muted)]">

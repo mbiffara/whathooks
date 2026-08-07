@@ -17,12 +17,10 @@ export default auth((req) => {
     return NextResponse.redirect(url);
   }
 
-  // /onboarding is gated like /admin only while it is a preview; drop it
-  // from this check to open the wizard to every organization.
-  if (
-    (pathname.startsWith("/admin") || pathname.startsWith("/onboarding")) &&
-    !isAdmin
-  ) {
+  // /onboarding needs auth but no particular role: any signed-in user can
+  // open it to try the flow. Nothing routes them there yet — no nav entry
+  // and no redirect after signup.
+  if (pathname.startsWith("/admin") && !isAdmin) {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
   }
 

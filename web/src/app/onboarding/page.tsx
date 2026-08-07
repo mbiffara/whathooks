@@ -6,7 +6,8 @@ import Link from "next/link";
  * Setup wizard on its own full-screen route. Deliberately outside
  * /dashboard and /admin: a nested layout cannot drop its parent's chrome,
  * and setup should not compete with a nav the org has nothing in yet.
- * Middleware restricts it to platform admins while it is unfinished.
+ * Reachable by any signed-in user for testing, but nothing routes anyone
+ * here yet: no nav entry, and signup still lands on the dashboard.
  */
 export default function OnboardingPage() {
   return (
@@ -27,8 +28,7 @@ export default function OnboardingPage() {
           Four steps to your first automated WhatsApp conversation.
         </p>
         <p className="mt-2 text-xs text-[var(--color-muted)]">
-          Preview: visible to platform admins only, not yet shown to new
-          organizations.
+          Preview: reachable by link only, not yet part of signup.
         </p>
       </div>
 

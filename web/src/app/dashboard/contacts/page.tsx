@@ -1,5 +1,6 @@
 "use client";
 
+import { Glyph } from "@/components/glyphs";
 import { apiClient } from "@/lib/client-api";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
@@ -214,7 +215,7 @@ export default function ContactsPage() {
             className="input min-h-16"
             maxLength={4096}
             placeholder={t("notes")}
-              aria-label={t("notes")}
+            aria-label={t("notes")}
             value={form.notes}
             onChange={(e) => field("notes", e.target.value)}
           />
@@ -253,7 +254,7 @@ export default function ContactsPage() {
       <input
         className="input w-72"
         placeholder={t("searchPlaceholder")}
-              aria-label={t("searchPlaceholder")}
+        aria-label={t("searchPlaceholder")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -263,78 +264,101 @@ export default function ContactsPage() {
       ) : contacts.length === 0 ? (
         <p className="text-sm text-[var(--color-muted)]">{t("empty")}</p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {contacts.map((c) => (
-            <div key={c.id} className="card flex items-start gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="font-medium">
-                    {c.name || t("unnamed")}
-                  </span>
-                  {c.phoneNumber && (
-                    <span className="text-xs text-[var(--color-muted)]">
-                      +{c.phoneNumber}
-                    </span>
-                  )}
-                  {!c.phoneNumber && c.lid && (
-                    <span className="text-xs text-[var(--color-muted)]">
-                      LID {c.lid}
-                    </span>
-                  )}
-                  {c.company && (
-                    <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
-                      {c.company}
-                    </span>
-                  )}
-                  {(c.sessions ?? []).map((s) => (
-                    <span
-                      key={s.id}
-                      className="badge bg-[var(--color-brand)]/10 text-[var(--color-brand)] text-[10px]"
-                      title={t("sessionChip")}
-                    >
-                      {s.label}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-[var(--color-muted)]">
-                  {c.email && <span>{c.email}</span>}
-                  {c.website && <span>{c.website}</span>}
-                  {c.instagram && <span>@{c.instagram.replace(/^@/, "")}</span>}
-                </div>
-                {c.notes && (
-                  <p className="mt-1 whitespace-pre-wrap break-words text-xs text-[var(--color-fg)]">
-                    {c.notes}
-                  </p>
-                )}
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <button
-                  onClick={() => {
-                    setEditingId(c.id);
-                    setForm(toForm(c));
-                    setFormOpen(true);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className="btn-ghost text-xs"
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
+                <th className="px-4 py-3 font-medium">{t("colName")}</th>
+                <th className="px-4 py-3 font-medium">{t("colPhone")}</th>
+                <th className="px-4 py-3 font-medium">{t("colCompany")}</th>
+                <th className="px-4 py-3 font-medium">{t("colDetails")}</th>
+                <th className="px-4 py-3 font-medium">{t("colSessions")}</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {contacts.map((c) => (
+                <tr
+                  key={c.id}
+                  className="border-b border-[var(--color-border)] last:border-0"
                 >
-                  {tc("edit")}
-                </button>
-                <button
-                  onClick={() =>
-                    void run(() =>
-                      apiClient(`/contacts/${c.id}`, token, {
-                        method: "DELETE",
-                      }),
-                    )
-                  }
-                  disabled={busy}
-                  className="btn-danger text-xs"
-                >
-                  {tc("delete")}
-                </button>
-              </div>
-            </div>
-          ))}
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{c.name || t("unnamed")}</div>
+                    {c.notes && (
+                      <div
+                        className="mt-0.5 max-w-xs truncate text-xs text-[var(--color-muted)]"
+                        title={c.notes}
+                      >
+                        {c.notes}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap font-mono text-xs">
+                    {c.phoneNumber ? (
+                      `+${c.phoneNumber}`
+                    ) : c.lid ? (
+                      <span className="text-[var(--color-muted)]">
+                        LID {c.lid}
+                      </span>
+                    ) : (
+                      ""
+                    )}
+                  </td>
+                  <td className="px-4 py-3">{c.company ?? ""}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--color-muted)]">
+                    {c.email && <div className="truncate">{c.email}</div>}
+                    {c.website && <div className="truncate">{c.website}</div>}
+                    {c.instagram && <div>@{c.instagram.replace(/^@/, "")}</div>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {(c.sessions ?? []).map((s) => (
+                        <span
+                          key={s.id}
+                          className="badge bg-[var(--color-brand)]/10 text-[10px] text-[var(--color-brand)]"
+                          title={t("sessionChip")}
+                        >
+                          {s.label}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => {
+                          setEditingId(c.id);
+                          setForm(toForm(c));
+                          setFormOpen(true);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        aria-label={tc("edit")}
+                        title={tc("edit")}
+                        className="rounded-lg p-1.5 text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                      >
+                        <Glyph name="pencil" size={16} />
+                      </button>
+                      <button
+                        onClick={() =>
+                          void run(() =>
+                            apiClient(`/contacts/${c.id}`, token, {
+                              method: "DELETE",
+                            }),
+                          )
+                        }
+                        disabled={busy}
+                        aria-label={tc("delete")}
+                        title={tc("delete")}
+                        className="rounded-lg p-1.5 text-[var(--color-muted)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                      >
+                        <Glyph name="trash" size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

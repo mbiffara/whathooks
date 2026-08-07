@@ -633,6 +633,11 @@
       "searchPlaceholder": "Search by name, phone, company or email…",
       "unnamed": "(no name)",
       "sessionChip": "Contacted this number",
+      "colName": "Name",
+      "colPhone": "Phone",
+      "colCompany": "Company",
+      "colDetails": "Details",
+      "colSessions": "Numbers",
       "empty": "No contacts yet. Add the \"Save contact\" node to a flow, or create one here."
     },
     "tags": {

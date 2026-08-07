@@ -17,7 +17,8 @@ export type GlyphName =
   | "check"
   | "reopen"
   | "pause"
-  | "play";
+  | "play"
+  | "pencil";
 
 const PATHS: Record<GlyphName, ReactNode> = {
   chevronRight: <path d="M9 6l6 6-6 6" />,
@@ -62,6 +63,12 @@ const PATHS: Record<GlyphName, ReactNode> = {
   ),
   pause: <path d="M9 5v14M15 5v14" />,
   play: <path d="M7 4l13 8-13 8z" />,
+  pencil: (
+    <>
+      <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
+      <path d="M13.5 6.5l3 3" />
+    </>
+  ),
 };
 
 export function Glyph({

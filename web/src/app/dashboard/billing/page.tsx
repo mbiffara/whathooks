@@ -188,97 +188,110 @@ function BillingContent() {
             </p>
           ) : (
             <>
-            <div className="mt-6 flex items-center gap-2">
-              <button
-                onClick={() => setBillingInterval("month")}
-                className={`badge border px-3 py-1 ${
-                  billingInterval === "month"
-                    ? "border-[var(--color-brand)] bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                    : "border-[var(--color-border)] text-[var(--color-muted)]"
-                }`}
+              {/* Segmented control: one track, the chosen half raised out of
+                it. Two separate pills read as two independent buttons. */}
+              <div
+                role="group"
+                aria-label={t("intervalLabel")}
+                className="mt-6 inline-flex rounded-full bg-[var(--color-surface-2)] p-1"
               >
-                {t("intervalMonthly")}
-              </button>
-              <button
-                onClick={() => setBillingInterval("year")}
-                className={`badge border px-3 py-1 ${
-                  billingInterval === "year"
-                    ? "border-[var(--color-brand)] bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                    : "border-[var(--color-border)] text-[var(--color-muted)]"
-                }`}
-              >
-                {t("intervalAnnual")}
-                <span className="ml-1.5 text-[10px] font-semibold">
-                  {t("annualBadge")}
-                </span>
-              </button>
-            </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              {PLAN_ORDER.map((plan) => {
-                const current = sub.subscribed && plan === sub.plan;
-                return (
-                  <div
-                    key={plan}
-                    className={`flex flex-col rounded-xl border p-5 ${
-                      current
-                        ? "border-[var(--color-brand)] bg-[var(--color-surface)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface)]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">
-                        {PLAN_PRICING[plan].label}
-                      </h3>
-                      {current && (
-                        <span className="rounded-full bg-[var(--color-brand)]/15 px-2 py-0.5 text-xs text-[var(--color-brand)]">
-                          {t("current")}
+                {(["month", "year"] as const).map((iv) => {
+                  const active = billingInterval === iv;
+                  return (
+                    <button
+                      key={iv}
+                      onClick={() => setBillingInterval(iv)}
+                      aria-pressed={active}
+                      className={`inline-flex h-8 items-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-colors ${
+                        active
+                          ? "bg-[var(--color-surface)] text-[var(--color-fg)] shadow-sm"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                      }`}
+                    >
+                      {iv === "month"
+                        ? t("intervalMonthly")
+                        : t("intervalAnnual")}
+                      {iv === "year" && (
+                        <span
+                          className={
+                            active
+                              ? "text-[10px] font-semibold text-[var(--color-brand)]"
+                              : "text-[10px] font-semibold text-[var(--color-muted)]"
+                          }
+                        >
+                          {t("annualBadge")}
                         </span>
                       )}
-                    </div>
-                    <div className="mt-1 text-2xl font-bold">
-                      {billingInterval === "year"
-                        ? PLAN_PRICING[plan].annualPrice
-                        : PLAN_PRICING[plan].price}
-                      <span className="text-sm font-normal text-[var(--color-muted)]">
-                        {billingInterval === "year"
-                          ? t("perYear")
-                          : t("perMonth")}
-                      </span>
-                    </div>
-                    {billingInterval === "year" && (
-                      <p className="mt-0.5 text-xs text-[var(--color-brand)]">
-                        {t("annualSavings")}
-                      </p>
-                    )}
-                    <ul className="mt-4 flex-1 space-y-2 text-sm text-[var(--color-muted)]">
-                      {(t.raw(`features.${plan}`) as string[]).map((f) => (
-                        <li key={f}>· {f}</li>
-                      ))}
-                    </ul>
-                    <button
-                      onClick={() =>
-                        redirectTo("/billing/checkout", {
-                          plan,
-                          interval: billingInterval,
-                        })
-                      }
-                      disabled={current || busy !== null}
-                      className={`mt-4 w-full ${
-                        current ? "btn-ghost" : "btn-primary"
-                      } disabled:opacity-50`}
-                    >
-                      {current
-                        ? t("currentPlanBtn")
-                        : busy === "/billing/checkout"
-                          ? t("redirecting")
-                          : trialEligible
-                            ? t("startTrial")
-                            : t("choosePlan")}
                     </button>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                {PLAN_ORDER.map((plan) => {
+                  const current = sub.subscribed && plan === sub.plan;
+                  return (
+                    <div
+                      key={plan}
+                      className={`flex flex-col rounded-xl border p-5 ${
+                        current
+                          ? "border-[var(--color-brand)] bg-[var(--color-surface)]"
+                          : "border-[var(--color-border)] bg-[var(--color-surface)]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold">
+                          {PLAN_PRICING[plan].label}
+                        </h3>
+                        {current && (
+                          <span className="rounded-full bg-[var(--color-brand)]/15 px-2 py-0.5 text-xs text-[var(--color-brand)]">
+                            {t("current")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 text-2xl font-bold">
+                        {billingInterval === "year"
+                          ? PLAN_PRICING[plan].annualPrice
+                          : PLAN_PRICING[plan].price}
+                        <span className="text-sm font-normal text-[var(--color-muted)]">
+                          {billingInterval === "year"
+                            ? t("perYear")
+                            : t("perMonth")}
+                        </span>
+                      </div>
+                      {billingInterval === "year" && (
+                        <p className="mt-0.5 text-xs text-[var(--color-brand)]">
+                          {t("annualSavings")}
+                        </p>
+                      )}
+                      <ul className="mt-4 flex-1 space-y-2 text-sm text-[var(--color-muted)]">
+                        {(t.raw(`features.${plan}`) as string[]).map((f) => (
+                          <li key={f}>· {f}</li>
+                        ))}
+                      </ul>
+                      <button
+                        onClick={() =>
+                          redirectTo("/billing/checkout", {
+                            plan,
+                            interval: billingInterval,
+                          })
+                        }
+                        disabled={current || busy !== null}
+                        className={`mt-4 w-full ${
+                          current ? "btn-ghost" : "btn-primary"
+                        } disabled:opacity-50`}
+                      >
+                        {current
+                          ? t("currentPlanBtn")
+                          : busy === "/billing/checkout"
+                            ? t("redirecting")
+                            : trialEligible
+                              ? t("startTrial")
+                              : t("choosePlan")}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
         </>

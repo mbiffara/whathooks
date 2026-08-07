@@ -286,6 +286,7 @@
       "trialEnds": "la prueba gratuita termina el {date}",
       "startTrial": "Comenzar prueba gratis",
       "intervalMonthly": "Mensual",
+      "intervalLabel": "Período de facturación",
       "intervalAnnual": "Anual",
       "annualBadge": "2 meses gratis",
       "perYear": "/año",

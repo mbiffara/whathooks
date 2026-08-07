@@ -286,6 +286,7 @@
       "trialEnds": "free trial ends {date}",
       "startTrial": "Start free trial",
       "intervalMonthly": "Monthly",
+      "intervalLabel": "Billing period",
       "intervalAnnual": "Annual",
       "annualBadge": "2 months free",
       "perYear": "/year",

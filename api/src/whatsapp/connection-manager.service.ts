@@ -18,6 +18,8 @@ import makeWASocket, {
   downloadMediaMessage,
   fetchLatestBaileysVersion,
   fetchLatestWaWebVersion,
+  isJidBroadcast,
+  isJidNewsletter,
   jidNormalizedUser,
   makeCacheableSignalKeyStore,
   proto,
@@ -530,6 +532,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   ) {
     if (upsert.type !== 'notify') return;
     for (const msg of upsert.messages) {
+      if (this.isIgnorableChat(msg.key.remoteJid)) continue;
       if (!msg.message) {
         // Decryption failed (missing sender key — common in LID groups):
         // Baileys emits a CIPHERTEXT stub and asks the sender to re-send.
@@ -553,6 +556,18 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         this.log.error(`Inbound handling failed for ${sessionId}: ${e}`);
       }
     }
+  }
+
+  /**
+   * Chats that are not conversations with anyone: Status/stories
+   * (status@broadcast), broadcast lists, and channels. None of them is a
+   * thread a person can be answered in, and each would otherwise become a
+   * conversation — with its media downloaded and billed to storage. Own
+   * status posts arrive as fromMe, so this has to run before that split too.
+   */
+  private isIgnorableChat(remoteJid: string | null | undefined): boolean {
+    if (!remoteJid) return true;
+    return Boolean(isJidBroadcast(remoteJid) || isJidNewsletter(remoteJid));
   }
 
   /**

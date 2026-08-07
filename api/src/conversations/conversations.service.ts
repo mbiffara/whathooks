@@ -91,6 +91,15 @@ export class ConversationsService {
             : { in: opts.allowed }
           : opts.sessionId,
         ...(opts.assignedTo ? { assignedToUserId: opts.assignedTo } : {}),
+        // Status/stories, broadcast lists and channels are not threads anyone
+        // can be answered in. Ingestion drops them now, but rows created
+        // before that filter existed would otherwise still show up.
+        NOT: {
+          OR: [
+            { remoteJid: { endsWith: '@broadcast' } },
+            { remoteJid: { endsWith: '@newsletter' } },
+          ],
+        },
         lastMessageAt: { not: null },
         ...(opts.status && opts.status !== 'ALL'
           ? { status: opts.status }

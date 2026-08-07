@@ -541,6 +541,7 @@
       "filterUnassigned": "Sin asignar",
       "assignee": "Responsable",
       "noAssignee": "Sin asignar",
+      "hiddenNumber": "Número oculto",
       "resolve": "Resolver",
       "reopen": "Reabrir",
       "resolved": "Resuelta",

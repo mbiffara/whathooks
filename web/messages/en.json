@@ -541,6 +541,7 @@
       "filterUnassigned": "Unassigned",
       "assignee": "Assignee",
       "noAssignee": "Unassigned",
+      "hiddenNumber": "Hidden number",
       "resolve": "Resolve",
       "reopen": "Reopen",
       "resolved": "Resolved",

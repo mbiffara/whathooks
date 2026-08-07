@@ -90,3 +90,18 @@ export function formatBytes(size: number | null): string {
   }
   return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
 }
+
+/**
+ * The contact's number for display. Prefers the real phone number when
+ * WhatsApp addressed the thread by LID; returns null for a LID we could not
+ * resolve, since those digits are an internal identity, not a phone number.
+ */
+export function contactNumber(c: {
+  contact: string;
+  phoneNumber: string | null;
+  remoteJid: string;
+}): string | null {
+  if (c.phoneNumber) return `+${c.phoneNumber}`;
+  if (c.remoteJid.endsWith("@lid")) return null;
+  return `+${c.contact}`;
+}

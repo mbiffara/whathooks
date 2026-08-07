@@ -61,6 +61,8 @@ interface LiveSession {
 export interface InboundAutomationCtx {
   conversationId: string;
   remoteJid: string;
+  /** Contact phone digits when remoteJid is a LID; null when unresolved. */
+  phoneNumber?: string | null;
   isGroup: boolean;
   senderJid?: string;
   senderAltJid?: string;
@@ -596,6 +598,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       // pushName here is the connected account's own name, never the
       // contact's — only a group subject is safe to write.
       name: isGroup ? await this.groupSubject(sessionId, remoteJid) : null,
+      phoneNumber: await this.resolvePhoneNumber(sessionId, msg),
       direction: MessageDirection.OUTBOUND,
       fromMe: true,
       source: MessageSource.DEVICE,
@@ -614,6 +617,31 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       `Stored device-sent message on ${sessionId} in ${remoteJid} ` +
         `(waMessageId ${waMessageId ?? 'none'})`,
     );
+  }
+
+  /**
+   * The contact's phone digits for a DM, when WhatsApp addressed it by LID.
+   * The number normally rides on the key as `remoteJidAlt`; when it doesn't
+   * (older rows, some events) the signal layer's LID map is asked instead.
+   * Null for groups, for phone-keyed threads, and when nothing resolves.
+   */
+  private async resolvePhoneNumber(
+    sessionId: string,
+    msg: WAMessage,
+  ): Promise<string | null> {
+    const remoteJid = msg.key.remoteJid ?? '';
+    if (!remoteJid.endsWith('@lid')) return null;
+    const alt = (msg.key as { remoteJidAlt?: string | null }).remoteJidAlt;
+    if (alt) return alt.split('@')[0].split(':')[0];
+    try {
+      const pn = await this.sessions
+        .get(sessionId)
+        ?.sock.signalRepository.lidMapping.getPNForLID(remoteJid);
+      return pn ? pn.split('@')[0].split(':')[0] : null;
+    } catch (e) {
+      this.log.warn(`LID lookup failed on ${sessionId} for ${remoteJid}: ${e}`);
+      return null;
+    }
   }
 
   /** Remember a waMessageId we just sent, so its echo is not stored twice. */
@@ -691,12 +719,14 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
       : new Date();
 
     const media = await this.stageMedia(sessionId, msg, described);
+    const phoneNumber = await this.resolvePhoneNumber(sessionId, msg);
 
     const result = await this.persistMessage({
       sessionId,
       organizationId,
       remoteJid,
       name: contactName,
+      phoneNumber,
       // In a group, pushName is the individual sender — keep it for agent context.
       senderName: isGroup ? (msg.pushName ?? null) : null,
       direction: MessageDirection.INBOUND,
@@ -757,6 +787,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     void this.runAutomation(sessionId, {
       conversationId: result.conversationId,
       remoteJid,
+      phoneNumber,
       isGroup,
       senderJid,
       senderAltJid:
@@ -1646,6 +1677,8 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     sessionId: string;
     organizationId: string;
     remoteJid: string;
+    /** Contact phone digits when remoteJid is a LID; never overwritten with null. */
+    phoneNumber?: string | null;
     name?: string | null;
     senderName?: string | null;
     direction: MessageDirection;
@@ -1680,6 +1713,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         organizationId: p.organizationId,
         sessionId: p.sessionId,
         remoteJid: p.remoteJid,
+        phoneNumber: p.phoneNumber ?? null,
         name: p.name ?? null,
         isGroup,
         lastMessageAt: p.timestamp,
@@ -1688,6 +1722,9 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         unreadCount: p.incrementUnread ? 1 : 0,
       },
       update: {
+        // undefined leaves a known number in place when a later message
+        // arrives without one.
+        phoneNumber: p.phoneNumber ?? undefined,
         name: p.name ?? undefined,
         lastMessageAt: p.timestamp,
         lastMessageText: preview,

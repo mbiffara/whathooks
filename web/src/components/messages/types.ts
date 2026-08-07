@@ -69,7 +69,10 @@ export interface Conversation {
   id: string;
   sessionId: string;
   remoteJid: string;
+  /** Raw addressing identity: a phone number, or a LID when WhatsApp hides it. */
   contact: string;
+  /** The real phone number when `contact` is a LID. Prefer this for display. */
+  phoneNumber: string | null;
   name: string | null;
   isGroup: boolean;
   avatarUrl: string | null;

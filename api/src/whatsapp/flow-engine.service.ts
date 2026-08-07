@@ -403,11 +403,19 @@ export class FlowEngineService {
     });
     if (!session) return 'error';
     const organizationId = session.organizationId;
-    // DMs arrive from a phone jid or (phone hidden) a LID jid.
+    // DMs arrive from a phone jid or (phone hidden) a LID jid. When it is a
+    // LID we may also know the number behind it, so both identities are kept
+    // and either one matches an existing contact.
     const [num, host] = ctx.remoteJid.split('@');
-    const key = host === 'lid' ? { lid: num } : { phoneNumber: num };
+    const lid = host === 'lid' ? num : null;
+    const phoneNumber = host === 'lid' ? (ctx.phoneNumber ?? null) : num;
+    const identities = [
+      ...(lid ? [{ lid }] : []),
+      ...(phoneNumber ? [{ phoneNumber }] : []),
+    ];
+    if (identities.length === 0) return 'error';
     const existing = await this.prisma.contact.findFirst({
-      where: { organizationId, ...key },
+      where: { organizationId, OR: identities },
       include: {
         sessions: { where: { id: sessionId }, select: { id: true } },
       },
@@ -415,11 +423,22 @@ export class FlowEngineService {
     if (existing) {
       const fillName = !existing.name && ctx.pushName;
       const linkSession = existing.sessions.length === 0;
-      if (!fillName && !linkSession) return 'exists';
+      // Identities are unique per org, so only adopt one nobody else holds.
+      const addLid =
+        lid &&
+        !existing.lid &&
+        (await this.identityFree(organizationId, { lid }, existing.id));
+      const addPhone =
+        phoneNumber &&
+        !existing.phoneNumber &&
+        (await this.identityFree(organizationId, { phoneNumber }, existing.id));
+      if (!fillName && !linkSession && !addLid && !addPhone) return 'exists';
       const updated = await this.prisma.contact.update({
         where: { id: existing.id },
         data: {
           ...(fillName ? { name: ctx.pushName } : {}),
+          ...(addLid ? { lid } : {}),
+          ...(addPhone ? { phoneNumber } : {}),
           ...(linkSession ? { sessions: { connect: { id: sessionId } } } : {}),
         },
       });
@@ -435,7 +454,8 @@ export class FlowEngineService {
       data: {
         organizationId,
         name: ctx.pushName ?? null,
-        ...key,
+        lid,
+        phoneNumber,
         sessions: { connect: { id: sessionId } },
       },
     });
@@ -446,6 +466,19 @@ export class FlowEngineService {
       payload: created,
     });
     return 'created';
+  }
+
+  /** True when no other contact in the org already holds this identity. */
+  private async identityFree(
+    organizationId: string,
+    identity: { lid: string } | { phoneNumber: string },
+    exceptId: string,
+  ): Promise<boolean> {
+    const taken = await this.prisma.contact.findFirst({
+      where: { organizationId, ...identity, id: { not: exceptId } },
+      select: { id: true },
+    });
+    return taken === null;
   }
 
   /**

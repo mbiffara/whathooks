@@ -8,7 +8,11 @@ import type {
   MessagesPage,
   QuickReply,
 } from "@/components/messages/types";
-import { previewText, relativeTime } from "@/components/messages/utils";
+import {
+  contactNumber,
+  previewText,
+  relativeTime,
+} from "@/components/messages/utils";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { TeamMember, WaSession } from "@/lib/types";
@@ -934,7 +938,8 @@ function MessagesInbox() {
             </div>
           ) : (
             conversations.map((c) => {
-              const display = c.name || `+${c.contact}`;
+              const display =
+                c.name || contactNumber(c) || t("hiddenNumber");
               const preview = previewText(
                 c.lastMessageText,
                 c.lastMessageType,
@@ -1038,12 +1043,14 @@ function MessagesInbox() {
                 )}
                 <div className="min-w-0">
                   <div className="truncate font-medium text-[var(--color-fg)]">
-                    {selectedConv.name || `+${selectedConv.contact}`}
+                    {selectedConv.name ||
+                      contactNumber(selectedConv) ||
+                      t("hiddenNumber")}
                   </div>
                   <div className="truncate text-xs text-[var(--color-muted)]">
                     {[
                       !selectedConv.isGroup && selectedConv.name
-                        ? `+${selectedConv.contact}`
+                        ? contactNumber(selectedConv)
                         : null,
                       selectedSession
                         ? `${selectedSession.label} · ${tStatus(selectedSession.status).toLowerCase()}`

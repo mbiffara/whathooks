@@ -577,6 +577,11 @@ model Conversation {
   sessionId       String
   session         WaSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   remoteJid       String // contact/group jid
+  // The contact's phone number when remoteJid is a LID (WhatsApp's hidden
+  // addressing). Stored alongside rather than re-keying the thread, so a
+  // conversation never forks when WhatsApp switches addressing mode. Null
+  // for groups and for threads already keyed by phone jid.
+  phoneNumber     String?
   name            String? // pushName / contact name
   isGroup         Boolean      @default(false)
   lastMessageAt   DateTime?

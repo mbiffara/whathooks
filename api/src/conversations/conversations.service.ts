@@ -619,7 +619,10 @@ export class ConversationsService {
       id: c.id,
       sessionId: c.sessionId,
       remoteJid: c.remoteJid,
+      // The raw addressing identity: a phone number, or a LID when WhatsApp
+      // hides it. `phoneNumber` carries the real number in the LID case.
       contact: c.remoteJid.split('@')[0],
+      phoneNumber: c.phoneNumber,
       name: c.name,
       isGroup: c.isGroup,
       avatarUrl: c.avatarUrl,

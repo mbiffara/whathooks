@@ -13,30 +13,31 @@ const MAX_ATTEMPTS = 3;
 const NODE_TYPES = Object.keys(NODE_ICONS) as [string, ...string[]];
 
 // Closed shape (no open records): OpenAI strict structured outputs reject
-// objects with free-form properties. Unused fields come back null and are
-// stripped before validation.
+// objects with free-form properties, and require every key to appear in
+// `required` — so fields are `.nullable()`, never `.optional()`/`.nullish()`.
+// Unused fields come back null and are stripped before validation.
 const nodeDataSchema = z.object({
-  keywords: z.array(z.string()).nullish(),
-  agentId: z.string().nullish(),
+  keywords: z.array(z.string()).nullable(),
+  agentId: z.string().nullable(),
   intents: z
     .array(
       z.object({
         key: z.string(),
         label: z.string(),
-        description: z.string().nullish(),
+        description: z.string().nullable(),
       }),
     )
-    .nullish(),
-  humanAgentId: z.string().nullish(),
-  humanAgentIds: z.array(z.string()).nullish(),
-  webhookId: z.string().nullish(),
-  tagId: z.string().nullish(),
-  userId: z.string().nullish(),
-  groupPrefix: z.string().nullish(),
-  farewellText: z.string().nullish(),
-  showLeadName: z.boolean().nullish(),
-  copyHistory: z.boolean().nullish(),
-  note: z.string().nullish(),
+    .nullable(),
+  humanAgentId: z.string().nullable(),
+  humanAgentIds: z.array(z.string()).nullable(),
+  webhookId: z.string().nullable(),
+  tagId: z.string().nullable(),
+  userId: z.string().nullable(),
+  groupPrefix: z.string().nullable(),
+  farewellText: z.string().nullable(),
+  showLeadName: z.boolean().nullable(),
+  copyHistory: z.boolean().nullable(),
+  note: z.string().nullable(),
 });
 
 const graphSchema = z.object({
@@ -63,7 +64,20 @@ function cleanGraph(g: z.infer<typeof graphSchema>): DraftGraph {
       id: n.id,
       type: n.type as DraftGraph["nodes"][number]["type"],
       data: Object.fromEntries(
-        Object.entries(n.data).filter(([, v]) => v != null),
+        Object.entries(n.data)
+          .filter(([, v]) => v != null)
+          .map(([k, v]) =>
+            k === "intents" && Array.isArray(v)
+              ? [
+                  k,
+                  v.map((i) =>
+                    Object.fromEntries(
+                      Object.entries(i as object).filter(([, iv]) => iv != null),
+                    ),
+                  ),
+                ]
+              : [k, v],
+          ),
       ),
     })),
     edges: g.edges.map((e) => ({

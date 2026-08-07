@@ -29,7 +29,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   FlowIntent,
   FlowNodeType,
@@ -40,6 +40,7 @@ import {
   handlesFor,
   summarize,
 } from "../flow-defs";
+import { layoutDraft, type DraftGraph } from "../assistant";
 
 type FlowNodeData = Record<string, unknown>;
 type EditorNode = Node<FlowNodeData>;
@@ -157,6 +158,7 @@ const nodeTypes = Object.fromEntries(
 export default function FlowEditorPage() {
   const t = useTranslations("dash.flows");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const { id } = useParams<{ id: string }>();
   const { data: auth } = useSession();
   const token = auth?.accessToken;
@@ -186,6 +188,11 @@ export default function FlowEditorPage() {
     null,
   );
   const [loaded, setLoaded] = useState(false);
+  // AI first-prompt overlay (blank flows only).
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiDismissed, setAiDismissed] = useState(false);
 
   // ---- undo/redo -----------------------------------------------------------
   // Snapshots of {nodes, edges}. State objects are replaced immutably on
@@ -471,6 +478,53 @@ export default function FlowEditorPage() {
     [nodes, selectedId],
   );
 
+  /** First-prompt generation: describe the flow, get a reviewed draft. */
+  async function generateWithAi() {
+    if (!aiPrompt.trim() || aiBusy || !refs) return;
+    setAiBusy(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/flow-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: aiPrompt.trim(),
+          references: refs,
+          locale,
+        }),
+      });
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? "error");
+      }
+      const draft = (await res.json()) as DraftGraph;
+      // Applied like any manual edit: snapshotted (undoable), unsaved
+      // until the user hits save.
+      snapshot();
+      setNodes(layoutDraft(draft) as EditorNode[]);
+      setEdges(
+        draft.edges.map((e) => ({
+          id: `e-${e.source}-${e.sourceHandle ?? "out"}-${e.target}`,
+          source: e.source,
+          sourceHandle: e.sourceHandle,
+          target: e.target,
+        })),
+      );
+      setDirty(true);
+      setAiDismissed(true);
+    } catch (e) {
+      setAiError(
+        e instanceof Error && e.message === "not_configured"
+          ? t("assistantNotConfigured")
+          : t("assistantError"),
+      );
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
   /** Create a tag on the fly from the tag node's panel; returns its id. */
   async function createTag(name: string): Promise<string | null> {
     if (!token) return null;
@@ -670,7 +724,55 @@ export default function FlowEditorPage() {
             ))}
           </div>
 
-          <div className="min-w-0 flex-1" ref={flowWrapRef}>
+          <div className="relative min-w-0 flex-1" ref={flowWrapRef}>
+            {loaded &&
+              refs &&
+              !runsOpen &&
+              !aiDismissed &&
+              nodes.length <= 1 &&
+              edges.length === 0 && (
+                <div className="absolute inset-0 z-10 grid place-items-center p-6">
+                  <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xl">
+                    <h2 className="text-lg font-semibold">
+                      ✨ {t("assistantTitle")}
+                    </h2>
+                    <p className="mt-1 text-sm text-[var(--color-muted)]">
+                      {t("assistantHint")}
+                    </p>
+                    <textarea
+                      className="input mt-4 min-h-24 w-full text-sm"
+                      placeholder={t("assistantPlaceholder")}
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      disabled={aiBusy}
+                      autoFocus
+                    />
+                    {aiError && (
+                      <p className="mt-2 text-xs text-[var(--color-danger)]">
+                        {aiError}
+                      </p>
+                    )}
+                    <div className="mt-4 flex items-center gap-3">
+                      <button
+                        onClick={() => void generateWithAi()}
+                        disabled={aiBusy || !aiPrompt.trim()}
+                        className="btn-primary text-sm disabled:opacity-50"
+                      >
+                        {aiBusy
+                          ? t("assistantGenerating")
+                          : t("assistantGenerate")}
+                      </button>
+                      <button
+                        onClick={() => setAiDismissed(true)}
+                        disabled={aiBusy}
+                        className="btn-ghost text-sm disabled:opacity-50"
+                      >
+                        {t("assistantDismiss")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             {loaded ? (
               <ReactFlow
                 onInit={(inst) => {

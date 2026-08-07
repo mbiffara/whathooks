@@ -110,7 +110,8 @@
       "groups": {
         "automation": "Automatización",
         "developer": "Desarrollador",
-        "organization": "Organización"
+        "organization": "Organización",
+        "help": "Ayuda"
       },
       "mirror": "Mirror",
       "humanAgents": "Agentes humanos",

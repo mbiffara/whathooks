@@ -167,16 +167,22 @@ interface NavLink {
   newTab?: boolean;
 }
 
-/** The inbox toolset — all an OPERATOR gets to see. */
+/** The inbox toolset — all an OPERATOR gets to see, plus the help links. */
 const OPERATOR_KEYS = new Set<IconName>([
   "messages",
-  "guide",
   "contacts",
   "quickReplies",
   "tags",
+  "guide",
+  "docs",
 ]);
 
-/** Grouped nav: first group has no header. Group keys map to dash.nav.groups. */
+/**
+ * Grouped nav: the first group has no header and is always shown; the rest
+ * are collapsible and their keys map to dash.nav.groups. Webhooks sits with
+ * the developer tools rather than under automation: it is an integration
+ * primitive (endpoint, payload mapping, delivery log), not a routing rule.
+ */
 const GROUPS: { key: string | null; links: NavLink[] }[] = [
   {
     key: null,
@@ -187,25 +193,24 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
       { href: "/dashboard/quick-replies", key: "quickReplies" },
       { href: "/dashboard/tags", key: "tags" },
       { href: "/dashboard/sessions", key: "sessions" },
-      { href: "/getting-started", key: "guide", newTab: true },
     ],
   },
   {
     key: "automation",
     links: [
+      // Flows leads: the others are the building blocks it composes.
+      { href: "/dashboard/flows", key: "flows", orgAdminOnly: true },
       { href: "/dashboard/agents", key: "agents" },
       { href: "/dashboard/human-agents", key: "humanAgents" },
-      { href: "/dashboard/webhooks", key: "webhooks" },
       { href: "/dashboard/mirror", key: "mirror" },
-      { href: "/dashboard/flows", key: "flows", orgAdminOnly: true },
     ],
   },
   {
     key: "developer",
     links: [
+      { href: "/dashboard/webhooks", key: "webhooks" },
       { href: "/dashboard/api-keys", key: "apiKeys" },
       { href: "/dashboard/logs", key: "logs" },
-      { href: "/docs", key: "docs", newTab: true },
     ],
   },
   {
@@ -216,9 +221,17 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
       { href: "/dashboard/settings", key: "settings" },
     ],
   },
+  {
+    key: "help",
+    links: [
+      { href: "/getting-started", key: "guide", newTab: true },
+      { href: "/docs", key: "docs", newTab: true },
+    ],
+  },
 ];
 
 const COLLAPSE_KEY = "NAV_COLLAPSED";
+const GROUP_COLLAPSE_KEY = "NAV_GROUPS_COLLAPSED";
 
 export function DashboardNav() {
   const t = useTranslations("dash.nav");
@@ -239,11 +252,22 @@ export function DashboardNav() {
     ),
   })).filter((g) => g.links.length > 0);
   const [collapsed, setCollapsed] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // localStorage isn't available during SSR — restore the preference on mount.
   useEffect(() => {
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
+    try {
+      const stored: unknown = JSON.parse(
+        localStorage.getItem(GROUP_COLLAPSE_KEY) ?? "[]",
+      );
+      if (Array.isArray(stored)) {
+        setCollapsedGroups(stored.filter((k) => typeof k === "string"));
+      }
+    } catch {
+      /* corrupt value — start expanded */
+    }
   }, []);
 
   function toggleCollapsed() {
@@ -253,8 +277,30 @@ export function DashboardNav() {
     });
   }
 
+  function toggleGroup(key: string) {
+    setCollapsedGroups((prev) => {
+      const next = prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev, key];
+      localStorage.setItem(GROUP_COLLAPSE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
+  }
+
+  // The group holding the current page always shows, so navigating never
+  // hides where you are. Computed rather than written back, so the stored
+  // preference returns as soon as you leave the section.
+  const activeGroupKey =
+    visibleGroups.find((g) =>
+      g.links.some((l) => !l.newTab && isActive(l.href, l.exact)),
+    )?.key ?? null;
+
+  function isGroupOpen(key: string) {
+    return key === activeGroupKey || !collapsedGroups.includes(key);
   }
 
   // Phones always get the icon rail (pure CSS via the wrapper below — no JS,
@@ -368,33 +414,54 @@ export function DashboardNav() {
       </div>
       <OrgSwitcher />
       <nav className="mt-4 flex flex-1 flex-col gap-1 overflow-y-auto">
-        {visibleGroups.map((group) => (
-          <div key={group.key ?? "main"} className="flex flex-col gap-1">
-            {group.key && (
-              <div className="mt-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-                {t(`groups.${group.key}`)}
-              </div>
-            )}
-            {group.links.map((l) => (
-              <Link
-                prefetch={false}
-                key={l.href}
-                href={l.href}
-                {...(l.newTab
-                  ? { target: "_blank", rel: "noreferrer" }
-                  : {})}
-                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  isActive(l.href, l.exact)
-                    ? "bg-[var(--color-surface-2)] font-medium text-[var(--color-fg)]"
-                    : "text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
-                }`}
+        {visibleGroups.map((group) => {
+          const key = group.key;
+          const open = key === null || isGroupOpen(key);
+          return (
+            <div key={key ?? "main"} className="flex flex-col gap-1">
+              {key && (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(key)}
+                  aria-expanded={open}
+                  aria-controls={`nav-group-${key}`}
+                  className="mt-3 flex items-center justify-between rounded-lg px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)] transition-colors hover:text-[var(--color-fg)]"
+                >
+                  {t(`groups.${key}`)}
+                  <Glyph
+                    name="chevronRight"
+                    size={12}
+                    className={`transition-transform ${open ? "rotate-90" : ""}`}
+                  />
+                </button>
+              )}
+              <div
+                id={key ? `nav-group-${key}` : undefined}
+                className="flex flex-col gap-1"
               >
-                <NavIcon name={l.key} />
-                {t(l.key)}
-              </Link>
-            ))}
-          </div>
-        ))}
+                {open &&
+                  group.links.map((l) => (
+                    <Link
+                      prefetch={false}
+                      key={l.href}
+                      href={l.href}
+                      {...(l.newTab
+                        ? { target: "_blank", rel: "noreferrer" }
+                        : {})}
+                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                        isActive(l.href, l.exact)
+                          ? "bg-[var(--color-surface-2)] font-medium text-[var(--color-fg)]"
+                          : "text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+                      }`}
+                    >
+                      <NavIcon name={l.key} />
+                      {t(l.key)}
+                    </Link>
+                  ))}
+              </div>
+            </div>
+          );
+        })}
         {isAdmin && (
           <Link
             prefetch={false}

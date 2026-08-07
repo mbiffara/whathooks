@@ -12,7 +12,12 @@ export type GlyphName =
   | "panelExpand"
   | "trash"
   | "link"
-  | "unlink";
+  | "unlink"
+  | "userPlus"
+  | "check"
+  | "reopen"
+  | "pause"
+  | "play";
 
 const PATHS: Record<GlyphName, ReactNode> = {
   chevronRight: <path d="M9 6l6 6-6 6" />,
@@ -41,6 +46,22 @@ const PATHS: Record<GlyphName, ReactNode> = {
       <path d="M8 2v3M2 8h3M16 19v3M19 16h3" />
     </>
   ),
+  userPlus: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+      <path d="M18 8v6M15 11h6" />
+    </>
+  ),
+  check: <path d="M20 6L9 17l-5-5" />,
+  reopen: (
+    <>
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
+    </>
+  ),
+  pause: <path d="M9 5v14M15 5v14" />,
+  play: <path d="M7 4l13 8-13 8z" />,
 };
 
 export function Glyph({

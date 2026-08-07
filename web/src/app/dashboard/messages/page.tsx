@@ -1113,7 +1113,7 @@ function MessagesInbox() {
                 </select>
                 {selectedConv.mirror && (
                   <span
-                    className="badge inline-flex items-center gap-1.5 bg-[var(--color-chip)] text-[var(--color-muted)]"
+                    className="badge inline-flex h-8 items-center gap-1.5 bg-[var(--color-chip)] text-[var(--color-muted)]"
                     title={t("mirrorBadgeHint")}
                   >
                     <Glyph name="link" size={13} />
@@ -1141,7 +1141,8 @@ function MessagesInbox() {
                   selectedSession &&
                   !selectedSession.saveContacts &&
                   (contactSaved?.conversationId === selectedConv.id ? (
-                    <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
+                    <span className="badge inline-flex h-8 items-center gap-1.5 bg-[var(--color-chip)] text-[var(--color-muted)]">
+                      <Glyph name="check" size={13} />
                       {contactSaved.outcome === "created"
                         ? t("contactSaved")
                         : t("contactExists")}
@@ -1150,9 +1151,10 @@ function MessagesInbox() {
                     <button
                       onClick={saveContact}
                       disabled={savingContact}
-                      className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
+                      className="btn-ghost inline-flex h-8 items-center gap-1.5 rounded-lg px-3 py-0 text-xs disabled:opacity-50"
                       title={t("saveContactHint")}
                     >
+                      <Glyph name="userPlus" size={13} />
                       {savingContact ? tc("loading") : t("saveContact")}
                     </button>
                   ))}
@@ -1161,7 +1163,7 @@ function MessagesInbox() {
                     onClick={() =>
                       openMirrorPrompt(selectedConv.id, assigneeHumanAgent)
                     }
-                    className="btn-ghost inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs"
+                    className="btn-ghost inline-flex h-8 items-center gap-1.5 rounded-lg px-3 py-0 text-xs"
                     title={t("mirrorPromptTitle")}
                   >
                     <Glyph name="link" size={13} />
@@ -1178,8 +1180,14 @@ function MessagesInbox() {
                     })
                   }
                   disabled={updatingConv}
-                  className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
+                  className="btn-ghost inline-flex h-8 items-center gap-1.5 rounded-lg px-3 py-0 text-xs disabled:opacity-50"
                 >
+                  <Glyph
+                    name={
+                      selectedConv.status === "RESOLVED" ? "reopen" : "check"
+                    }
+                    size={13}
+                  />
                   {selectedConv.status === "RESOLVED"
                     ? t("reopen")
                     : t("resolve")}
@@ -1188,8 +1196,9 @@ function MessagesInbox() {
                   <button
                     onClick={deleteConversation}
                     disabled={updatingConv}
-                    className="btn-danger text-xs disabled:opacity-50"
+                    className="btn-danger inline-flex h-8 items-center gap-1.5 rounded-lg px-3 py-0 text-xs disabled:opacity-50"
                   >
+                    <Glyph name="trash" size={13} />
                     {t("deleteConversation")}
                   </button>
                 )}
@@ -1198,13 +1207,13 @@ function MessagesInbox() {
               {selectedConv.agent && (
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                   {!selectedConv.agent.enabled ? (
-                    <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
+                    <span className="badge inline-flex h-8 items-center bg-[var(--color-chip)] text-[var(--color-muted)]">
                       {t("agentDisabled", { name: selectedConv.agent.name })}
                     </span>
                   ) : selectedConv.agentPaused ? (
                     <>
                       <span
-                        className="badge max-w-[22rem] truncate bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
+                        className="badge inline-flex h-8 max-w-[22rem] items-center truncate bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
                         title={selectedConv.agentPausedReason ?? undefined}
                       >
                         {selectedConv.agentPausedReason
@@ -1216,14 +1225,15 @@ function MessagesInbox() {
                       <button
                         onClick={toggleAgentPause}
                         disabled={togglingAgent}
-                        className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
+                        className="btn-ghost inline-flex h-8 items-center gap-1.5 rounded-lg px-3 py-0 text-xs disabled:opacity-50"
                       >
+                        <Glyph name="play" size={13} />
                         {t("resumeAgent", { name: selectedConv.agent.name })}
                       </button>
                     </>
                   ) : (
                     <>
-                      <span className="badge bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
+                      <span className="badge inline-flex h-8 items-center bg-[var(--color-brand)]/15 text-[var(--color-brand)]">
                         {selectedConv.isGroup
                           ? t("agentGroupReplies", {
                               name: selectedConv.agent.name,
@@ -1235,8 +1245,9 @@ function MessagesInbox() {
                       <button
                         onClick={toggleAgentPause}
                         disabled={togglingAgent}
-                        className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-50"
+                        className="btn-ghost inline-flex h-8 items-center gap-1.5 rounded-lg px-3 py-0 text-xs disabled:opacity-50"
                       >
+                        <Glyph name="pause" size={13} />
                         {t("pauseAgent")}
                       </button>
                     </>

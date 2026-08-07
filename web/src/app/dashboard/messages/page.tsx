@@ -128,6 +128,19 @@ function MessagesInbox() {
       `${q.title ?? ""} ${q.text}`.toLowerCase().includes(needle),
     );
   }, [quickReplies, qrFilter]);
+  /**
+   * The WhatsApp identity of whoever this conversation is assigned to, when
+   * a mirror could still be opened for them. Drives the header's "mirror"
+   * button, which is the only way in once the thread is already assigned.
+   */
+  const assigneeHumanAgent = useMemo(() => {
+    if (!selectedConv || selectedConv.isGroup || selectedConv.mirror) {
+      return null;
+    }
+    const userId = selectedConv.assignedTo?.id;
+    if (!userId) return null;
+    return members.find((m) => m.userId === userId)?.humanAgent ?? null;
+  }, [selectedConv, members]);
   const selectedSession = useMemo(
     () =>
       selectedConv
@@ -402,9 +415,24 @@ function MessagesInbox() {
     }
   }
 
+  function openMirrorPrompt(
+    conversationId: string,
+    humanAgent: { id: string; name: string },
+  ) {
+    setMirrorCopyHistory(true);
+    setMirrorError(null);
+    setMirrorPrompt({
+      conversationId,
+      humanAgentId: humanAgent.id,
+      agentName: humanAgent.name,
+    });
+  }
+
   /**
    * Assign the thread, then offer a mirror group when the new assignee also
    * answers over WhatsApp. Skipped for groups and already-mirrored threads.
+   * Re-picking the same assignee fires no change event, so the header also
+   * carries a button that opens the same prompt (`assigneeHumanAgent`).
    */
   async function assignTo(userId: string) {
     const updated = await updateConversation({
@@ -413,13 +441,7 @@ function MessagesInbox() {
     if (!updated || !userId) return;
     const humanAgent = members.find((m) => m.userId === userId)?.humanAgent;
     if (!humanAgent || updated.isGroup || updated.mirror) return;
-    setMirrorCopyHistory(true);
-    setMirrorError(null);
-    setMirrorPrompt({
-      conversationId: updated.id,
-      humanAgentId: humanAgent.id,
-      agentName: humanAgent.name,
-    });
+    openMirrorPrompt(updated.id, humanAgent);
   }
 
   async function createMirror() {
@@ -1071,6 +1093,18 @@ function MessagesInbox() {
                       <Glyph name="unlink" size={13} />
                     </button>
                   </span>
+                )}
+                {assigneeHumanAgent && (
+                  <button
+                    onClick={() =>
+                      openMirrorPrompt(selectedConv.id, assigneeHumanAgent)
+                    }
+                    className="btn-ghost inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs"
+                    title={t("mirrorPromptTitle")}
+                  >
+                    <Glyph name="link" size={13} />
+                    {t("mirrorAdd")}
+                  </button>
                 )}
                 <button
                   onClick={() =>

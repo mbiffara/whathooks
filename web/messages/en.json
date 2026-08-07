@@ -550,6 +550,7 @@
       "mirrorCopyHistoryHint": "Sends the latest messages into the group as context.",
       "mirrorPromptSkip": "Not now",
       "mirrorPromptConfirm": "Create mirror group",
+      "mirrorAdd": "Mirror",
       "mirrorBadge": "Mirror: {name}",
       "mirrorBadgeUnknown": "Mirrored",
       "mirrorBadgeHint": "A human agent is answering from WhatsApp. The session's agents and flows stay out of this conversation until the mirror is removed.",

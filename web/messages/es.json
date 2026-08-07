@@ -550,6 +550,7 @@
       "mirrorCopyHistoryHint": "Envía los últimos mensajes al grupo como contexto.",
       "mirrorPromptSkip": "Ahora no",
       "mirrorPromptConfirm": "Crear grupo espejo",
+      "mirrorAdd": "Espejo",
       "mirrorBadge": "Espejo: {name}",
       "mirrorBadgeUnknown": "Con espejo",
       "mirrorBadgeHint": "Un agente humano responde desde WhatsApp. Los agentes y flows de la sesión no intervienen en esta conversación hasta que quites el espejo.",

@@ -1,4 +1,8 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  // "scripts" must stay excluded: a .ts file outside src/ moves TypeScript's
+  // inferred rootDir to the package root, which emits dist/src/main.js and
+  // breaks docker-entrypoint.sh's `node dist/main.js`. Scripts run under
+  // ts-node and are still typechecked by the root tsconfig.
+  "exclude": ["node_modules", "test", "dist", "scripts", "**/*spec.ts"]
 }

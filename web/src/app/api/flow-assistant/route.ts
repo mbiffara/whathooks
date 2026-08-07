@@ -12,22 +12,67 @@ import { z } from "zod";
 const MAX_ATTEMPTS = 3;
 const NODE_TYPES = Object.keys(NODE_ICONS) as [string, ...string[]];
 
+// Closed shape (no open records): OpenAI strict structured outputs reject
+// objects with free-form properties. Unused fields come back null and are
+// stripped before validation.
+const nodeDataSchema = z.object({
+  keywords: z.array(z.string()).nullish(),
+  agentId: z.string().nullish(),
+  intents: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        description: z.string().nullish(),
+      }),
+    )
+    .nullish(),
+  humanAgentId: z.string().nullish(),
+  humanAgentIds: z.array(z.string()).nullish(),
+  webhookId: z.string().nullish(),
+  tagId: z.string().nullish(),
+  userId: z.string().nullish(),
+  groupPrefix: z.string().nullish(),
+  farewellText: z.string().nullish(),
+  showLeadName: z.boolean().nullish(),
+  copyHistory: z.boolean().nullish(),
+  note: z.string().nullish(),
+});
+
 const graphSchema = z.object({
   nodes: z.array(
     z.object({
       id: z.string(),
       type: z.enum(NODE_TYPES),
-      data: z.record(z.string(), z.unknown()).default({}),
+      data: nodeDataSchema,
     }),
   ),
   edges: z.array(
     z.object({
       source: z.string(),
-      sourceHandle: z.string().nullable().default(null),
+      sourceHandle: z.string().nullable(),
       target: z.string(),
     }),
   ),
 });
+
+/** Drop nullish data fields so node.data matches what the editor stores. */
+function cleanGraph(g: z.infer<typeof graphSchema>): DraftGraph {
+  return {
+    nodes: g.nodes.map((n) => ({
+      id: n.id,
+      type: n.type as DraftGraph["nodes"][number]["type"],
+      data: Object.fromEntries(
+        Object.entries(n.data).filter(([, v]) => v != null),
+      ),
+    })),
+    edges: g.edges.map((e) => ({
+      source: e.source,
+      sourceHandle: e.sourceHandle,
+      target: e.target,
+    })),
+  };
+}
 
 /** The graph DSL, as prose the model can follow. */
 function systemPrompt(refs: FlowRefs, locale: string): string {
@@ -51,11 +96,24 @@ NODE TYPES (type → data fields → output handles):
 - saveContact → {} → "out". Saves the sender to the contact book, then continues.
 
 RULES:
-- Only use ids listed below. Never invent ids. If a category is empty, do not use node types that need it.
+- Only use ids listed below. Never invent ids. If the user asks for a tag,
+  webhook, agent or human that has no matching reference, use the closest
+  existing one; if the category is empty, skip that node and keep the rest
+  of the chain connected.
 - Keep it focused: 3–8 nodes beyond the trigger is ideal.
 - Set copyHistory: true on assign nodes when the human would benefit from context.
 - All user-facing text (keywords, intent labels, farewellText) must be written in locale "${locale}".
 - Node ids: short lowercase slugs (e.g. "kw_precio", "ai_ventas").
+- Leave unused data fields null.
+
+COMMON PATTERNS:
+- "AI answers unless X": keyword → "no" → agentReply; "yes" → the exception.
+- Branch on intent AND reply: the intent node only CLASSIFIES (it never
+  replies). Put it before the actions: route each intent key to its chain
+  (e.g. tagConversation → roundRobin) and route "fallback" to an agentReply
+  so unmatched messages still get an answer.
+- agentReply cannot branch. Its only optional output is "onHandoff"; never
+  draw any other handle from it.
 
 AVAILABLE REFERENCES:
 AI agents (agentId):
@@ -104,19 +162,24 @@ export async function POST(req: Request) {
         system,
         prompt: feedback ? `${prompt}\n\n${feedback}` : prompt,
       });
-      const graph = object as DraftGraph;
+      const graph = cleanGraph(object);
       const errors = validateDraft(graph, refs);
       if (errors.length === 0) {
         return NextResponse.json(graph);
       }
       lastErrors = errors;
       feedback =
-        "Your previous graph had these problems — fix ALL of them:\n" +
+        "Your previous graph had these problems. Fix ALL of them:\n" +
         errors.map((e) => `- ${e}`).join("\n");
-    } catch {
-      lastErrors = ["model_error"];
+    } catch (e) {
+      // Surface the real failure in the function logs; a schema/model
+      // error here has nothing to do with the user's prompt.
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[flow-assistant] attempt ${attempt + 1} failed:`, msg);
+      lastErrors = [`model_error: ${msg.slice(0, 300)}`];
     }
   }
+  console.error("[flow-assistant] generation failed:", lastErrors);
   return NextResponse.json(
     { error: "generation_failed", issues: lastErrors },
     { status: 422 },

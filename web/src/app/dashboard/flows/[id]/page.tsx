@@ -496,7 +496,11 @@ export default function FlowEditorPage() {
       if (!res.ok) {
         const payload = (await res.json().catch(() => null)) as {
           error?: string;
+          issues?: string[];
         } | null;
+        if (payload?.issues?.length) {
+          console.error("flow-assistant issues:", payload.issues);
+        }
         throw new Error(payload?.error ?? "error");
       }
       const draft = (await res.json()) as DraftGraph;

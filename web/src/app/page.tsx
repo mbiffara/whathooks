@@ -1,6 +1,7 @@
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { AdClickTracker } from "@/components/ad-click-tracker";
 import { BrandStrip } from "@/components/brand-strip";
+import { FlowPipeline } from "@/components/flow-pipeline";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useTranslations } from "next-intl";
@@ -211,41 +212,14 @@ twq('config','re0yu');`}
             <p className="mt-3 text-[var(--color-muted)]">{t("flowsDesc")}</p>
           </div>
           <div className="card mt-12 overflow-x-auto p-6 md:p-8">
-            <div className="flex min-w-[640px] items-center gap-3">
-              {(["flowNode1", "flowNode2", "flowNode3"] as const).map(
-                (key, i) => (
-                  <div key={key} className="flex flex-1 items-center gap-3">
-                    <div
-                      className={`flex-1 rounded-xl border px-4 py-3 text-center text-sm font-medium ${
-                        i === 0
-                          ? "border-[var(--color-brand)]/40 bg-[var(--color-brand)]/5"
-                          : "border-[var(--color-border)] bg-[var(--color-surface-2)]"
-                      }`}
-                    >
-                      {t(key)}
-                    </div>
-                    <svg aria-hidden
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="shrink-0 text-[var(--color-muted)]"
-                    >
-                      <path
-                        d="M4 12h16m0 0l-5-5m5 5l-5 5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                ),
-              )}
-              <div className="flex-1 rounded-xl border border-[var(--color-brand)]/40 bg-[var(--color-brand)]/5 px-4 py-3 text-center text-sm font-medium">
-                👥 {t("flowNode4")}
-              </div>
-            </div>
+            <FlowPipeline
+              nodes={[
+                t("flowNode1"),
+                t("flowNode2"),
+                t("flowNode3"),
+                `👥 ${t("flowNode4")}`,
+              ]}
+            />
             <div className="mt-6 flex flex-wrap gap-2">
               {(["flowsChip1", "flowsChip2", "flowsChip3"] as const).map(
                 (key) => (

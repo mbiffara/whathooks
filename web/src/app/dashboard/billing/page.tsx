@@ -135,7 +135,11 @@ function BillingContent() {
                   </div>
                 )}
               </div>
-              {isOwner && sub.hasCustomer && (
+              {/* hasCustomer alone is true after merely starting a checkout,
+                  which showed a portal link to orgs that never subscribed.
+                  A non-null status means a subscription exists or existed, so
+                  cancelled customers keep access to their invoices. */}
+              {isOwner && (sub.subscribed || sub.status !== null) && (
                 <button
                   onClick={() => redirectTo("/billing/portal")}
                   disabled={busy !== null}

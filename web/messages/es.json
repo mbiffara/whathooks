@@ -16,8 +16,8 @@
     "failedToCreate": "No se pudo crear"
   },
   "meta": {
-    "title": "whathooks — WhatsApp como webhook",
-    "description": "Conecta tu número de WhatsApp con un código QR, recibe mensajes en tu webhook y responde con una API simple."
+    "title": "whathooks — Tu WhatsApp atiende solo",
+    "description": "Conecta tu número con un QR: la IA responde, tu equipo entra desde WhatsApp cuando hace falta. Bandeja de equipo, contactos, flows y API incluidos."
   },
   "nav": {
     "docs": "Docs",
@@ -27,6 +27,9 @@
     "privacy": "Privacidad",
     "poweredBy": "creado por",
     "pricing": "Precios",
+    "automation": "Automatización",
+    "developers": "Desarrolladores",
+    "guide": "Guía",
     "forTeams": "Para equipos"
   },
   "auth": {
@@ -784,20 +787,21 @@
   },
   "landing": {
     "badge": "Tu propio número · Sin aprobación de la Business API",
-    "heroTitle": "WhatsApp como <brand>webhook</brand>.",
-    "heroSubtitle": "Conecta tu propio número de WhatsApp escaneando un QR. Cada mensaje que recibes se envía por POST a tu endpoint, y respondes con una sola llamada REST. Sin Business API, sin esperas.",
+    "heroTitle": "Tu WhatsApp <brand>atiende solo</brand>.",
+    "heroSubtitle": "La IA responde con tu tono y tu equipo entra desde su propio WhatsApp cuando hace falta — todo en el número que ya tienes. Conéctalo escaneando un QR: sin Business API, sin esperas.",
     "connectCta": "Conecta tu WhatsApp",
+    "heroGuideCta": "Ver la guía de inicio",
     "readDocs": "Leer la documentación",
     "setupNote": "Prueba gratis de 7 días · Listo en minutos · Cancela cuando quieras",
-    "theFlow": "El flujo",
-    "scanQr": "Escanea el QR",
-    "scanQrDesc": "Vincula tu número con WhatsApp",
-    "inboundMessage": "Mensaje entrante",
-    "inboundSample": "“¡Hola! ¿Ya enviaron mi pedido?”",
-    "webhookReply": "Tu webhook → responde vía API",
-    "webhookReplyDesc": "POST /v1/messages para responder",
-    "notJustApi": "No es solo una API",
-    "notJustApiDesc": "Todo funciona también desde el dashboard — chatea con tus clientes y trae a todo tu equipo.",
+    "storyLabel": "Así se ve en la práctica",
+    "storyLeadTag": "Mensaje del lead",
+    "storyLead": "“¡Hola! ¿Tienen mesa para 4 el sábado?”",
+    "storyAiTag": "Agente IA · responde al instante",
+    "storyAi": "“¡Hola! Sí — ¿a qué hora te gustaría? 😊”",
+    "storyHumanTag": "Grupo espejo · tu equipo entra",
+    "storyHuman": "Marcelo confirma la reserva desde su propio WhatsApp — el lead lo recibe como tu marca.",
+    "notJustApi": "La bandeja del equipo, incluida",
+    "notJustApiDesc": "Cada conversación vive en un dashboard compartido: asignaciones, etiquetas, notas internas y respuestas rápidas para todo tu equipo.",
     "inboxTitle": "Una bandeja de entrada integrada",
     "inboxDesc": "Envía y recibe mensajes directamente desde el dashboard — historial completo de conversaciones, multimedia y respuestas en tiempo real. No necesitas código para hablar con tus clientes.",
     "chatIn": "¡Hola! ¿Ya enviaron mi pedido?",
@@ -810,51 +814,72 @@
     "roleAdmin": "Admin",
     "roleMember": "Miembro",
     "howItWorks": "Cómo funciona",
-    "howItWorksDesc": "De una cuenta nueva a una integración bidireccional con WhatsApp en tres pasos.",
+    "howItWorksDesc": "De una cuenta nueva a un WhatsApp que se atiende solo, en tres pasos.",
     "steps": [
       {
         "title": "Escanea un QR para vincular tu número",
         "desc": "Abre el dashboard, escanea el QR con WhatsApp en tu teléfono y tu número queda activo en segundos. Sin trámites de la Business API."
       },
       {
-        "title": "Recibe cada mensaje en tu webhook",
-        "desc": "Cada mensaje entrante se entrega a tu endpoint como un evento JSON firmado en el momento en que llega."
+        "title": "Activa un agente IA o elige una plantilla de flow",
+        "desc": "Define su carácter con tus instrucciones y documentos — usa tu propia clave de Anthropic u OpenAI y responde al instante."
       },
       {
-        "title": "Responde con un simple POST a nuestra API",
-        "desc": "Envía la respuesta con una sola llamada REST. Nosotros manejamos la conexión con WhatsApp, los reintentos y el estado de entrega."
+        "title": "Tu equipo entra cuando hace falta",
+        "desc": "El flow deriva la conversación a un humano por WhatsApp o la asigna en la bandeja — con todo el contexto de la charla."
       }
     ],
-    "featuresTitle": "Todo lo que necesitas para lanzar",
-    "featuresDesc": "La infraestructura para conversaciones reales de WhatsApp — resuelta.",
+    "flowsTitle": "Diseña el recorrido — sin código",
+    "flowsDesc": "Flows es tu enrutador visual: decide qué pasa con cada mensaje conectando nodos. Empieza desde una plantilla y mira el camino de cada mensaje en el panel de ejecuciones.",
+    "flowNode1": "Mensaje recibido",
+    "flowNode2": "¿Palabra clave?",
+    "flowNode3": "Responde agente IA",
+    "flowNode4": "Asignar agente humano",
+    "flowsChip1": "Plantillas listas para usar",
+    "flowsChip2": "Panel de ejecuciones para depurar",
+    "flowsChip3": "Incluido en todos los planes",
+    "mirrorTitle": "Tu equipo atiende desde su propio WhatsApp",
+    "mirrorDesc": "Cuando un lead necesita a una persona, whathooks crea un grupo espejo en WhatsApp con tu agente. Sin cuentas, sin contraseñas, sin apps nuevas — solo su número.",
+    "mirrorPoint1": "El agente responde desde su teléfono y el lead lo recibe como tu marca",
+    "mirrorPoint2": "El lead nunca ve el número personal del agente",
+    "mirrorPoint3": "Vincúlalo a un miembro del equipo y la conversación queda asignada en la bandeja",
+    "mirrorGroupName": "🔒 Lead #12",
+    "mirrorMsg1": "Juan: ¿Tienen mesa para 4?",
+    "mirrorMsg1Tag": "mensaje del lead, reenviado al grupo",
+    "mirrorMsg2": "Sí — ¿a las 21:00 te sirve?",
+    "mirrorMsg2Tag": "Marcelo, desde su WhatsApp",
+    "mirrorMsg3": "El lead recibe la respuesta como tu marca ✓",
+    "devPageCta": "Página para desarrolladores",
+    "featuresTitle": "Todo lo que necesitas para atender por WhatsApp",
+    "featuresDesc": "IA, humanos y organización — resuelto en un solo lugar.",
     "features": [
       {
-        "title": "Vinculación por QR en segundos",
-        "desc": "Vincula un número real de WhatsApp escaneando un QR — sin revisión de apps ni filas de aprobación."
+        "title": "Agentes IA con tu propia clave",
+        "desc": "Anthropic u OpenAI: tú controlas el modelo y el costo. Con documentos de referencia, horarios y pausas por conversación."
       },
       {
-        "title": "Webhooks firmados (HMAC-SHA256)",
-        "desc": "Cada entrega va firmada para que verifiques que realmente vino de whathooks."
+        "title": "Flows visuales (beta)",
+        "desc": "Enruta cada mensaje con nodos: palabras clave, intención con IA, derivaciones, etiquetas y webhooks."
       },
       {
-        "title": "Envía texto vía API REST",
-        "desc": "Responde a cualquier conversación con una sola petición POST autenticada."
+        "title": "Grupos espejo",
+        "desc": "Deriva leads a una persona real sin que salga de WhatsApp — responde como la marca desde su propio teléfono."
       },
       {
-        "title": "Varios números por cuenta",
-        "desc": "Corre varias sesiones en paralelo, cada una con su propio webhook y clave API."
+        "title": "Contactos automáticos",
+        "desc": "Cada persona que escribe queda en tu libreta, con nombre de WhatsApp y los números a los que escribió."
       },
       {
-        "title": "Registros de entrega y reintentos",
-        "desc": "Inspecciona cada evento, revisa los códigos de respuesta y deja que las entregas fallidas se reintenten automáticamente."
+        "title": "Respuestas rápidas y etiquetas",
+        "desc": "Guarda los mensajes que repites, organiza por colores y asigna cada conversación a un responsable."
       },
       {
-        "title": "Dashboard autoservicio",
-        "desc": "Conecta números, rota claves y mira el tráfico en vivo sin abrir un ticket."
+        "title": "Roles y permisos",
+        "desc": "Admins, miembros con acceso por sesión y operadores que solo ven sus conversaciones asignadas."
       }
     ],
-    "apiTitle": "Una API limpia y predecible",
-    "apiDesc": "Recibe eventos estructurados y responde con una sola petición.",
+    "apiTitle": "¿Desarrollador? La API está debajo de todo",
+    "apiDesc": "Cada mensaje y contacto llega firmado a tu endpoint (HMAC-SHA256) y respondes con un POST. Personaliza el payload por evento desde el dashboard.",
     "inboundWebhook": "Webhook entrante",
     "yourEndpoint": "POST · tu endpoint",
     "sendReply": "Enviar una respuesta",
@@ -909,8 +934,8 @@
       }
     },
     "pricingFootnote": "Los límites de mensajes cuentan tanto los entrantes como los salientes. ¿Necesitas más? <link>Escríbenos</link>.",
-    "ctaTitle": "Convierte tu número de WhatsApp en un webhook hoy",
-    "ctaDesc": "Escanea un QR, apúntanos a tu endpoint y empieza a manejar conversaciones desde tu código. Sin aprobación de la Business API.",
+    "ctaTitle": "Pon tu WhatsApp a trabajar hoy",
+    "ctaDesc": "Escanea un QR, activa un agente y deja que tu número atienda — con tu equipo a un toque de distancia. Sin aprobación de la Business API.",
     "trialNote": "Prueba gratis de 7 días",
     "annualNote": "o {price}/año — 2 meses gratis"
   },
@@ -987,6 +1012,81 @@
       },
       "outro": "Todo lo anterior funciona sin código. Si además quieres integrar tus sistemas — recibir cada mensaje o contacto en tu backend, o enviar por API — revisa la",
       "outroDocsLink": "documentación para desarrolladores"
+    },
+    "automation": {
+      "title": "Automatiza tu WhatsApp — de punta a punta",
+      "intro": "La IA responde al instante, los flows enrutan cada mensaje y tu equipo entra desde su propio WhatsApp cuando hace falta. Todo en el número que ya tienes, sin Business API.",
+      "cta": "Empieza gratis",
+      "guideCta": "Ver la guía de inicio",
+      "pricingCta": "Ver precios",
+      "bottomTitle": "Tu primer flow funcionando en 10 minutos",
+      "bottomDesc": "Conecta el número, elige una plantilla, asígnala a tu sesión y actívala. Prueba gratis de 7 días.",
+      "blocks": {
+        "flows": {
+          "title": "Flows visuales",
+          "desc": "Decide qué pasa con cada mensaje conectando nodos — sin escribir código.",
+          "points": [
+            "Palabras clave y clasificación de intención con IA",
+            "Etiquetas, contactos, asignaciones y webhooks como acciones",
+            "Plantillas listas para arrancar en un clic"
+          ]
+        },
+        "agents": {
+          "title": "Agentes IA con tu propia clave",
+          "desc": "Define su carácter e instrucciones, súbele documentos y deja que responda con tu tono.",
+          "points": [
+            "Anthropic u OpenAI — tú eliges modelo y controlas el costo",
+            "Se pausa solo y te avisa cuando necesita un humano",
+            "Horarios de atención y pausa por conversación"
+          ]
+        },
+        "handoff": {
+          "title": "Derivación a humanos por WhatsApp",
+          "desc": "Grupos espejo: tu agente responde desde su propio teléfono y el lead lo recibe como tu marca.",
+          "points": [
+            "Un agente fijo, por turnos (round-robin) o un grupo con varios",
+            "Copia el historial de la conversación al derivar",
+            "Vinculado a un miembro, la conversación queda asignada en la bandeja"
+          ]
+        },
+        "runs": {
+          "title": "Ejecuciones y contactos",
+          "desc": "Cada mensaje deja rastro: qué nodos corrió y cómo terminó. Y cada persona queda en tu libreta.",
+          "points": [
+            "Panel de ejecuciones para depurar el flow",
+            "Guardado automático de contactos por sesión",
+            "Webhooks contact.created y contact.updated para tu CRM"
+          ]
+        }
+      }
+    },
+    "developers": {
+      "title": "WhatsApp como webhook — para desarrolladores",
+      "intro": "Conecta un número real escaneando un QR. Cada mensaje llega firmado a tu endpoint y respondes con un POST. Sin Business API, sin SDKs obligatorios.",
+      "docsCta": "Leer la documentación",
+      "signupCta": "Crear una cuenta",
+      "inboundTitle": "Entrante → tu webhook",
+      "sendTitle": "Saliente → nuestra API",
+      "eventsNote": "Eventos disponibles: message.received, session.status, session.qr, contact.created y contact.updated — payloads y firmas en la",
+      "eventsNoteLink": "documentación técnica",
+      "cards": {
+        "webhooks": {
+          "title": "Webhooks firmados (HMAC-SHA256)",
+          "desc": "Cada entrega incluye X-Whathooks-Signature para verificar el origen, más registros de entrega con códigos de respuesta por evento."
+        },
+        "send": {
+          "title": "API REST con claves por servidor",
+          "desc": "Envía texto y media con un POST autenticado por X-API-Key. Varias sesiones en paralelo, cada una con su webhook."
+        },
+        "mapping": {
+          "title": "Payloads a tu medida, por evento",
+          "desc": "Renombra campos, formatea fechas e inyecta valores fijos desde el dashboard — reglas separadas para mensajes y contactos."
+        },
+        "keys": {
+          "title": "Todo lo demás ya está resuelto",
+          "desc": "La bandeja, los agentes IA y las derivaciones conviven con tu integración: automatiza lo tuyo y deja el resto al dashboard."
+        }
+      }
     },
   "docs": {
     "nav": {
@@ -1171,7 +1271,7 @@
       },
       {
         "title": "Invita a tu equipo",
-        "desc": "Envía invitaciones por correo y asigna roles. Cada persona entra con su propia cuenta a la misma bandeja compartida."
+        "desc": "Envía invitaciones por correo y asigna roles: admins, miembros con acceso por sesión, y operadores que solo ven sus conversaciones asignadas."
       },
       {
         "title": "Respondan juntos",

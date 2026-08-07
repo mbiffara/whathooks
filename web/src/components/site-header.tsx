@@ -19,10 +19,10 @@ export async function SiteHeader() {
             reachable from the signup page and footer). */}
         <nav className="flex items-center gap-1 text-sm sm:gap-2">
           <Link
-            href="/docs"
+            href="/automation"
             className="hidden px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)] sm:block"
           >
-            {t("docs")}
+            {t("automation")}
           </Link>
           <Link
             href="/teams"
@@ -31,10 +31,28 @@ export async function SiteHeader() {
             {t("forTeams")}
           </Link>
           <Link
+            href="/developers"
+            className="hidden px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)] sm:block"
+          >
+            {t("developers")}
+          </Link>
+          <Link
             href="/#pricing"
             className="hidden px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)] sm:block"
           >
             {t("pricing")}
+          </Link>
+          <Link
+            href="/getting-started"
+            className="hidden px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)] lg:block"
+          >
+            {t("guide")}
+          </Link>
+          <Link
+            href="/docs"
+            className="hidden px-3 py-2 text-[var(--color-muted)] hover:text-[var(--color-fg)] lg:block"
+          >
+            {t("docs")}
           </Link>
           <Link
             href="/signin"

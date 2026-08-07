@@ -16,8 +16,8 @@
     "failedToCreate": "Failed to create"
   },
   "meta": {
-    "title": "whathooks — WhatsApp as a webhook",
-    "description": "Connect your WhatsApp number via QR, receive messages on your webhook, and reply through a simple API."
+    "title": "whathooks — Your WhatsApp answers itself",
+    "description": "Connect your number with a QR: AI replies, your team steps in from WhatsApp when it matters. Team inbox, contacts, flows and API included."
   },
   "nav": {
     "docs": "Docs",
@@ -27,6 +27,9 @@
     "privacy": "Privacy",
     "poweredBy": "powered by",
     "pricing": "Pricing",
+    "automation": "Automation",
+    "developers": "Developers",
+    "guide": "Guide",
     "forTeams": "For teams"
   },
   "auth": {
@@ -784,20 +787,21 @@
   },
   "landing": {
     "badge": "Your own number · No Business API approval",
-    "heroTitle": "WhatsApp as a <brand>webhook</brand>.",
-    "heroSubtitle": "Connect your own WhatsApp number with a QR scan. Every message you receive is POSTed to your endpoint, and you reply with a single REST call. No Business API, no waiting.",
+    "heroTitle": "Your WhatsApp <brand>answers itself</brand>.",
+    "heroSubtitle": "AI replies in your voice, and your team steps in from their own WhatsApp when it matters — all on the number you already have. Connect it with a QR scan: no Business API, no waiting.",
     "connectCta": "Connect your WhatsApp",
+    "heroGuideCta": "See the getting-started guide",
     "readDocs": "Read the docs",
     "setupNote": "7-day free trial · Set up in minutes · Cancel anytime",
-    "theFlow": "The flow",
-    "scanQr": "Scan the QR",
-    "scanQrDesc": "Link your number with WhatsApp",
-    "inboundMessage": "Inbound message",
-    "inboundSample": "“Hi! Is my order shipped yet?”",
-    "webhookReply": "Your webhook → reply via API",
-    "webhookReplyDesc": "POST /v1/messages to respond",
-    "notJustApi": "Not just an API",
-    "notJustApiDesc": "Everything also works from the dashboard — chat with your customers and bring your whole team along.",
+    "storyLabel": "How it plays out",
+    "storyLeadTag": "Lead message",
+    "storyLead": "“Hi! Do you have a table for 4 on Saturday?”",
+    "storyAiTag": "AI agent · instant reply",
+    "storyAi": "“Hi! Yes — what time works for you? 😊”",
+    "storyHumanTag": "Mirror group · your team steps in",
+    "storyHuman": "Marcelo confirms the booking from his own WhatsApp — the lead receives it as your brand.",
+    "notJustApi": "The team inbox, included",
+    "notJustApiDesc": "Every conversation lives in a shared dashboard: assignments, tags, internal notes and quick replies for your whole team.",
     "inboxTitle": "A built-in inbox",
     "inboxDesc": "Send and receive messages right from the dashboard — full conversation history, media, and replies in real time. No code required to talk to your customers.",
     "chatIn": "Hi! Is my order shipped yet?",
@@ -810,51 +814,72 @@
     "roleAdmin": "Admin",
     "roleMember": "Member",
     "howItWorks": "How it works",
-    "howItWorksDesc": "From a fresh account to a two-way WhatsApp integration in three steps.",
+    "howItWorksDesc": "From a fresh account to a WhatsApp that answers itself, in three steps.",
     "steps": [
       {
         "title": "Scan a QR to link your number",
         "desc": "Open the dashboard, scan the QR with WhatsApp on your phone, and your number is live in seconds. No Business API paperwork."
       },
       {
-        "title": "Receive every message on your webhook",
-        "desc": "Each inbound message is delivered to your endpoint as a signed JSON event the moment it arrives."
+        "title": "Enable an AI agent or pick a flow template",
+        "desc": "Define its character with your instructions and documents — bring your own Anthropic or OpenAI key and reply instantly."
       },
       {
-        "title": "Reply with a simple POST to our API",
-        "desc": "Send a text back through one REST call. We handle the WhatsApp connection, retries, and delivery state for you."
+        "title": "Your team steps in when it matters",
+        "desc": "The flow hands the conversation to a human on WhatsApp or assigns it in the inbox — with the full context of the chat."
       }
     ],
-    "featuresTitle": "Everything you need to ship",
-    "featuresDesc": "The plumbing for real WhatsApp conversations — handled.",
+    "flowsTitle": "Design the journey — no code",
+    "flowsDesc": "Flows is your visual router: decide what happens to every message by connecting nodes. Start from a template and watch each message's path in the runs panel.",
+    "flowNode1": "Message received",
+    "flowNode2": "Keyword match?",
+    "flowNode3": "AI agent replies",
+    "flowNode4": "Assign human agent",
+    "flowsChip1": "Ready-made templates",
+    "flowsChip2": "Runs panel for debugging",
+    "flowsChip3": "Included in every plan",
+    "mirrorTitle": "Your team answers from their own WhatsApp",
+    "mirrorDesc": "When a lead needs a person, whathooks creates a mirror group on WhatsApp with your agent. No accounts, no passwords, no new apps — just their number.",
+    "mirrorPoint1": "The agent replies from their phone and the lead receives it as your brand",
+    "mirrorPoint2": "The lead never sees the agent's personal number",
+    "mirrorPoint3": "Link them to a team member and the conversation gets assigned in the inbox",
+    "mirrorGroupName": "🔒 Lead #12",
+    "mirrorMsg1": "Juan: Do you have a table for 4?",
+    "mirrorMsg1Tag": "lead message, relayed to the group",
+    "mirrorMsg2": "Yes — does 9pm work?",
+    "mirrorMsg2Tag": "Marcelo, from his WhatsApp",
+    "mirrorMsg3": "The lead receives the reply as your brand ✓",
+    "devPageCta": "Developer page",
+    "featuresTitle": "Everything you need to run WhatsApp support",
+    "featuresDesc": "AI, humans and organization — handled in one place.",
     "features": [
       {
-        "title": "QR pairing in seconds",
-        "desc": "Link a real WhatsApp number by scanning a QR — no app review, no approval queue."
+        "title": "AI agents with your own key",
+        "desc": "Anthropic or OpenAI: you control the model and the cost. With reference documents, schedules, and per-conversation pausing."
       },
       {
-        "title": "Signed webhooks (HMAC-SHA256)",
-        "desc": "Every delivery is signed so you can verify it genuinely came from whathooks."
+        "title": "Visual flows (beta)",
+        "desc": "Route every message with nodes: keywords, AI intent, handoffs, tags and webhooks."
       },
       {
-        "title": "Send text via REST API",
-        "desc": "Reply to any conversation with a single authenticated POST request."
+        "title": "Mirror groups",
+        "desc": "Hand leads to a real person without leaving WhatsApp — they answer as the brand from their own phone."
       },
       {
-        "title": "Multiple numbers per account",
-        "desc": "Run many sessions side by side, each with its own webhook and API key."
+        "title": "Automatic contacts",
+        "desc": "Everyone who writes in lands in your address book, with their WhatsApp name and the numbers they contacted."
       },
       {
-        "title": "Delivery logs & retries",
-        "desc": "Inspect every event, see response codes, and let failed deliveries retry automatically."
+        "title": "Quick replies & tags",
+        "desc": "Save the messages you repeat, organize with colors, and assign every conversation an owner."
       },
       {
-        "title": "Self-serve dashboard",
-        "desc": "Connect numbers, rotate keys, and watch live traffic without filing a ticket."
+        "title": "Roles & permissions",
+        "desc": "Admins, members with per-number access, and operators who only see their assigned conversations."
       }
     ],
-    "apiTitle": "A clean, predictable API",
-    "apiDesc": "Receive structured events, reply with a single request.",
+    "apiTitle": "Developer? The API is under everything",
+    "apiDesc": "Every message and contact reaches your endpoint signed (HMAC-SHA256), and you reply with one POST. Shape the payload per event from the dashboard.",
     "inboundWebhook": "Inbound webhook",
     "yourEndpoint": "POST · your endpoint",
     "sendReply": "Send a reply",
@@ -909,8 +934,8 @@
       }
     },
     "pricingFootnote": "Message limits count both inbound and outbound messages. Need more? <link>Talk to us</link>.",
-    "ctaTitle": "Turn your WhatsApp number into a webhook today",
-    "ctaDesc": "Scan a QR, point us at your endpoint, and start handling conversations in code. No Business API approval required.",
+    "ctaTitle": "Put your WhatsApp to work today",
+    "ctaDesc": "Scan a QR, enable an agent, and let your number answer — with your team one tap away. No Business API approval required.",
     "trialNote": "7-day free trial",
     "annualNote": "or {price}/year — 2 months free"
   },
@@ -987,6 +1012,81 @@
       },
       "outro": "Everything above works without code. If you also want to integrate your systems — receive every message or contact in your backend, or send via API — check the",
       "outroDocsLink": "developer documentation"
+    },
+    "automation": {
+      "title": "Automate your WhatsApp — end to end",
+      "intro": "AI replies instantly, flows route every message, and your team steps in from their own WhatsApp when it matters. All on the number you already have, no Business API.",
+      "cta": "Start free",
+      "guideCta": "See the getting-started guide",
+      "pricingCta": "See pricing",
+      "bottomTitle": "Your first flow running in 10 minutes",
+      "bottomDesc": "Connect the number, pick a template, assign it to your session and enable it. 7-day free trial.",
+      "blocks": {
+        "flows": {
+          "title": "Visual flows",
+          "desc": "Decide what happens to every message by connecting nodes — no code.",
+          "points": [
+            "Keywords and AI intent classification",
+            "Tags, contacts, assignments and webhooks as actions",
+            "Ready-made templates to start in one click"
+          ]
+        },
+        "agents": {
+          "title": "AI agents with your own key",
+          "desc": "Define its character and instructions, upload documents, and let it reply in your voice.",
+          "points": [
+            "Anthropic or OpenAI — you pick the model and control the cost",
+            "Pauses itself and alerts you when a human is needed",
+            "Schedules and per-conversation pausing"
+          ]
+        },
+        "handoff": {
+          "title": "Human handoff over WhatsApp",
+          "desc": "Mirror groups: your agent replies from their own phone and the lead receives it as your brand.",
+          "points": [
+            "One fixed agent, round-robin, or a shared team group",
+            "Copy the conversation history on handoff",
+            "Linked to a team member, the conversation gets assigned in the inbox"
+          ]
+        },
+        "runs": {
+          "title": "Runs & contacts",
+          "desc": "Every message leaves a trail: which nodes ran and how it ended. And every person lands in your address book.",
+          "points": [
+            "Runs panel to debug the flow",
+            "Automatic contact capture per session",
+            "contact.created and contact.updated webhooks for your CRM"
+          ]
+        }
+      }
+    },
+    "developers": {
+      "title": "WhatsApp as a webhook — for developers",
+      "intro": "Connect a real number with a QR scan. Every message reaches your endpoint signed, and you reply with a POST. No Business API, no mandatory SDKs.",
+      "docsCta": "Read the docs",
+      "signupCta": "Create an account",
+      "inboundTitle": "Inbound → your webhook",
+      "sendTitle": "Outbound → our API",
+      "eventsNote": "Available events: message.received, session.status, session.qr, contact.created and contact.updated — payloads and signatures in the",
+      "eventsNoteLink": "technical docs",
+      "cards": {
+        "webhooks": {
+          "title": "Signed webhooks (HMAC-SHA256)",
+          "desc": "Every delivery carries X-Whathooks-Signature to verify origin, plus delivery logs with response codes per event."
+        },
+        "send": {
+          "title": "REST API with server keys",
+          "desc": "Send text and media with a POST authenticated by X-API-Key. Multiple sessions side by side, each with its own webhook."
+        },
+        "mapping": {
+          "title": "Payloads shaped your way, per event",
+          "desc": "Rename fields, format dates and inject fixed values from the dashboard — separate rules for messages and contacts."
+        },
+        "keys": {
+          "title": "Everything else is already handled",
+          "desc": "The inbox, AI agents and handoffs coexist with your integration: automate your part and leave the rest to the dashboard."
+        }
+      }
     },
   "docs": {
     "nav": {
@@ -1171,7 +1271,7 @@
       },
       {
         "title": "Invite your team",
-        "desc": "Send email invites and set roles. Everyone gets their own login to the same shared inbox."
+        "desc": "Send email invites and set roles: admins, members with per-number access, and operators who only see their assigned conversations."
       },
       {
         "title": "Reply together",

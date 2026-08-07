@@ -12,9 +12,12 @@ export function MobileMenu() {
   const [open, setOpen] = useState(false);
 
   const links = [
-    { href: "/docs", label: t("docs") },
+    { href: "/automation", label: t("automation") },
     { href: "/teams", label: t("forTeams") },
+    { href: "/developers", label: t("developers") },
     { href: "/#pricing", label: t("pricing") },
+    { href: "/getting-started", label: t("guide") },
+    { href: "/docs", label: t("docs") },
     { href: "/signin", label: t("signIn") },
   ];
 

@@ -92,10 +92,10 @@ twq('config','re0yu');`}
             "@type": "SoftwareApplication",
             name: "whathooks",
             url: "https://www.whathooks.app",
-            applicationCategory: "DeveloperApplication",
+            applicationCategory: "BusinessApplication",
             operatingSystem: "Web",
             description:
-              "Connect your WhatsApp number via QR, receive messages on your webhook, and reply through a simple API. Shared team inbox and AI agents included.",
+              "Connect your WhatsApp number via QR: AI agents reply in your voice, your team steps in from their own WhatsApp, and flows route every message. Team inbox, contacts and a full API included.",
             offers: {
               "@type": "AggregateOffer",
               lowPrice: "8.99",
@@ -134,8 +134,8 @@ twq('config','re0yu');`}
                 <Link href="/signup" className="btn-primary">
                   {t("connectCta")}
                 </Link>
-                <Link href="/docs" className="btn-ghost">
-                  {t("readDocs")}
+                <Link href="/getting-started" className="btn-ghost">
+                  {t("heroGuideCta")}
                 </Link>
               </div>
               <p className="mt-5 text-sm text-[var(--color-muted)]">
@@ -143,58 +143,18 @@ twq('config','re0yu');`}
               </p>
             </div>
 
-            {/* Flow visual */}
+            {/* The lead → AI → human story */}
             <div className="card border-[var(--color-border)] bg-[var(--color-surface)]/80 p-6 md:p-7">
               <p className="mb-5 text-xs font-medium uppercase tracking-wider text-[var(--color-muted)]">
-                {t("theFlow")}
+                {t("storyLabel")}
               </p>
               <div className="flex flex-col gap-3">
-                {/* QR */}
-                <div className="flex items-center gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[var(--color-bg)]">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="text-[var(--color-brand)]"
-                    >
-                      <path
-                        d="M4 4h6v6H4V4zm0 10h6v6H4v-6zM14 4h6v6h-6V4zm0 12h2v2h-2v-2zm4 0h2v2h-2v-2zm-4 2v2h2v-2h-2zm4 0v2h2v-2h-2z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{t("scanQr")}</p>
-                    <p className="text-xs text-[var(--color-muted)]">
-                      {t("scanQrDesc")}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex justify-center text-[var(--color-muted)]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 4v16m0 0l-5-5m5 5l5-5"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-
-                {/* Inbound */}
                 <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">
-                      {t("inboundMessage")}
-                    </p>
-                    <span className="pill">message.received</span>
-                  </div>
-                  <p className="mt-2 rounded-md bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-fg)]">
-                    {t("inboundSample")}
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                    {t("storyLeadTag")}
+                  </p>
+                  <p className="mt-2 max-w-[85%] rounded-lg rounded-bl-none bg-[var(--color-bg)] px-3 py-2 text-xs">
+                    {t("storyLead")}
                   </p>
                 </div>
 
@@ -210,31 +170,34 @@ twq('config','re0yu');`}
                   </svg>
                 </div>
 
-                {/* Webhook + reply */}
-                <div className="flex items-center gap-4 rounded-xl border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/5 p-4">
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[var(--color-bg)]">
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="text-[var(--color-brand)]"
-                    >
-                      <path
-                        d="M4 7l8 6 8-6M4 7v10h16V7M4 7l8 6 8-6"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{t("webhookReply")}</p>
-                    <p className="text-xs text-[var(--color-muted)]">
-                      {t("webhookReplyDesc")}
-                    </p>
-                  </div>
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-brand)]">
+                    🤖 {t("storyAiTag")}
+                  </p>
+                  <p className="mt-2 ml-auto max-w-[85%] rounded-lg rounded-br-none bg-[var(--color-brand)]/15 px-3 py-2 text-xs">
+                    {t("storyAi")}
+                  </p>
+                </div>
+
+                <div className="flex justify-center text-[var(--color-muted)]">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 4v16m0 0l-5-5m5 5l5-5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+
+                <div className="rounded-xl border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/5 p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-brand)]">
+                    👥 {t("storyHumanTag")}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--color-muted)]">
+                    {t("storyHuman")}
+                  </p>
                 </div>
               </div>
             </div>
@@ -242,6 +205,133 @@ twq('config','re0yu');`}
         </section>
 
         <BrandStrip />
+
+        {/* Flows — the visual router */}
+        <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              {t("flowsTitle")}
+            </h2>
+            <p className="mt-3 text-[var(--color-muted)]">{t("flowsDesc")}</p>
+          </div>
+          <div className="card mt-12 overflow-x-auto p-6 md:p-8">
+            <div className="flex min-w-[640px] items-center gap-3">
+              {(["flowNode1", "flowNode2", "flowNode3"] as const).map(
+                (key, i) => (
+                  <div key={key} className="flex flex-1 items-center gap-3">
+                    <div
+                      className={`flex-1 rounded-xl border px-4 py-3 text-center text-sm font-medium ${
+                        i === 0
+                          ? "border-[var(--color-brand)]/40 bg-[var(--color-brand)]/5"
+                          : "border-[var(--color-border)] bg-[var(--color-surface-2)]"
+                      }`}
+                    >
+                      {t(key)}
+                    </div>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="shrink-0 text-[var(--color-muted)]"
+                    >
+                      <path
+                        d="M4 12h16m0 0l-5-5m5 5l-5 5"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                ),
+              )}
+              <div className="flex-1 rounded-xl border border-[var(--color-brand)]/40 bg-[var(--color-brand)]/5 px-4 py-3 text-center text-sm font-medium">
+                👥 {t("flowNode4")}
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              {(["flowsChip1", "flowsChip2", "flowsChip3"] as const).map(
+                (key) => (
+                  <span key={key} className="pill">
+                    {t(key)}
+                  </span>
+                ),
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Mirror groups — the handoff mechanic */}
+        <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                {t("mirrorTitle")}
+              </h2>
+              <p className="mt-3 text-[var(--color-muted)]">
+                {t("mirrorDesc")}
+              </p>
+              <ul className="mt-6 flex flex-col gap-3 text-sm">
+                {(["mirrorPoint1", "mirrorPoint2", "mirrorPoint3"] as const).map(
+                  (key) => (
+                    <li key={key} className="flex items-start gap-2">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="mt-0.5 shrink-0 text-[var(--color-brand)]"
+                      >
+                        <path
+                          d="M5 13l4 4L19 7"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span className="text-[var(--color-muted)]">
+                        {t(key)}
+                      </span>
+                    </li>
+                  ),
+                )}
+              </ul>
+            </div>
+            <div className="card border-[var(--color-border)] bg-[var(--color-surface)]/80 p-5">
+              <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-3">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--color-brand)]/15 text-sm">
+                  👥
+                </span>
+                <span className="text-sm font-semibold">
+                  {t("mirrorGroupName")}
+                </span>
+              </div>
+              <div className="mt-4 flex flex-col gap-3">
+                <div>
+                  <p className="max-w-[85%] rounded-lg rounded-bl-none bg-[var(--color-surface-2)] px-3 py-2 text-xs">
+                    {t("mirrorMsg1")}
+                  </p>
+                  <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+                    {t("mirrorMsg1Tag")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="ml-auto max-w-[85%] rounded-lg rounded-br-none bg-[var(--color-brand)]/15 px-3 py-2 text-left text-xs">
+                    {t("mirrorMsg2")}
+                  </p>
+                  <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+                    {t("mirrorMsg2Tag")}
+                  </p>
+                </div>
+                <p className="mt-2 rounded-lg border border-dashed border-[var(--color-brand)]/40 px-3 py-2 text-center text-[11px] text-[var(--color-brand)]">
+                  {t("mirrorMsg3")}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Dashboard inbox + teams */}
         <section className="mx-auto max-w-6xl px-6 py-16 md:py-24">
@@ -397,6 +487,14 @@ twq('config','re0yu');`}
                 <code>{replySnippet}</code>
               </pre>
             </div>
+          </div>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/developers" className="btn-ghost">
+              {t("devPageCta")}
+            </Link>
+            <Link href="/docs" className="btn-ghost">
+              {t("readDocs")}
+            </Link>
           </div>
         </section>
 

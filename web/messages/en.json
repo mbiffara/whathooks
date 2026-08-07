@@ -540,6 +540,7 @@
       "filterMine": "Mine",
       "filterUnassigned": "Unassigned",
       "assignee": "Assignee",
+      "assignedTo": "Assigned to:",
       "noAssignee": "Unassigned",
       "hiddenNumber": "Hidden number",
       "saveContact": "Save contact",

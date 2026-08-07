@@ -540,6 +540,7 @@
       "filterMine": "Mías",
       "filterUnassigned": "Sin asignar",
       "assignee": "Responsable",
+      "assignedTo": "Asignado a:",
       "noAssignee": "Sin asignar",
       "hiddenNumber": "Número oculto",
       "saveContact": "Guardar contacto",

@@ -1096,21 +1096,29 @@ function MessagesInbox() {
                 </div>
               </div>
 
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <select
-                  className="input h-8 w-36 px-2 py-0 text-xs"
-                  value={selectedConv.assignedTo?.id ?? ""}
-                  disabled={updatingConv}
-                  onChange={(e) => assignTo(e.target.value)}
-                  aria-label={t("assignee")}
-                >
-                  <option value="">{t("noAssignee")}</option>
-                  {members.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.name ?? m.email}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex shrink-0 flex-wrap items-end gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <label
+                    htmlFor="conv-assignee"
+                    className="px-0.5 text-[10px] font-medium text-[var(--color-muted)]"
+                  >
+                    {t("assignedTo")}
+                  </label>
+                  <select
+                    id="conv-assignee"
+                    className="input h-8 w-36 px-2 py-0 text-xs"
+                    value={selectedConv.assignedTo?.id ?? ""}
+                    disabled={updatingConv}
+                    onChange={(e) => assignTo(e.target.value)}
+                  >
+                    <option value="">{t("noAssignee")}</option>
+                    {members.map((m) => (
+                      <option key={m.userId} value={m.userId}>
+                        {m.name ?? m.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {selectedConv.mirror && (
                   <span
                     className="badge inline-flex h-8 items-center gap-1.5 bg-[var(--color-chip)] text-[var(--color-muted)]"

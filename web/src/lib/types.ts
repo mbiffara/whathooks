@@ -245,6 +245,11 @@ export interface TeamMember {
   /** Session allow-list; empty = access to all sessions. */
   sessionIds: string[];
   joinedAt: string;
+  /**
+   * The WhatsApp-side identity linked to this account, when any. Present =
+   * assigning a conversation here can also open a mirror group.
+   */
+  humanAgent: { id: string; name: string } | null;
 }
 
 export type InvitationStatus = "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";

@@ -3,7 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Conversation, MediaAsset, Message } from '@prisma/client';
+import {
+  Conversation,
+  MediaAsset,
+  Message,
+  MessageSource,
+} from '@prisma/client';
 type MessageWithRelations = Message & {
   media: MediaAsset | null;
   agent: { name: string } | null;
@@ -25,10 +30,27 @@ const AGENT_INCLUDE = {
   assignedTo: { select: { id: true, name: true, email: true } },
   tags: { select: { id: true, name: true, color: true } },
 } as const;
+const MIRROR_SELECT = {
+  id: true,
+  groupJid: true,
+  sessionId: true,
+  leadJid: true,
+  humanAgent: { select: { id: true, name: true } },
+} as const;
+type MirrorInfo = {
+  id: string;
+  groupJid: string;
+  sessionId: string;
+  leadJid: string;
+  humanAgent: { id: string; name: string } | null;
+};
+/** Subject prefix for mirror groups opened from the inbox. */
+const INBOX_GROUP_PREFIX = '🔒 Lead';
 import { QuotaService } from '../billing/quota.service';
 import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
+import { FlowEngineService } from '../whatsapp/flow-engine.service';
 
 @Injectable()
 export class ConversationsService {
@@ -37,6 +59,7 @@ export class ConversationsService {
     private readonly media: MediaService,
     private readonly manager: ConnectionManagerService,
     private readonly quota: QuotaService,
+    private readonly flowEngine: FlowEngineService,
   ) {}
 
   async list(
@@ -94,7 +117,10 @@ export class ConversationsService {
       take: Math.min(opts.limit ?? 100, 200),
       include: AGENT_INCLUDE,
     });
-    return rows.map((c) => this.toConversationDto(c));
+    const mirrors = await this.mirrorsFor(rows);
+    return rows.map((c) =>
+      this.toConversationDto(c, mirrors.get(`${c.sessionId}|${c.remoteJid}`)),
+    );
   }
 
   /**
@@ -141,7 +167,10 @@ export class ConversationsService {
     if (assignedTo && conversation.assignedToUserId !== assignedTo) {
       throw new NotFoundException('Conversation not found');
     }
-    return this.toConversationDto(conversation);
+    return this.toConversationDto(
+      conversation,
+      await this.mirrorFor(conversation),
+    );
   }
 
   /** Assign to a teammate (null unassigns) and/or set open/resolved. */
@@ -200,7 +229,7 @@ export class ConversationsService {
       },
       include: AGENT_INCLUDE,
     });
-    return this.toConversationDto(updated);
+    return this.toConversationDto(updated, await this.mirrorFor(updated));
   }
 
   async get(
@@ -216,7 +245,120 @@ export class ConversationsService {
       allowed,
       assignedTo,
     );
-    return this.toConversationDto(c);
+    return this.toConversationDto(c, await this.mirrorFor(c));
+  }
+
+  /**
+   * Open a mirror group for this conversation: a private WhatsApp group with
+   * one human agent, whose replies relay back to the lead as the brand. The
+   * inbox counterpart of the flow "assign to human agent" node — offered when
+   * a conversation is assigned to a teammate who is also a human agent.
+   */
+  async createMirror(
+    organizationId: string,
+    id: string,
+    opts: { humanAgentId: string; copyHistory?: boolean },
+    allowed?: string[] | null,
+    assignedTo?: string | null,
+  ) {
+    // Creating the group needs a live socket, same bar as sending.
+    const c = await this.assertSendable(
+      organizationId,
+      id,
+      allowed,
+      assignedTo,
+    );
+    if (c.isGroup) {
+      throw new BadRequestException(
+        'Mirror groups only apply to direct conversations',
+      );
+    }
+    if (await this.mirrorFor(c)) {
+      throw new BadRequestException('This conversation is already mirrored');
+    }
+    const human = await this.prisma.humanAgent.findFirst({
+      where: { id: opts.humanAgentId, organizationId },
+    });
+    if (!human) throw new BadRequestException('Unknown human agent');
+
+    const thread = await this.manager.createMirrorThread(
+      c.sessionId,
+      c.remoteJid,
+      [{ id: human.id, number: human.phoneNumber }],
+      { prefix: INBOX_GROUP_PREFIX, showLeadName: true },
+    );
+    if (opts.copyHistory) {
+      // Best-effort: the group works without the transcript. Nothing here is
+      // a "triggering" message, so the newest inbound row is kept.
+      const transcript = await this.flowEngine.historyTranscript(
+        c.id,
+        c.name,
+        false,
+      );
+      if (transcript) {
+        await this.manager
+          .sendText(c.sessionId, thread.groupJid, transcript, {
+            source: MessageSource.MIRROR,
+          })
+          .catch(() => undefined);
+      }
+    }
+    return this.get(organizationId, id, allowed, assignedTo);
+  }
+
+  /**
+   * Close the mirror: the session leaves the group (the "<brand> left" system
+   * message tells the agent relaying stopped) and the thread is dropped, so
+   * the session's own automation owns the conversation again.
+   */
+  async removeMirror(
+    organizationId: string,
+    id: string,
+    allowed?: string[] | null,
+    assignedTo?: string | null,
+  ) {
+    const c = await this.requireConversation(
+      organizationId,
+      id,
+      false,
+      allowed,
+      assignedTo,
+    );
+    const thread = await this.mirrorFor(c);
+    if (!thread) {
+      throw new NotFoundException('This conversation is not mirrored');
+    }
+    // Best-effort: an offline session still gets the thread removed; the
+    // group is simply left behind.
+    await this.manager
+      .leaveGroup(c.sessionId, thread.groupJid)
+      .catch(() => undefined);
+    await this.prisma.mirrorThread.delete({ where: { id: thread.id } });
+    return this.get(organizationId, id, allowed, assignedTo);
+  }
+
+  /** The mirror thread owning this conversation, if any. */
+  private mirrorFor(c: { sessionId: string; remoteJid: string }) {
+    return this.prisma.mirrorThread.findUnique({
+      where: {
+        sessionId_leadJid: { sessionId: c.sessionId, leadJid: c.remoteJid },
+      },
+      select: MIRROR_SELECT,
+    });
+  }
+
+  /** Same, batched for a list. Keyed by `${sessionId}|${remoteJid}`. */
+  private async mirrorsFor(rows: { sessionId: string; remoteJid: string }[]) {
+    const map = new Map<string, MirrorInfo>();
+    if (rows.length === 0) return map;
+    const threads = await this.prisma.mirrorThread.findMany({
+      where: {
+        OR: rows.map((r) => ({ sessionId: r.sessionId, leadJid: r.remoteJid })),
+      },
+      select: MIRROR_SELECT,
+    });
+    for (const t of threads) map.set(`${t.sessionId}|${t.leadJid}`, t);
+    return map;
   }
 
   /** Pause or resume the assigned agent's auto-replies for one conversation. */
@@ -473,7 +615,10 @@ export class ConversationsService {
     return c;
   }
 
-  private toConversationDto(c: ConversationWithAgent) {
+  private toConversationDto(
+    c: ConversationWithAgent,
+    mirror?: MirrorInfo | null,
+  ) {
     const agent = c.session?.agent ?? null;
     return {
       id: c.id,
@@ -498,6 +643,15 @@ export class ConversationsService {
         ? {
             id: c.assignedTo.id,
             name: c.assignedTo.name ?? c.assignedTo.email,
+          }
+        : null,
+      // Set while a human agent owns the thread over WhatsApp: the session's
+      // own automation stays out of the way until the mirror is removed.
+      mirror: mirror
+        ? {
+            id: mirror.id,
+            groupJid: mirror.groupJid,
+            agentName: mirror.humanAgent?.name ?? null,
           }
         : null,
     };

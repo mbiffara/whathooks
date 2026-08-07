@@ -64,6 +64,16 @@ class UpdateConversationDto {
   tagIds?: string[];
 }
 
+class CreateMirrorDto {
+  @IsString()
+  humanAgentId!: string;
+
+  // Seed the group with the conversation so far.
+  @IsOptional()
+  @IsBoolean()
+  copyHistory?: boolean;
+}
+
 class NoteDto {
   @IsString()
   @MinLength(1)
@@ -236,6 +246,36 @@ export class ConversationsController {
         this.orgOf(user),
         id,
         body.paused,
+        allowed,
+        this.assignedOnly(user),
+      ),
+    );
+  }
+
+  /** Hand the thread to a human agent over WhatsApp (mirror group). */
+  @Post(':id/mirror')
+  createMirror(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: CreateMirrorDto,
+  ) {
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.createMirror(
+        this.orgOf(user),
+        id,
+        body,
+        allowed,
+        this.assignedOnly(user),
+      ),
+    );
+  }
+
+  @Delete(':id/mirror')
+  removeMirror(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.allowedFor(user).then((allowed) =>
+      this.conversations.removeMirror(
+        this.orgOf(user),
+        id,
         allowed,
         this.assignedOnly(user),
       ),

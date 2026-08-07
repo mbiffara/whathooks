@@ -94,6 +94,18 @@ function MessagesInbox() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [togglingAgent, setTogglingAgent] = useState(false);
 
+  // Mirror group: offered right after assigning to a teammate who is also a
+  // WhatsApp human agent, and removable from the header badge.
+  const [mirrorPrompt, setMirrorPrompt] = useState<{
+    conversationId: string;
+    humanAgentId: string;
+    agentName: string;
+  } | null>(null);
+  const [mirrorCopyHistory, setMirrorCopyHistory] = useState(true);
+  const [mirrorBusy, setMirrorBusy] = useState(false);
+  const [mirrorError, setMirrorError] = useState<string | null>(null);
+  const [unlinkOpen, setUnlinkOpen] = useState(false);
+
   // "New conversation" dialog.
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [newConvSession, setNewConvSession] = useState("");
@@ -370,7 +382,7 @@ function MessagesInbox() {
     status?: "OPEN" | "RESOLVED";
     tagIds?: string[];
   }) {
-    if (!token || !selectedConv || updatingConv) return;
+    if (!token || !selectedConv || updatingConv) return null;
     setUpdatingConv(true);
     try {
       const updated = await apiClient<Conversation>(
@@ -381,10 +393,80 @@ function MessagesInbox() {
       setConversations((prev) =>
         prev.map((c) => (c.id === updated.id ? updated : c)),
       );
+      return updated;
     } catch {
       /* surface via next poll */
+      return null;
     } finally {
       setUpdatingConv(false);
+    }
+  }
+
+  /**
+   * Assign the thread, then offer a mirror group when the new assignee also
+   * answers over WhatsApp. Skipped for groups and already-mirrored threads.
+   */
+  async function assignTo(userId: string) {
+    const updated = await updateConversation({
+      assignedToUserId: userId || null,
+    });
+    if (!updated || !userId) return;
+    const humanAgent = members.find((m) => m.userId === userId)?.humanAgent;
+    if (!humanAgent || updated.isGroup || updated.mirror) return;
+    setMirrorCopyHistory(true);
+    setMirrorError(null);
+    setMirrorPrompt({
+      conversationId: updated.id,
+      humanAgentId: humanAgent.id,
+      agentName: humanAgent.name,
+    });
+  }
+
+  async function createMirror() {
+    if (!token || !mirrorPrompt || mirrorBusy) return;
+    setMirrorBusy(true);
+    setMirrorError(null);
+    try {
+      const updated = await apiClient<Conversation>(
+        `/conversations/${mirrorPrompt.conversationId}/mirror`,
+        token,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            humanAgentId: mirrorPrompt.humanAgentId,
+            copyHistory: mirrorCopyHistory,
+          }),
+        },
+      );
+      setConversations((prev) =>
+        prev.map((c) => (c.id === updated.id ? updated : c)),
+      );
+      setMirrorPrompt(null);
+    } catch (e) {
+      setMirrorError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+    } finally {
+      setMirrorBusy(false);
+    }
+  }
+
+  async function removeMirror() {
+    if (!token || !selectedConv || mirrorBusy) return;
+    setMirrorBusy(true);
+    setMirrorError(null);
+    try {
+      const updated = await apiClient<Conversation>(
+        `/conversations/${selectedConv.id}/mirror`,
+        token,
+        { method: "DELETE" },
+      );
+      setConversations((prev) =>
+        prev.map((c) => (c.id === updated.id ? updated : c)),
+      );
+      setUnlinkOpen(false);
+    } catch (e) {
+      setMirrorError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+    } finally {
+      setMirrorBusy(false);
     }
   }
 
@@ -552,6 +634,102 @@ function MessagesInbox() {
 
   return (
     <div className="flex h-full overflow-hidden">
+      {mirrorPrompt && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setMirrorPrompt(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mirror-title"
+        >
+          <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h2 id="mirror-title" className="text-lg font-semibold">
+              {t("mirrorPromptTitle")}
+            </h2>
+            <p className="mt-2 text-sm text-[var(--color-muted)]">
+              {t("mirrorPromptBody", { name: mirrorPrompt.agentName })}
+            </p>
+            <label className="mt-4 flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={mirrorCopyHistory}
+                onChange={(e) => setMirrorCopyHistory(e.target.checked)}
+              />
+              <span>
+                {t("mirrorCopyHistory")}
+                <span className="block text-xs text-[var(--color-muted)]">
+                  {t("mirrorCopyHistoryHint")}
+                </span>
+              </span>
+            </label>
+            {mirrorError && (
+              <p className="mt-3 text-sm text-[var(--color-danger)]">
+                {mirrorError}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setMirrorPrompt(null)}
+              >
+                {t("mirrorPromptSkip")}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={mirrorBusy}
+                onClick={createMirror}
+                autoFocus
+              >
+                {mirrorBusy ? tc("loading") : t("mirrorPromptConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {unlinkOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setUnlinkOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="unlink-title"
+        >
+          <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h2 id="unlink-title" className="text-lg font-semibold">
+              {t("mirrorRemoveTitle")}
+            </h2>
+            <p className="mt-2 text-sm text-[var(--color-muted)]">
+              {t("mirrorRemoveBody")}
+            </p>
+            {mirrorError && (
+              <p className="mt-3 text-sm text-[var(--color-danger)]">
+                {mirrorError}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setUnlinkOpen(false)}
+              >
+                {tc("cancel")}
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                disabled={mirrorBusy}
+                onClick={removeMirror}
+                autoFocus
+              >
+                {mirrorBusy ? tc("loading") : t("mirrorRemoveConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {newConvOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -860,11 +1038,7 @@ function MessagesInbox() {
                   className="input h-8 w-36 px-2 py-0 text-xs"
                   value={selectedConv.assignedTo?.id ?? ""}
                   disabled={updatingConv}
-                  onChange={(e) =>
-                    updateConversation({
-                      assignedToUserId: e.target.value || null,
-                    })
-                  }
+                  onChange={(e) => assignTo(e.target.value)}
                   aria-label={t("assignee")}
                 >
                   <option value="">{t("noAssignee")}</option>
@@ -874,6 +1048,30 @@ function MessagesInbox() {
                     </option>
                   ))}
                 </select>
+                {selectedConv.mirror && (
+                  <span
+                    className="badge inline-flex items-center gap-1.5 bg-[var(--color-chip)] text-[var(--color-muted)]"
+                    title={t("mirrorBadgeHint")}
+                  >
+                    <Glyph name="link" size={13} />
+                    {selectedConv.mirror.agentName
+                      ? t("mirrorBadge", {
+                          name: selectedConv.mirror.agentName,
+                        })
+                      : t("mirrorBadgeUnknown")}
+                    <button
+                      onClick={() => {
+                        setMirrorError(null);
+                        setUnlinkOpen(true);
+                      }}
+                      className="-mr-1 rounded p-0.5 text-[var(--color-muted)] hover:text-[var(--color-danger)]"
+                      aria-label={t("mirrorRemove")}
+                      title={t("mirrorRemove")}
+                    >
+                      <Glyph name="unlink" size={13} />
+                    </button>
+                  </span>
+                )}
                 <button
                   onClick={() =>
                     updateConversation({

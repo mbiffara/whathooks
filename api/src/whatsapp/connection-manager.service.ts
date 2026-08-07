@@ -946,6 +946,16 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Leave a group. Used when a mirror is removed: the "<brand> left" system
+   * message is the human agent's signal that replies stop relaying.
+   */
+  async leaveGroup(sessionId: string, groupJid: string): Promise<void> {
+    const live = this.sessions.get(sessionId);
+    if (!live) throw new Error('Session is not connected');
+    await live.sock.groupLeave(groupJid);
+  }
+
+  /**
    * Validate a recipient on WhatsApp via the live socket and return its
    * canonical JID (WhatsApp may normalize the number, e.g. AR mobile 549…).
    * Group JIDs pass through untouched — they can't be probed.

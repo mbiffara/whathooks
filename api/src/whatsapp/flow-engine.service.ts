@@ -449,14 +449,16 @@ export class FlowEngineService {
   }
 
   /**
-   * Compact one-message transcript of the conversation so far. The newest
-   * inbound row (the message that triggered the flow) is left out — it is
-   * forwarded to the group separately, right after this. Null when there is
-   * no prior history worth copying.
+   * Compact one-message transcript of the conversation so far. During a flow
+   * handoff the newest inbound row (the message that triggered the run) is
+   * left out — it is forwarded to the group separately, right after this.
+   * Mirrors opened from the inbox have no triggering message, so they keep
+   * it (`dropTriggering: false`). Null when there is no history worth copying.
    */
-  private async historyTranscript(
+  async historyTranscript(
     conversationId: string,
     leadName: string | null,
+    dropTriggering = true,
   ): Promise<string | null> {
     const rows = await this.prisma.message.findMany({
       where: { conversationId, source: { not: MessageSource.NOTE } },
@@ -465,7 +467,7 @@ export class FlowEngineService {
       select: { direction: true, source: true, type: true, text: true },
     });
     rows.reverse();
-    if (rows.length && rows[rows.length - 1].direction === 'INBOUND') {
+    if (dropTriggering && rows.length && rows.at(-1)!.direction === 'INBOUND') {
       rows.pop();
     }
     const lines = rows.slice(-HISTORY_COPY_LIMIT).map((m) => {

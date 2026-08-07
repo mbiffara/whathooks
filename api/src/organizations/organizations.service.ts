@@ -29,7 +29,18 @@ export class OrganizationsService {
   async members(organizationId: string) {
     const memberships = await this.prisma.membership.findMany({
       where: { organizationId },
-      include: { user: true },
+      include: {
+        user: {
+          include: {
+            // The account's WhatsApp-side identity in this org, when linked.
+            humanAgents: {
+              where: { organizationId },
+              select: { id: true, name: true },
+              take: 1,
+            },
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
     return memberships.map((m) => ({
@@ -39,6 +50,8 @@ export class OrganizationsService {
       role: m.role,
       sessionIds: m.sessionIds,
       joinedAt: m.createdAt,
+      // Present = assigning a conversation here can also open a mirror group.
+      humanAgent: m.user.humanAgents[0] ?? null,
     }));
   }
 

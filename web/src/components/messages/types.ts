@@ -82,6 +82,11 @@ export interface Conversation {
   status: "OPEN" | "RESOLVED";
   tags: ConversationTag[];
   assignedTo: { id: string; name: string } | null;
+  /**
+   * Set while a human agent owns this thread over WhatsApp through a mirror
+   * group. The session's own automation stays out of the way until removed.
+   */
+  mirror: { id: string; groupJid: string; agentName: string | null } | null;
 }
 
 export interface ConversationAgent {

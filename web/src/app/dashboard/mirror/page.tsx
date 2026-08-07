@@ -1,6 +1,7 @@
 "use client";
 
 import { Glyph } from "@/components/glyphs";
+import { relativeTime } from "@/components/messages/utils";
 import { StatusBadge } from "@/components/status-badge";
 import { apiClient } from "@/lib/client-api";
 import type { WaSession, WaStatus } from "@/lib/types";
@@ -8,6 +9,26 @@ import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+
+/** One live mirror, whatever opened it: a link, a flow handoff, or the inbox. */
+interface MirrorThread {
+  id: string;
+  seq: number;
+  groupJid: string;
+  leadJid: string;
+  leadNumber: string;
+  agents: { number: string; name: string | null }[];
+  fromLink: boolean;
+  session: {
+    id: string;
+    label: string;
+    phoneNumber: string | null;
+    status: WaStatus;
+  };
+  conversationId: string | null;
+  contactName: string | null;
+  createdAt: string;
+}
 
 interface MirrorLink {
   id: string;
@@ -39,6 +60,7 @@ export default function MirrorPage() {
   const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
+  const [threads, setThreads] = useState<MirrorThread[]>([]);
   const [links, setLinks] = useState<MirrorLink[]>([]);
   const [sessions, setSessions] = useState<WaSession[]>([]);
   const [agents, setAgents] = useState<HumanAgent[]>([]);
@@ -53,11 +75,13 @@ export default function MirrorPage() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const [linkList, sessionList, agentList] = await Promise.all([
+      const [threadList, linkList, sessionList, agentList] = await Promise.all([
+        apiClient<MirrorThread[]>("/mirror-threads", token),
         apiClient<MirrorLink[]>("/mirror-links", token),
         apiClient<WaSession[]>("/sessions", token),
         apiClient<HumanAgent[]>("/human-agents", token),
       ]);
+      setThreads(threadList);
       setLinks(linkList);
       setSessions(sessionList);
       setAgents(agentList);
@@ -119,6 +143,122 @@ export default function MirrorPage() {
       </div>
 
       {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
+
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">{t("activeTitle")}</h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">
+            {t("activeSubtitle")}
+          </p>
+        </div>
+        {loading ? (
+          <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
+        ) : threads.length === 0 ? (
+          <div className="card text-sm text-[var(--color-muted)]">
+            {t("noThreads")}
+          </div>
+        ) : (
+          <div className="card overflow-x-auto p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
+                  <th className="px-4 py-3 font-medium">{t("colContact")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colSession")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colAgents")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colGroup")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colOpened")}</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {threads.map((th) => (
+                  <tr
+                    key={th.id}
+                    className="border-b border-[var(--color-border)] last:border-0"
+                  >
+                    <td className="px-4 py-3">
+                      {th.conversationId ? (
+                        <Link
+                          href={`/dashboard/messages?c=${th.conversationId}`}
+                          title={t("openConversation")}
+                          className="text-[var(--color-brand)] hover:underline"
+                        >
+                          {th.contactName || `+${th.leadNumber}`}
+                        </Link>
+                      ) : (
+                        <span>{th.contactName || `+${th.leadNumber}`}</span>
+                      )}
+                      {th.contactName && (
+                        <div className="font-mono text-xs text-[var(--color-muted)]">
+                          +{th.leadNumber}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div>{th.session.label}</div>
+                      <div className="mt-0.5">
+                        <StatusBadge status={th.session.status} />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {th.agents.map((a) => (
+                        <div key={a.number}>
+                          <span
+                            className={
+                              a.name ? "" : "text-[var(--color-muted)] italic"
+                            }
+                          >
+                            {a.name ?? t("unknownAgent")}
+                          </span>
+                          <span className="ml-1.5 font-mono text-xs text-[var(--color-muted)]">
+                            +{a.number}
+                          </span>
+                        </div>
+                      ))}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div>#{th.seq}</div>
+                      {th.fromLink && (
+                        <span
+                          className="badge mt-0.5 bg-[var(--color-chip)] text-[var(--color-muted)]"
+                          title={t("fromLinkHint")}
+                        >
+                          {t("title")}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-muted)]">
+                      {relativeTime(th.createdAt, t("now"))}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => {
+                          if (!confirm(t("confirmRemoveThread"))) return;
+                          void run(() =>
+                            apiClient(`/mirror-threads/${th.id}`, token, {
+                              method: "DELETE",
+                            }),
+                          );
+                        }}
+                        disabled={busy}
+                        aria-label={t("removeThread")}
+                        title={t("removeThread")}
+                        className="rounded-lg p-1.5 text-[var(--color-muted)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                      >
+                        <Glyph name="unlink" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <div>
+        <h2 className="text-lg font-semibold">{t("linksTitle")}</h2>
+      </div>
 
       <form
         onSubmit={createLink}

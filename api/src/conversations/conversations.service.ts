@@ -328,12 +328,7 @@ export class ConversationsService {
     if (!thread) {
       throw new NotFoundException('This conversation is not mirrored');
     }
-    // Best-effort: an offline session still gets the thread removed; the
-    // group is simply left behind.
-    await this.manager
-      .leaveGroup(c.sessionId, thread.groupJid)
-      .catch(() => undefined);
-    await this.prisma.mirrorThread.delete({ where: { id: thread.id } });
+    await this.manager.closeMirrorThread(thread);
     return this.get(organizationId, id, allowed, assignedTo);
   }
 

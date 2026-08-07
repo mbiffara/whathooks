@@ -6,17 +6,20 @@ import {
 } from '@nestjs/common';
 import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConnectionManagerService } from './connection-manager.service';
 
 /**
- * Org-scoped management for Mirror Links (lead-protection relay) and the
- * human-agent directory they draw from. The relay itself runs in
- * ConnectionManagerService (maybeMirror); this service only manages config.
+ * Org-scoped management for Mirror Links (lead-protection relay), the
+ * human-agent directory they draw from, and the live mirrored conversations.
+ * The relay itself runs in ConnectionManagerService (maybeMirror); this
+ * service only manages config and inspects/closes threads.
  */
 @Injectable()
 export class MirrorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly quota: QuotaService,
+    private readonly manager: ConnectionManagerService,
   ) {}
 
   // ---- human agents ----
@@ -231,6 +234,99 @@ export class MirrorService {
   async deleteLink(organizationId: string, id: string) {
     await this.requireLink(organizationId, id);
     await this.prisma.mirrorLink.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ---- mirrored conversations (threads) ----
+
+  /**
+   * Every live mirror in the org, whatever opened it: a static MirrorLink, a
+   * flow handoff node, or the inbox action. Rows carry the conversation id so
+   * the dashboard can jump into the thread, and resolve agent numbers to
+   * directory names (team groups list several).
+   */
+  async listAllThreads(organizationId: string) {
+    const threads = await this.prisma.mirrorThread.findMany({
+      where: { session: { organizationId } },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        session: {
+          select: { id: true, label: true, phoneNumber: true, status: true },
+        },
+        humanAgent: { select: { id: true, name: true } },
+      },
+    });
+    if (threads.length === 0) return [];
+
+    // The lead's conversation shares (sessionId, jid) with the thread.
+    const conversations = await this.prisma.conversation.findMany({
+      where: {
+        OR: threads.map((t) => ({
+          sessionId: t.sessionId,
+          remoteJid: t.leadJid,
+        })),
+      },
+      select: { id: true, sessionId: true, remoteJid: true, name: true },
+    });
+    const convByKey = new Map(
+      conversations.map((c) => [`${c.sessionId}|${c.remoteJid}`, c]),
+    );
+
+    const numbers = [
+      ...new Set(
+        threads.flatMap((t) =>
+          t.agentNumbers.length ? t.agentNumbers : [t.agentNumber],
+        ),
+      ),
+    ];
+    const directory = await this.prisma.humanAgent.findMany({
+      where: { organizationId, phoneNumber: { in: numbers } },
+      select: { phoneNumber: true, name: true },
+    });
+    const nameByNumber = new Map(
+      directory.map((a) => [a.phoneNumber, a.name] as const),
+    );
+
+    return threads.map((t) => {
+      const conversation = convByKey.get(`${t.sessionId}|${t.leadJid}`) ?? null;
+      const agentNumbers = t.agentNumbers.length
+        ? t.agentNumbers
+        : [t.agentNumber];
+      return {
+        id: t.id,
+        seq: t.seq,
+        groupJid: t.groupJid,
+        leadJid: t.leadJid,
+        leadNumber: t.leadJid.split('@')[0],
+        // Team groups (assignGroup) let every listed number reply. The
+        // primary agent prefers its own relation: agentNumber is
+        // denormalized, so a later phone edit would miss the directory.
+        agents: agentNumbers.map((number) => ({
+          number,
+          name:
+            (number === t.agentNumber ? t.humanAgent?.name : null) ??
+            nameByNumber.get(number) ??
+            null,
+        })),
+        // Static links keep re-creating the thread on the next inbound
+        // message, so the UI warns instead of offering a pointless removal.
+        fromLink: t.linkId !== null,
+        session: t.session,
+        conversationId: conversation?.id ?? null,
+        contactName: conversation?.name ?? null,
+        createdAt: t.createdAt,
+      };
+    });
+  }
+
+  /** Close one mirror: leave the group, drop the thread. */
+  async removeThread(organizationId: string, id: string) {
+    const thread = await this.prisma.mirrorThread.findFirst({
+      where: { id, session: { organizationId } },
+      select: { id: true, sessionId: true, groupJid: true },
+    });
+    if (!thread) throw new NotFoundException('Mirror not found');
+    await this.manager.closeMirrorThread(thread);
     return { ok: true };
   }
 

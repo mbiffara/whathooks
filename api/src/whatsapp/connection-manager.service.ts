@@ -956,6 +956,23 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Close a mirror: leave the group and drop the thread, handing the
+   * conversation back to the session's own agents and flows. Leaving is
+   * best-effort so an offline session still gets the thread removed.
+   * Shared by the inbox action and the mirror admin page.
+   */
+  async closeMirrorThread(thread: {
+    id: string;
+    sessionId: string;
+    groupJid: string;
+  }): Promise<void> {
+    await this.leaveGroup(thread.sessionId, thread.groupJid).catch(
+      () => undefined,
+    );
+    await this.prisma.mirrorThread.delete({ where: { id: thread.id } });
+  }
+
+  /**
    * Validate a recipient on WhatsApp via the live socket and return its
    * canonical JID (WhatsApp may normalize the number, e.g. AR mobile 549…).
    * Group JIDs pass through untouched — they can't be probed.

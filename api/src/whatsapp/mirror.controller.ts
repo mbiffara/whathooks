@@ -159,4 +159,18 @@ export class MirrorController {
   listThreads(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.mirror.listThreads(this.orgOf(org), id);
   }
+
+  // ---- mirrored conversations ----
+
+  /** Every live mirror in the org, whatever opened it. */
+  @Get('mirror-threads')
+  listAllThreads(@ApiOrg() org: string | undefined) {
+    return this.mirror.listAllThreads(this.orgOf(org));
+  }
+
+  /** Operational, not config — same bar as removing a mirror from the inbox. */
+  @Delete('mirror-threads/:id')
+  removeThread(@ApiOrg() org: string | undefined, @Param('id') id: string) {
+    return this.mirror.removeThread(this.orgOf(org), id);
+  }
 }

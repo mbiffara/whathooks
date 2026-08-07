@@ -189,6 +189,34 @@ export class MailService {
     });
   }
 
+  /** Warn an owner that this month's included AI tokens are nearly gone. */
+  async sendLowAiTokens(email: {
+    to: string;
+    locale?: string | null;
+    used: number;
+    limit: number;
+    billingUrl: string;
+  }): Promise<boolean> {
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale].lowAiTokens;
+    const pct = Math.max(
+      0,
+      Math.round(((email.limit - email.used) / email.limit) * 100),
+    );
+    return this.send(email.to, {
+      locale,
+      subject: M.subject,
+      preheader: M.preheader(String(pct)),
+      heading: M.heading,
+      paragraphs: [
+        M.body1(email.used.toLocaleString(), email.limit.toLocaleString()),
+        M.body2,
+      ],
+      cta: { label: M.cta, url: email.billingUrl },
+      footnote: M.footnote,
+    });
+  }
+
   /** Render through the shared layout and deliver via Resend. */
   private async send(
     to: string,

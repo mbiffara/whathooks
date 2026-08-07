@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   ACTIVE_SUBSCRIPTION_STATUSES,
   PLANS,
+  TOKEN_PACK,
   TRIAL_DAYS,
   planForPriceId,
   planRequiresSubscription,
@@ -164,6 +165,31 @@ export class BillingService {
     return { url: session.url };
   }
 
+  /**
+   * Checkout for a one-off AI token pack. `mode: 'payment'` rather than a
+   * subscription: the balance carries over, so there is nothing to renew.
+   * The org id rides in metadata for the webhook to credit.
+   */
+  async createTokenCheckout(organizationId: string): Promise<{ url: string }> {
+    const price = this.config.get<string>(TOKEN_PACK.priceEnv);
+    if (!price) {
+      throw new BadRequestException('Token packs are not configured');
+    }
+    const customerId = await this.ensureCustomer(organizationId);
+    const base = this.webBase();
+    const session = await this.client().checkout.sessions.create({
+      mode: 'payment',
+      customer: customerId,
+      line_items: [{ price, quantity: 1 }],
+      success_url: `${base}/dashboard/billing?checkout=tokens`,
+      cancel_url: `${base}/dashboard/billing?checkout=cancel`,
+      client_reference_id: organizationId,
+      metadata: { organizationId, tokenPack: String(TOKEN_PACK.tokens) },
+    });
+    if (!session.url) throw new BadRequestException('Could not start checkout');
+    return { url: session.url };
+  }
+
   /** Create a Customer Portal session (manage/cancel/update card). */
   async createPortalSession(organizationId: string): Promise<{ url: string }> {
     const customerId = await this.ensureCustomer(organizationId);
@@ -201,6 +227,23 @@ export class BillingService {
       }
       case 'checkout.session.completed': {
         const session = event.data.object;
+        // A token pack is a one-off payment, not a subscription.
+        const packTokens = Number(session.metadata?.tokenPack ?? 0);
+        const orgId = session.metadata?.organizationId;
+        if (session.mode === 'payment' && packTokens > 0 && orgId) {
+          const credited = await this.quota.creditAiTokens(orgId, {
+            tokens: packTokens,
+            amountCents: session.amount_total ?? 0,
+            currency: session.currency ?? 'usd',
+            stripeSessionId: session.id,
+          });
+          this.log.log(
+            credited
+              ? `Credited ${packTokens} AI tokens to ${orgId}`
+              : `Token pack ${session.id} already credited — ignoring replay`,
+          );
+          break;
+        }
         if (session.subscription) {
           const sub = await this.client().subscriptions.retrieve(
             typeof session.subscription === 'string'

@@ -234,6 +234,7 @@ export class AgentRunnerService {
           await this.quota.recordAiTokens(
             agent.organizationId,
             res.usage?.total_tokens ?? 0,
+            agent.id,
           );
         }
         raw = res.choices[0]?.message?.content ?? '';
@@ -449,6 +450,7 @@ export class AgentRunnerService {
       await this.quota.recordAiTokens(
         agent.organizationId,
         response.usage?.total_tokens ?? 0,
+        agent.id,
       );
     }
 

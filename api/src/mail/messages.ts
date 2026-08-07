@@ -58,7 +58,8 @@ export const MAIL_MESSAGES = {
       footnote: 'You can turn these notifications off in the agent settings.',
     },
     sessionDown: {
-      subject: (label: string) => `⚠ Your WhatsApp number "${label}" is disconnected`,
+      subject: (label: string) =>
+        `⚠ Your WhatsApp number "${label}" is disconnected`,
       preheader: 'It has been failing to reconnect for over a minute.',
       heading: 'A WhatsApp number is disconnected',
       body1: (label: string, phone: string) =>
@@ -102,6 +103,18 @@ export const MAIL_MESSAGES = {
       cta: 'Open the conversation',
       footnote:
         'The agent sends these when its instructions tell it to use the notify_owner tool.',
+    },
+    lowAiTokens: {
+      subject: 'Your whathooks AI tokens are running low',
+      preheader: (pct: string) =>
+        `${pct}% of this month's AI tokens left — top up to keep your agents replying.`,
+      heading: 'Your AI tokens are running low',
+      body1: (used: string, limit: string) =>
+        `Your agents have used ${used} of this month's ${limit} included AI tokens. When the allowance runs out they stop replying and hand their conversations to a person instead.`,
+      body2:
+        'Monthly tokens reset on the 1st. Buying a token pack adds tokens that never expire, and they are only spent once the monthly allowance is gone.',
+      cta: 'Buy more tokens',
+      footnote: 'Agents running on your own API key are never affected.',
     },
     trialEnding: {
       subject: 'Your whathooks trial ends soon',
@@ -183,7 +196,8 @@ export const MAIL_MESSAGES = {
     sessionLoggedOut: {
       subject: (label: string) =>
         `Tu número de WhatsApp "${label}" se desvinculó — hay que escanear el QR de nuevo`,
-      preheader: 'El dispositivo fue eliminado de WhatsApp; dejaron de llegar mensajes.',
+      preheader:
+        'El dispositivo fue eliminado de WhatsApp; dejaron de llegar mensajes.',
       heading: 'Un número de WhatsApp se desvinculó',
       body1: (label: string, phone: string) =>
         `Tu sesión "${label}"${phone ? ` (+${phone})` : ''} fue desvinculada de WhatsApp (eliminada de Dispositivos vinculados). NO se va a reconectar sola.`,
@@ -226,6 +240,18 @@ export const MAIL_MESSAGES = {
       cta: 'Abrir la conversación',
       footnote:
         'Puedes desactivar estas notificaciones en la configuración del agente.',
+    },
+    lowAiTokens: {
+      subject: 'Te quedan pocos tokens de IA en whathooks',
+      preheader: (pct: string) =>
+        `Queda el ${pct}% de los tokens de IA del mes. Recargá para que tus agentes sigan respondiendo.`,
+      heading: 'Te quedan pocos tokens de IA',
+      body1: (used: string, limit: string) =>
+        `Tus agentes usaron ${used} de los ${limit} tokens de IA incluidos este mes. Cuando se agoten dejan de responder y derivan la conversación a una persona.`,
+      body2:
+        'Los tokens mensuales se renuevan el día 1. Los packs que comprás no vencen, y solo se consumen cuando se acabaron los del mes.',
+      cta: 'Comprar más tokens',
+      footnote: 'Los agentes que usan tu propia clave nunca se ven afectados.',
     },
     trialEnding: {
       subject: 'Tu prueba gratuita de whathooks termina pronto',

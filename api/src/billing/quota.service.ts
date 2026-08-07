@@ -1,9 +1,11 @@
 import {
   ForbiddenException,
+  Logger,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Plan } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ACTIVE_SUBSCRIPTION_STATUSES,
@@ -11,6 +13,8 @@ import {
   TRIAL_LIMITS,
   currentMonthStart,
   currentPeriod,
+  LOW_TOKENS_THRESHOLD,
+  startOfUtcDay,
   planRequiresSubscription,
 } from './plans';
 
@@ -31,7 +35,12 @@ function min(a: number | null, b: number): number {
 
 @Injectable()
 export class QuotaService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly log = new Logger(QuotaService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+  ) {}
 
   private async orgBilling(organizationId: string) {
     const org = await this.prisma.organization.findUnique({
@@ -121,27 +130,215 @@ export class QuotaService {
     return { used: row?.tokens ?? 0, limit: limits.includedAiTokens };
   }
 
-  /** True when the org still has included-AI budget for this month. */
+  /** Purchased tokens still unspent. These carry over between months. */
+  async paidAiTokens(organizationId: string): Promise<number> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { paidAiTokens: true },
+    });
+    return org?.paidAiTokens ?? 0;
+  }
+
+  /** True while the org can still run an included-AI agent. */
   async hasIncludedAiBudget(organizationId: string): Promise<boolean> {
     const { used, limit } = await this.aiTokenUsage(organizationId);
-    return limit == null || used < limit;
+    if (limit == null || used < limit) return true;
+    return (await this.paidAiTokens(organizationId)) > 0;
   }
 
   /**
-   * Add a run's tokens to this month's meter. Best-effort by design: a reply
-   * has already been generated and paid for by the time this is called, so a
-   * failure here must never surface to the caller.
+   * Book a run's tokens. The plan's monthly allowance is always spent first;
+   * only the overflow draws down purchased tokens, which is what makes
+   * "monthly tokens don't carry over, purchased ones do" true without a
+   * separate expiry job.
+   *
+   * Best-effort by design: the reply has already been generated and paid for
+   * by the time this runs, so a failure here must never surface to the
+   * caller. Returns how the spend was split, for the low-balance check.
    */
-  async recordAiTokens(organizationId: string, tokens: number): Promise<void> {
+  async recordAiTokens(
+    organizationId: string,
+    tokens: number,
+    agentId?: string,
+  ): Promise<void> {
     if (tokens <= 0) return;
-    const period = currentPeriod(new Date());
-    await this.prisma.aiTokenUsage
-      .upsert({
-        where: { organizationId_period: { organizationId, period } },
-        create: { organizationId, period, tokens },
-        update: { tokens: { increment: tokens } },
-      })
-      .catch(() => undefined);
+    try {
+      const now = new Date();
+      const period = currentPeriod(now);
+      const { used, limit } = await this.aiTokenUsage(organizationId);
+      const freeLeft = limit == null ? tokens : Math.max(0, limit - used);
+      const fromFree = Math.min(tokens, freeLeft);
+      const fromPaid = tokens - fromFree;
+
+      if (fromFree > 0) {
+        await this.prisma.aiTokenUsage.upsert({
+          where: { organizationId_period: { organizationId, period } },
+          create: { organizationId, period, tokens: fromFree },
+          update: { tokens: { increment: fromFree } },
+        });
+      }
+      if (fromPaid > 0) {
+        // Floor at zero: a run that overshoots the balance must not leave a
+        // negative one that a later purchase would silently pay off.
+        await this.prisma.organization.update({
+          where: { id: organizationId },
+          data: { paidAiTokens: { decrement: fromPaid } },
+        });
+        await this.prisma.organization.updateMany({
+          where: { id: organizationId, paidAiTokens: { lt: 0 } },
+          data: { paidAiTokens: 0 },
+        });
+      }
+      // Reporting rows count every token, whichever bucket paid for it. The
+      // compound unique includes a nullable agentId, which Prisma cannot use
+      // in upsert, so this is a find-then-write.
+      const day = startOfUtcDay(now);
+      const existing = await this.prisma.aiTokenDailyUsage.findFirst({
+        where: { organizationId, agentId: agentId ?? null, day },
+        select: { id: true },
+      });
+      if (existing) {
+        await this.prisma.aiTokenDailyUsage.update({
+          where: { id: existing.id },
+          data: { tokens: { increment: tokens } },
+        });
+      } else {
+        await this.prisma.aiTokenDailyUsage.create({
+          data: { organizationId, agentId: agentId ?? null, day, tokens },
+        });
+      }
+      await this.maybeWarnLowTokens(organizationId, period);
+    } catch (e) {
+      this.log.warn(`AI token metering failed for ${organizationId}: ${e}`);
+    }
+  }
+
+  /**
+   * Email the owners once per month when the allowance drops to the warning
+   * threshold. Skipped when purchased tokens are on hand, since those cover
+   * the shortfall and nothing is about to stop working.
+   */
+  private async maybeWarnLowTokens(
+    organizationId: string,
+    period: string,
+  ): Promise<void> {
+    const { used, limit } = await this.aiTokenUsage(organizationId);
+    if (limit == null) return;
+    if (limit - used > Math.ceil(limit * LOW_TOKENS_THRESHOLD)) return;
+    if ((await this.paidAiTokens(organizationId)) > 0) return;
+
+    // Claim the slot first: two concurrent runs must not both send.
+    const claimed = await this.prisma.aiTokenUsage.updateMany({
+      where: { organizationId, period, lowAlertSentAt: null },
+      data: { lowAlertSentAt: new Date() },
+    });
+    if (claimed.count === 0) return;
+
+    const owners = await this.prisma.membership.findMany({
+      where: { organizationId, role: 'OWNER' },
+      select: { user: { select: { email: true, locale: true } } },
+    });
+    const billingUrl = `${process.env.WEB_ORIGIN ?? ''}/dashboard/billing`;
+    for (const o of owners) {
+      await this.mail
+        .sendLowAiTokens({
+          to: o.user.email,
+          locale: o.user.locale,
+          used,
+          limit,
+          billingUrl,
+        })
+        .catch((e) => this.log.warn(`Low-token email failed: ${e}`));
+    }
+  }
+
+  /**
+   * Credit a token-pack purchase. Idempotent on the Stripe session id, since
+   * checkout.session.completed can be delivered more than once.
+   */
+  async creditAiTokens(
+    organizationId: string,
+    opts: {
+      tokens: number;
+      amountCents: number;
+      currency: string;
+      stripeSessionId: string;
+    },
+  ): Promise<boolean> {
+    const existing = await this.prisma.aiTokenPurchase.findUnique({
+      where: { stripeSessionId: opts.stripeSessionId },
+      select: { id: true },
+    });
+    if (existing) return false;
+    await this.prisma.$transaction([
+      this.prisma.aiTokenPurchase.create({
+        data: { organizationId, ...opts },
+      }),
+      this.prisma.organization.update({
+        where: { id: organizationId },
+        data: { paidAiTokens: { increment: opts.tokens } },
+      }),
+    ]);
+    return true;
+  }
+
+  /**
+   * The full AI-token picture for the dashboard: this month's allowance use,
+   * the carried-over paid balance, and enough history for the usage table.
+   */
+  async aiTokenReport(organizationId: string, days = 30) {
+    const [{ used, limit }, paid] = await Promise.all([
+      this.aiTokenUsage(organizationId),
+      this.paidAiTokens(organizationId),
+    ]);
+    const since = startOfUtcDay(new Date());
+    since.setUTCDate(since.getUTCDate() - (days - 1));
+    const rows = await this.prisma.aiTokenDailyUsage.findMany({
+      where: { organizationId, day: { gte: since } },
+      select: { day: true, tokens: true, agent: { select: { name: true } } },
+      orderBy: { day: 'desc' },
+    });
+
+    const byDayMap = new Map<string, number>();
+    const byAgentMap = new Map<string, number>();
+    for (const r of rows) {
+      const key = r.day.toISOString().slice(0, 10);
+      byDayMap.set(key, (byDayMap.get(key) ?? 0) + r.tokens);
+      const name = r.agent?.name ?? 'Deleted agent';
+      byAgentMap.set(name, (byAgentMap.get(name) ?? 0) + r.tokens);
+    }
+    const remainingFree = limit == null ? null : Math.max(0, limit - used);
+    return {
+      included: { used, limit },
+      paid,
+      // Null limit means unlimited, which is never "low".
+      low:
+        limit != null &&
+        paid === 0 &&
+        remainingFree! <= Math.ceil(limit * LOW_TOKENS_THRESHOLD),
+      byDay: [...byDayMap.entries()]
+        .map(([day, tokens]) => ({ day, tokens }))
+        .sort((a, b) => b.day.localeCompare(a.day)),
+      byAgent: [...byAgentMap.entries()]
+        .map(([name, tokens]) => ({ name, tokens }))
+        .sort((a, b) => b.tokens - a.tokens),
+    };
+  }
+
+  /** Token-pack purchases, newest first, for the billing history. */
+  async aiTokenPurchases(organizationId: string) {
+    return this.prisma.aiTokenPurchase.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        tokens: true,
+        amountCents: true,
+        currency: true,
+        createdAt: true,
+      },
+    });
   }
 
   /** Throw if the org may not send: no live subscription, or over the cap. */

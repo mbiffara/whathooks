@@ -48,6 +48,10 @@ model Organization {
   plan                 Plan      @default(STARTER)
   // Admin override for the monthly message cap (null = plan/trial default).
   messageLimitOverride Int?
+  // Purchased AI tokens still unspent. Unlike the plan's monthly allowance
+  // this carries over: it is only ever decremented by use, and topped up by
+  // a token-pack purchase. Included tokens are always spent first.
+  paidAiTokens         Int       @default(0)
   // X ads click id captured at signup (twclid) — used to attribute the later
   // paid-subscription conversion via X's Conversion API. Never shown in UI.
   adClickId            String?
@@ -61,6 +65,8 @@ model Organization {
   memberships   Membership[]
   invitations   Invitation[]
   aiTokenUsage  AiTokenUsage[]
+  aiTokenDaily  AiTokenDailyUsage[]
+  aiTokenPurchases AiTokenPurchase[]
   sessions      WaSession[]
   webhooks      Webhook[]
   apiKeys       ApiKey[]
@@ -254,6 +260,7 @@ model Agent {
   sessions WaSession[]
   messages Message[]
   knowledgeDocs AgentKnowledgeDoc[]
+  aiTokenDaily  AiTokenDailyUsage[]
 
   @@index([organizationId])
 }
@@ -381,10 +388,48 @@ model AiTokenUsage {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   period         String
+  // Tokens drawn from the PLAN's monthly allowance only; spend beyond it
+  // comes out of Organization.paidAiTokens. Resets simply by moving to a new
+  // period key — monthly tokens never carry over.
   tokens         Int          @default(0)
+  // Set when the "10% of your allowance left" email went out, so the warning
+  // fires once per month rather than on every run past the threshold.
+  lowAlertSentAt DateTime?
   updatedAt      DateTime     @updatedAt
 
   @@unique([organizationId, period])
+}
+
+// Per-day, per-agent token spend, for the usage table. Counts every token
+// consumed (included and paid alike) — the split lives in AiTokenUsage and
+// Organization.paidAiTokens. `day` is midnight UTC, matching the period key.
+model AiTokenDailyUsage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agentId        String?
+  agent          Agent?       @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  day            DateTime
+  tokens         Int          @default(0)
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, agentId, day])
+  @@index([organizationId, day])
+}
+
+// A token-pack purchase. Kept for the billing history and to make top-ups
+// idempotent: Stripe may deliver checkout.session.completed more than once.
+model AiTokenPurchase {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tokens          Int
+  amountCents     Int
+  currency        String       @default("usd")
+  stripeSessionId String       @unique
+  createdAt       DateTime     @default(now())
+
+  @@index([organizationId])
 }
 
 // ---------------------------------------------------------------------------

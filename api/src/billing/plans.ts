@@ -97,6 +97,18 @@ export const PLANS: Record<Plan, PlanLimits> = {
  * is included so Stripe's dunning/retry cycle can run before access is cut. */
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'];
 
+/**
+ * One-off AI token pack. Bought as a Stripe payment (not a subscription), so
+ * it tops up a balance that carries over instead of renewing.
+ */
+export const TOKEN_PACK = {
+  tokens: 10_000_000,
+  priceEnv: 'STRIPE_PRICE_TOKENS_10M',
+} as const;
+
+/** Warn the owner once the monthly allowance drops to this share. */
+export const LOW_TOKENS_THRESHOLD = 0.1;
+
 /** Card-gated free trial on first subscription, any tier. */
 export const TRIAL_DAYS = 7;
 
@@ -133,6 +145,13 @@ export function planForPriceId(
 /** Start of the current UTC calendar month — the message-quota window. */
 export function currentMonthStart(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+/** Midnight UTC for a timestamp — the per-day usage bucket. */
+export function startOfUtcDay(now: Date): Date {
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
 }
 
 /**

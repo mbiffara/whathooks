@@ -20,6 +20,7 @@ import {
 } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
+import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
@@ -69,6 +70,7 @@ const MAX_CONTACTS_PER_ORG = 5000;
 
 /** Org-scoped contact book. Any member can manage it. */
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
+@OrgRoles('MEMBER') // the contact book holds customer numbers: operators are out
 @Controller('contacts')
 export class ContactsController {
   constructor(

@@ -170,7 +170,7 @@ interface NavLink {
 /** The inbox toolset — all an OPERATOR gets to see, plus the help links. */
 const OPERATOR_KEYS = new Set<IconName>([
   "messages",
-  "contacts",
+  // No "contacts": the address book holds customer numbers.
   "quickReplies",
   "tags",
   "guide",

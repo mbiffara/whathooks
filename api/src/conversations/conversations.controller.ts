@@ -30,6 +30,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { SessionAccessService } from '../auth/session-access.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { ConversationsService } from './conversations.service';
 
@@ -110,6 +111,11 @@ export class ConversationsController {
     return user.orgRole === 'OPERATOR' ? user.userId : null;
   }
 
+  /** Operators answer threads without seeing the contact's number. */
+  private redactFor(user: AuthUser): boolean {
+    return user.orgRole === 'OPERATOR';
+  }
+
   private orgOf(user: AuthUser): string {
     if (!user.organizationId)
       throw new BadRequestException('User has no organization');
@@ -143,6 +149,7 @@ export class ConversationsController {
         tagId: tag,
         allowed,
         assignedTo: this.assignedOnly(user),
+        redactNumbers: this.redactFor(user),
       }),
     );
   }
@@ -155,6 +162,7 @@ export class ConversationsController {
         body,
         allowed,
         this.assignedOnly(user),
+        this.redactFor(user),
       ),
     );
   }
@@ -172,6 +180,7 @@ export class ConversationsController {
         body,
         allowed,
         this.assignedOnly(user),
+        this.redactFor(user),
       ),
     );
   }
@@ -184,6 +193,7 @@ export class ConversationsController {
       id,
       allowed,
       this.assignedOnly(user),
+      this.redactFor(user),
     );
   }
 
@@ -253,6 +263,7 @@ export class ConversationsController {
   }
 
   /** Save the contact by hand, for sessions that don't auto-save them. */
+  @OrgRoles('MEMBER') // address-book management — not for operators
   @Post(':id/contact')
   saveContact(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.allowedFor(user).then((allowed) =>

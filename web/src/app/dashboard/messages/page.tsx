@@ -57,6 +57,8 @@ function MessagesInbox() {
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const isPlatformAdmin = auth?.user?.role === "ADMIN";
+  // Operators never see customer numbers, so no address-book actions.
+  const isOperator = !isPlatformAdmin && auth?.user?.orgRole === "OPERATOR";
 
   const [sessions, setSessions] = useState<WaSession[]>([]);
   const [sessionFilter, setSessionFilter] = useState<string>("");
@@ -695,7 +697,10 @@ function MessagesInbox() {
           aria-modal="true"
           aria-labelledby="mirror-title"
         >
-          <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="card w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 id="mirror-title" className="text-lg font-semibold">
               {t("mirrorPromptTitle")}
             </h2>
@@ -750,7 +755,10 @@ function MessagesInbox() {
           aria-modal="true"
           aria-labelledby="unlink-title"
         >
-          <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="card w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 id="unlink-title" className="text-lg font-semibold">
               {t("mirrorRemoveTitle")}
             </h2>
@@ -909,7 +917,7 @@ function MessagesInbox() {
           <input
             className="input mt-2"
             placeholder={t("searchPlaceholder")}
-              aria-label={t("searchPlaceholder")}
+            aria-label={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -965,8 +973,7 @@ function MessagesInbox() {
             </div>
           ) : (
             conversations.map((c) => {
-              const display =
-                c.name || contactNumber(c) || t("hiddenNumber");
+              const display = c.name || contactNumber(c) || t("hiddenNumber");
               const preview = previewText(
                 c.lastMessageText,
                 c.lastMessageType,
@@ -1129,7 +1136,8 @@ function MessagesInbox() {
                   </span>
                 )}
                 {/* Sessions that auto-save already have the contact. */}
-                {!selectedConv.isGroup &&
+                {!isOperator &&
+                  !selectedConv.isGroup &&
                   selectedSession &&
                   !selectedSession.saveContacts &&
                   (contactSaved?.conversationId === selectedConv.id ? (
@@ -1302,7 +1310,7 @@ function MessagesInbox() {
                         <input
                           className="input h-7 flex-1 px-2 py-0 text-xs"
                           placeholder={t("newTagPlaceholder")}
-              aria-label={t("newTagPlaceholder")}
+                          aria-label={t("newTagPlaceholder")}
                           value={newTagName}
                           onChange={(e) => setNewTagName(e.target.value)}
                           onKeyDown={(e) => {
@@ -1462,28 +1470,28 @@ function MessagesInbox() {
                             </p>
                           ) : (
                             qrFiltered.map((q) => (
-                                <button
-                                  key={q.id}
-                                  onClick={() => {
-                                    setText((prev) =>
-                                      prev.trim()
-                                        ? `${prev.trimEnd()} ${q.text}`
-                                        : q.text,
-                                    );
-                                    setQrOpen(false);
-                                  }}
-                                  className="rounded-lg px-2.5 py-2 text-left hover:bg-[var(--color-surface-2)]"
-                                >
-                                  {q.title && (
-                                    <span className="block text-[10px] font-semibold text-[var(--color-brand)]">
-                                      {q.title}
-                                    </span>
-                                  )}
-                                  <span className="block truncate text-xs text-[var(--color-fg)]">
-                                    {q.text}
+                              <button
+                                key={q.id}
+                                onClick={() => {
+                                  setText((prev) =>
+                                    prev.trim()
+                                      ? `${prev.trimEnd()} ${q.text}`
+                                      : q.text,
+                                  );
+                                  setQrOpen(false);
+                                }}
+                                className="rounded-lg px-2.5 py-2 text-left hover:bg-[var(--color-surface-2)]"
+                              >
+                                {q.title && (
+                                  <span className="block text-[10px] font-semibold text-[var(--color-brand)]">
+                                    {q.title}
                                   </span>
-                                </button>
-                              ))
+                                )}
+                                <span className="block truncate text-xs text-[var(--color-fg)]">
+                                  {q.text}
+                                </span>
+                              </button>
+                            ))
                           )}
                         </div>
                         <Link
@@ -1516,7 +1524,7 @@ function MessagesInbox() {
                         ? t("typeMessage")
                         : t("numberDisconnected")
                   }
-              aria-label={
+                  aria-label={
                     noteMode
                       ? t("notePlaceholder")
                       : isConnected

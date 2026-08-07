@@ -68,9 +68,10 @@ export interface MessagesPage {
 export interface Conversation {
   id: string;
   sessionId: string;
-  remoteJid: string;
+  /** All three are null for operators: they never see customer numbers. */
+  remoteJid: string | null;
   /** Raw addressing identity: a phone number, or a LID when WhatsApp hides it. */
-  contact: string;
+  contact: string | null;
   /** The real phone number when `contact` is a LID. Prefer this for display. */
   phoneNumber: string | null;
   name: string | null;

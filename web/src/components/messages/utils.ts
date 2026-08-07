@@ -97,11 +97,12 @@ export function formatBytes(size: number | null): string {
  * resolve, since those digits are an internal identity, not a phone number.
  */
 export function contactNumber(c: {
-  contact: string;
+  contact: string | null;
   phoneNumber: string | null;
-  remoteJid: string;
+  remoteJid: string | null;
 }): string | null {
   if (c.phoneNumber) return `+${c.phoneNumber}`;
-  if (c.remoteJid.endsWith("@lid")) return null;
+  // Redacted for operators, or a LID we could not resolve: no number to show.
+  if (!c.contact || c.remoteJid?.endsWith("@lid")) return null;
   return `+${c.contact}`;
 }

@@ -77,6 +77,8 @@ export class ConversationsService {
       allowed?: string[] | null;
       /** Operators only see conversations assigned to this user id. */
       assignedTo?: string | null;
+      /** Blank the contact's number in the response (operators). */
+      redactNumbers?: boolean;
     },
   ) {
     const q = opts.q?.trim();
@@ -103,7 +105,9 @@ export class ConversationsService {
           ? {
               OR: [
                 { name: { contains: q, mode: 'insensitive' } },
-                { remoteJid: { contains: q } },
+                // Matching the jid would let a hidden number be confirmed
+                // by typing it into search.
+                ...(opts.redactNumbers ? [] : [{ remoteJid: { contains: q } }]),
                 {
                   messages: {
                     some: { text: { contains: q, mode: 'insensitive' } },
@@ -119,7 +123,11 @@ export class ConversationsService {
     });
     const mirrors = await this.mirrorsFor(rows);
     return rows.map((c) =>
-      this.toConversationDto(c, mirrors.get(`${c.sessionId}|${c.remoteJid}`)),
+      this.toConversationDto(
+        c,
+        mirrors.get(`${c.sessionId}|${c.remoteJid}`),
+        opts.redactNumbers,
+      ),
     );
   }
 
@@ -133,6 +141,7 @@ export class ConversationsService {
     dto: { sessionId: string; to: string },
     allowed?: string[] | null,
     assignedTo?: string | null,
+    redactNumbers = false,
   ) {
     // 404 (not 403) so restricted members can't probe session existence.
     if (allowed && !allowed.includes(dto.sessionId)) {
@@ -170,6 +179,7 @@ export class ConversationsService {
     return this.toConversationDto(
       conversation,
       await this.mirrorFor(conversation),
+      redactNumbers,
     );
   }
 
@@ -185,6 +195,7 @@ export class ConversationsService {
     },
     allowed?: string[] | null,
     assignedTo?: string | null,
+    redactNumbers = false,
   ) {
     await this.requireConversation(
       organizationId,
@@ -229,7 +240,11 @@ export class ConversationsService {
       },
       include: AGENT_INCLUDE,
     });
-    return this.toConversationDto(updated, await this.mirrorFor(updated));
+    return this.toConversationDto(
+      updated,
+      await this.mirrorFor(updated),
+      redactNumbers,
+    );
   }
 
   async get(
@@ -237,6 +252,7 @@ export class ConversationsService {
     id: string,
     allowed?: string[] | null,
     assignedTo?: string | null,
+    redactNumbers = false,
   ) {
     const c = await this.requireConversation(
       organizationId,
@@ -245,7 +261,7 @@ export class ConversationsService {
       allowed,
       assignedTo,
     );
-    return this.toConversationDto(c, await this.mirrorFor(c));
+    return this.toConversationDto(c, await this.mirrorFor(c), redactNumbers);
   }
 
   /**
@@ -642,19 +658,27 @@ export class ConversationsService {
     return c;
   }
 
+  /**
+   * `redactNumbers` blanks every field that reveals the contact's number.
+   * Operators answer threads without being able to read, or walk away with,
+   * customer numbers — the same posture as a mirror link, where the human
+   * agent never sees the lead. Names stay: they are how threads are told
+   * apart, and they are not contact details.
+   */
   private toConversationDto(
     c: ConversationWithAgent,
     mirror?: MirrorInfo | null,
+    redactNumbers = false,
   ) {
     const agent = c.session?.agent ?? null;
     return {
       id: c.id,
       sessionId: c.sessionId,
-      remoteJid: c.remoteJid,
+      remoteJid: redactNumbers ? null : c.remoteJid,
       // The raw addressing identity: a phone number, or a LID when WhatsApp
       // hides it. `phoneNumber` carries the real number in the LID case.
-      contact: c.remoteJid.split('@')[0],
-      phoneNumber: c.phoneNumber,
+      contact: redactNumbers ? null : c.remoteJid.split('@')[0],
+      phoneNumber: redactNumbers ? null : c.phoneNumber,
       name: c.name,
       isGroup: c.isGroup,
       avatarUrl: c.avatarUrl,

@@ -217,7 +217,11 @@ export class FlowsService {
   async simulate(organizationId: string, id: string, text: string) {
     const flow = await this.get(organizationId, id);
     const rec = await this.engine.simulate(
-      { id: flow.id, graph: flow.graph as unknown as FlowGraph },
+      {
+        id: flow.id,
+        graph: flow.graph as unknown as FlowGraph,
+        organizationId,
+      },
       {
         conversationId: `sim_${flow.id}`,
         remoteJid: 'simulation@s.whatsapp.net',

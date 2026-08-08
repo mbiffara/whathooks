@@ -1120,7 +1120,12 @@ function NodePanel({
             value={(d.agentId as string) ?? ""}
             onChange={(e) => onPatch({ agentId: e.target.value })}
           >
-            <option value="">{t("select")}</option>
+            {/* These two nodes only need a model and credentials, never a
+                persona, so "included tokens" is a valid default rather than
+                a missing setting. agentReply does need the persona. */}
+            <option value="">
+              {nt === "agentReply" ? t("select") : t("aiIncludedOption")}
+            </option>
             {refs.agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -1128,6 +1133,11 @@ function NodePanel({
               </option>
             ))}
           </select>
+          {nt !== "agentReply" && !d.agentId && (
+            <span className="text-xs text-[var(--color-muted)]">
+              {t("aiIncludedHint")}
+            </span>
+          )}
         </label>
       )}
 

@@ -112,8 +112,8 @@ NODE TYPES (type → data fields → output handles):
 - trigger → {} → "out". Exactly one, with id "trigger". Every graph starts here.
 - keyword → { keywords: string[] } → "yes", "no". Case/accent-insensitive contains-match on the inbound message.
 - keywordCases → { cases: [{ key, label, keywords: string[] }] } → one handle per case key, plus "fallback". Several keyword lists, each with its own branch; the FIRST case that matches wins. Use this instead of chaining keyword nodes when a message should route three or more ways on wording alone. Keys are short lowercase slugs; "fallback" is reserved.
-- aiDecision → { agentId, question } → "yes", "no". An AI agent answers ONE yes/no question about the conversation. Use it for judgements no keyword list can make ("is the customer angry?", "did they already pay?"). An unclear answer takes "no", so wire the safer outcome there.
-- intent → { agentId, intents: [{ key, label, description? }] } → one handle per intent key, plus "fallback". Keys are short lowercase slugs; "fallback" is reserved.
+- aiDecision → { agentId?, question } → "yes", "no". An AI agent answers ONE yes/no question about the conversation. Use it for judgements no keyword list can make ("is the customer angry?", "did they already pay?"). An unclear answer takes "no", so wire the safer outcome there.
+- intent → { agentId?, intents: [{ key, label, description? }] } → one handle per intent key, plus "fallback". Keys are short lowercase slugs; "fallback" is reserved.
 - agentReply → { agentId } → optional "onHandoff". The AI agent answers; the walk ends after replying. Connect "onHandoff" to route the conversation when the agent decides a human is needed.
 - assignHuman → { humanAgentId, groupPrefix?, farewellText?, copyHistory? } → terminal. Creates a WhatsApp mirror group with that human.
 - roundRobin → { humanAgentIds: string[], same options } → terminal. Rotates leads across humans, one group per lead.
@@ -133,6 +133,9 @@ RULES:
 - All user-facing text (keywords, intent labels, farewellText) must be written in locale "${locale}".
 - Node ids: short lowercase slugs (e.g. "kw_precio", "ai_ventas").
 - Leave unused data fields null.
+- intent and aiDecision take agentId OPTIONALLY: leave it null unless the
+  user names a specific agent. Empty means the org's included AI tokens,
+  which is the normal choice. agentReply always needs one.
 
 COMMON PATTERNS:
 - Routing on wording alone with 3+ destinations: ONE keywordCases node, not a

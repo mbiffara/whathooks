@@ -780,6 +780,8 @@
       "summaryIntents": "{count, plural, one {# intent} other {# intents}}",
       "casesLabel": "Cases",
       "simulate": "Test",
+      "aiIncludedOption": "Included tokens (default)",
+      "aiIncludedHint": "Runs on your plan's AI tokens. Pick an agent only to use its provider and model instead — the agent's personality is not used here.",
       "simulatorTitle": "Test this flow",
       "simulatorHint": "Send a pretend message through the graph. Nothing is delivered, no groups are created and nothing is saved. The AI nodes do run, so their answers are real.",
       "simulatorPlaceholder": "e.g. Hola, cuánto sale el plan?",

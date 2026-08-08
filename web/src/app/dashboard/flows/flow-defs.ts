@@ -77,6 +77,7 @@ export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
         cases: [{ key: "case1", label: "Case 1", keywords: [] }],
       };
     case "intent":
+      // Empty agentId = the org's included tokens.
       return { agentId: "", intents: [{ key: "sales", label: "Sales" }] };
     case "aiDecision":
       return { agentId: "", question: "" };

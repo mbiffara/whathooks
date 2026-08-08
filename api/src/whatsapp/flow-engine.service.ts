@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MessageSource } from '@prisma/client';
+import { Agent, MessageSource } from '@prisma/client';
 import { AgentRunnerService } from '../agents/agent-runner.service';
 import {
   FlowGraph,
@@ -17,8 +17,15 @@ import type {
 
 /** Cached per-session flow lookup (mirror-link cache pattern). */
 interface CachedFlow {
-  flow: { id: string; graph: FlowGraph } | null;
+  flow: FlowRef | null;
   expires: number;
+}
+
+/** A flow as the engine needs it: id, graph, and who pays for AI nodes. */
+export interface FlowRef {
+  id: string;
+  graph: FlowGraph;
+  organizationId: string;
 }
 
 const MAX_STEPS = 20;
@@ -55,17 +62,24 @@ export class FlowEngineService {
   ) {}
 
   /** The session's enabled flow, cached ~30s (checked on every DM). */
-  async enabledFlowFor(
-    sessionId: string,
-  ): Promise<{ id: string; graph: FlowGraph } | null> {
+  async enabledFlowFor(sessionId: string): Promise<FlowRef | null> {
     const cached = this.cache.get(sessionId);
     if (cached && cached.expires > Date.now()) return cached.flow;
     const row = await this.prisma.flow.findUnique({
       where: { sessionId },
-      select: { id: true, graph: true, enabled: true },
+      select: {
+        id: true,
+        graph: true,
+        enabled: true,
+        organizationId: true,
+      },
     });
     const flow = row?.enabled
-      ? { id: row.id, graph: row.graph as unknown as FlowGraph }
+      ? {
+          id: row.id,
+          graph: row.graph as unknown as FlowGraph,
+          organizationId: row.organizationId,
+        }
       : null;
     this.cache.set(sessionId, { flow, expires: Date.now() + 30_000 });
     return flow;
@@ -78,7 +92,7 @@ export class FlowEngineService {
 
   /** Walk the graph for one inbound DM. Never throws into the caller. */
   async run(
-    flow: { id: string; graph: FlowGraph },
+    flow: FlowRef,
     sessionId: string,
     ctx: InboundAutomationCtx,
     manager: ConnectionManagerService,
@@ -136,7 +150,7 @@ export class FlowEngineService {
    * would not be worth running.
    */
   async simulate(
-    flow: { id: string; graph: FlowGraph },
+    flow: FlowRef,
     ctx: InboundAutomationCtx,
     manager: ConnectionManagerService,
   ): Promise<RunRecorder> {
@@ -169,9 +183,29 @@ export class FlowEngineService {
     return rec;
   }
 
+  /**
+   * Who runs an AI node: the configured agent, or the org itself on included
+   * tokens when none is set. These nodes only ever used an agent for its
+   * credentials and model, never its persona, so leaving the field empty is
+   * the simpler default rather than a missing setting.
+   */
+  private async aiTarget(
+    flow: FlowRef,
+    node: FlowNode,
+  ): Promise<Agent | { organizationId: string }> {
+    const agentId = node.data.agentId as string | undefined;
+    if (agentId) {
+      const agent = await this.prisma.agent.findUnique({
+        where: { id: agentId },
+      });
+      if (agent) return agent;
+    }
+    return { organizationId: flow.organizationId };
+  }
+
   /** Execute one node; returns the next node (undefined = stop). */
   private async execute(
-    flow: { id: string; graph: FlowGraph },
+    flow: FlowRef,
     sessionId: string,
     ctx: InboundAutomationCtx,
     manager: ConnectionManagerService,
@@ -209,16 +243,11 @@ export class FlowEngineService {
       }
 
       case 'aiDecision': {
-        const agent = await this.prisma.agent.findUnique({
-          where: { id: node.data.agentId as string },
-        });
-        const yes = agent
-          ? await this.agentRunner.decide(
-              agent,
-              ctx.conversationId,
-              (node.data.question as string) ?? '',
-            )
-          : null;
+        const yes = await this.agentRunner.decide(
+          await this.aiTarget(flow, node),
+          ctx.conversationId,
+          (node.data.question as string) ?? '',
+        );
         // A failed or unreadable decision takes "no": the safer branch, and
         // the one a user is likelier to have wired to a human.
         const branch = yes === true ? 'yes' : 'no';
@@ -231,13 +260,12 @@ export class FlowEngineService {
       }
 
       case 'intent': {
-        const agent = await this.prisma.agent.findUnique({
-          where: { id: node.data.agentId as string },
-        });
         const intents = intentsOf(node);
-        const key = agent
-          ? await this.agentRunner.classify(agent, ctx.conversationId, intents)
-          : null;
+        const key = await this.agentRunner.classify(
+          await this.aiTarget(flow, node),
+          ctx.conversationId,
+          intents,
+        );
         const branch = key && intents.some((i) => i.key === key) ? key : null;
         rec.steps.push({
           nodeId: node.id,

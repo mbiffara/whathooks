@@ -780,6 +780,8 @@
       "summaryIntents": "{count, plural, one {# intención} other {# intenciones}}",
       "casesLabel": "Casos",
       "simulate": "Probar",
+      "aiIncludedOption": "Tokens incluidos (por defecto)",
+      "aiIncludedHint": "Usa los tokens de IA de tu plan. Elegí un agente solo si querés usar su proveedor y modelo — acá no se usa su personalidad.",
       "simulatorTitle": "Probar este flow",
       "simulatorHint": "Enviá un mensaje de prueba por el grafo. No se entrega nada, no se crean grupos y no se guarda nada. Los nodos de IA sí se ejecutan, así que sus respuestas son reales.",
       "simulatorPlaceholder": "ej. Hola, ¿cuánto sale el plan?",

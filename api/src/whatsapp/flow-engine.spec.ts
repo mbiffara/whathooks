@@ -289,7 +289,12 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'k'), edge('k', 'tag', 'yes')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     expect(t.updates).toHaveLength(1); // tag connected via the yes branch
   });
 
@@ -311,7 +316,12 @@ describe('FlowEngineService.run', () => {
         edge('i', 'r', 'fallback'),
       ],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     expect(t.created).toHaveLength(0);
     expect(t.agentReplies).toHaveLength(1);
   });
@@ -333,7 +343,12 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'i'), edge('i', 'a', 'sales')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     expect(t.created[0]).toMatchObject({
       leadJid: CTX.remoteJid,
       agents: [{ id: 'ha1', number: '555ha1' }],
@@ -371,7 +386,12 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'a')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     // The transcript lands in the group, attributed per speaker…
     const transcript = t.sent.find((s) => s.to === 'g@g.us');
     expect(transcript?.text).toContain('Historial');
@@ -392,7 +412,12 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'c'), edge('c', 'tag', 'out')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     const createArgs = t.prisma.contact.create.mock.calls[0][0];
     expect(createArgs.data).toMatchObject({
       organizationId: 'org1',
@@ -414,7 +439,12 @@ describe('FlowEngineService.run', () => {
     });
     t.prisma.contact.create.mockClear();
     (t.webhooks.dispatch as jest.Mock).mockClear();
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     expect(t.prisma.contact.create).not.toHaveBeenCalled();
     expect(t.webhooks.dispatch).not.toHaveBeenCalled();
   });
@@ -429,7 +459,7 @@ describe('FlowEngineService.run', () => {
     };
     const first = makeEngine({ counterValues: [1] });
     await first.engine.run(
-      { id: 'f1', graph },
+      { id: 'f1', graph, organizationId: 'org1' },
       's1',
       CTX,
       first.manager as never,
@@ -438,7 +468,7 @@ describe('FlowEngineService.run', () => {
 
     const second = makeEngine({ counterValues: [2] });
     await second.engine.run(
-      { id: 'f1', graph },
+      { id: 'f1', graph, organizationId: 'org1' },
       's1',
       CTX,
       second.manager as never,
@@ -461,7 +491,12 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'a')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     expect(t.updates[0]).toMatchObject({
       where: { id: 'conv1' },
       data: { assignedToUserId: 'user1' },
@@ -477,7 +512,12 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'g')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     // One group with both agents — no round-robin counter involved.
     expect(t.created).toHaveLength(1);
     expect(t.created[0]).toMatchObject({
@@ -510,7 +550,12 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'r'), edge('r', 'a', 'onHandoff')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     // pauseOnHandoff false because the edge exists
     expect((t.agentReplies[0] as { args: unknown[] }).args[4]).toEqual({
       pauseOnHandoff: false,
@@ -524,7 +569,12 @@ describe('FlowEngineService.run', () => {
       status: 'HANDED_OFF',
     });
     const graph = defaultGraph();
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     expect(t.agentReplies).toHaveLength(0);
   });
 
@@ -538,7 +588,12 @@ describe('FlowEngineService.run', () => {
       ],
       edges: [edge('t', 'w'), edge('w', 'tag'), edge('tag', 'w')],
     };
-    await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
     expect(t.dispatched.length + t.updates.length).toBeLessThanOrEqual(20);
     expect(t.dispatched.length).toBeGreaterThan(3); // it did loop, then stopped
   });
@@ -567,7 +622,7 @@ describe('keywordCases routing', () => {
   it('takes the branch whose keywords match, ignoring accents', async () => {
     const t = makeEngine({});
     await t.engine.run(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       's1',
       { ...CTX, text: 'Necesito la FACTURA de marzo' },
       t.manager as never,
@@ -579,7 +634,7 @@ describe('keywordCases routing', () => {
   it('falls back when no case matches', async () => {
     const t = makeEngine({});
     await t.engine.run(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       's1',
       { ...CTX, text: 'hola, buenas tardes' },
       t.manager as never,
@@ -591,7 +646,7 @@ describe('keywordCases routing', () => {
   it('falls back when the matching case has no edge wired', async () => {
     const t = makeEngine({});
     await t.engine.run(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       's1',
       // "support" matches but only billing and fallback are connected.
       { ...CTX, text: 'el bot no funciona' },
@@ -618,7 +673,7 @@ describe('aiDecision routing', () => {
   it('takes yes when the agent decides yes', async () => {
     const t = makeEngine({ decide: () => Promise.resolve(true) });
     await t.engine.run(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       's1',
       CTX,
       t.manager as never,
@@ -629,7 +684,7 @@ describe('aiDecision routing', () => {
   it('takes no when the agent decides no', async () => {
     const t = makeEngine({ decide: () => Promise.resolve(false) });
     await t.engine.run(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       's1',
       CTX,
       t.manager as never,
@@ -641,7 +696,7 @@ describe('aiDecision routing', () => {
   it('treats an undecided answer as no, so a flow never stalls', async () => {
     const t = makeEngine({ decide: () => Promise.resolve(null) });
     await t.engine.run(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       's1',
       CTX,
       t.manager as never,
@@ -677,7 +732,7 @@ describe('FlowEngineService.simulate', () => {
   it('walks the real branches but performs no side effect', async () => {
     const t = makeEngine({});
     const rec = await t.engine.simulate(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       { ...CTX, text: 'cual es el PRECIO?' },
       t.manager as never,
     );
@@ -706,7 +761,7 @@ describe('FlowEngineService.simulate', () => {
   it('takes the no branch and reports the reply without sending it', async () => {
     const t = makeEngine({});
     const rec = await t.engine.simulate(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       { ...CTX, text: 'hola' },
       t.manager as never,
     );
@@ -719,10 +774,84 @@ describe('FlowEngineService.simulate', () => {
   it('records no FlowRun — a simulation is not part of the history', async () => {
     const t = makeEngine({});
     await t.engine.simulate(
-      { id: 'f1', graph: graph() },
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
       CTX,
       t.manager as never,
     );
     expect(t.runs).toHaveLength(0);
+  });
+});
+
+describe('AI nodes without an agent', () => {
+  it('validates with no agentId, and rejects an unknown one', () => {
+    const withNone: FlowGraph = {
+      nodes: [
+        node('trigger', 'trigger'),
+        node('i', 'intent', { intents: [{ key: 'sales', label: 'Sales' }] }),
+      ],
+      edges: [edge('trigger', 'i')],
+    };
+    expect(validateGraph(withNone, REFS)).toEqual([]);
+
+    const withBogus: FlowGraph = {
+      nodes: [
+        node('trigger', 'trigger'),
+        node('i', 'intent', {
+          agentId: 'deleted',
+          intents: [{ key: 'sales', label: 'Sales' }],
+        }),
+      ],
+      edges: [edge('trigger', 'i')],
+    };
+    expect(validateGraph(withBogus, REFS)).toHaveLength(1);
+  });
+
+  it('classifies on the org itself, not a configured agent', async () => {
+    const t = makeEngine({ classify: () => Promise.resolve('sales') });
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        // No agentId: the node runs on the org's included tokens.
+        node('i', 'intent', { intents: [{ key: 'sales', label: 'Sales' }] }),
+        node('tag', 'tagConversation', { tagId: 'tag1' }),
+      ],
+      edges: [edge('t', 'i'), edge('i', 'tag', 'sales')],
+    };
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.updates).toHaveLength(1);
+    // The runner is handed the paying org, never an Agent row.
+    expect(t.agentRunner.classify).toHaveBeenCalledWith(
+      { organizationId: 'org1' },
+      expect.any(String),
+      expect.any(Array),
+    );
+  });
+
+  it('decides on the org itself when no agent is set', async () => {
+    const t = makeEngine({ decide: () => Promise.resolve(true) });
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('d', 'aiDecision', { question: 'Angry?' }),
+        node('a', 'assignHuman', { humanAgentId: 'ha1' }),
+      ],
+      edges: [edge('t', 'd'), edge('d', 'a', 'yes')],
+    };
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.agentRunner.decide).toHaveBeenCalledWith(
+      { organizationId: 'org1' },
+      expect.any(String),
+      'Angry?',
+    );
   });
 });

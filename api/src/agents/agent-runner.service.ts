@@ -4,6 +4,7 @@ import { Agent } from '@prisma/client';
 import OpenAI from 'openai';
 import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { INCLUDED_AI_MODEL } from './dto/agent.dto';
 import { EncryptionService } from './encryption.service';
 import { AgentMcpServer, isAgentMcpServers } from './mcp-servers';
 
@@ -185,21 +186,14 @@ export class AgentRunnerService {
    * on any error / no confident match (callers treat null as "fallback").
    */
   async classify(
-    agent: Agent,
+    target: Agent | { organizationId: string },
     conversationId: string,
     intents: Array<{ key: string; label: string; description?: string }>,
   ): Promise<string | null> {
-    if (!this.encryption.isConfigured() || intents.length === 0) return null;
-    const creds = await this.credentials(agent);
+    if (intents.length === 0) return null;
+    const run = await this.resolveRunner(target);
     // No credentials or no budget: callers treat null as "fallback".
-    if (!creds || 'exhausted' in creds) return null;
-    const metered = creds.metered;
-    let apiKey: string;
-    try {
-      apiKey = creds.apiKey;
-    } catch {
-      return null;
-    }
+    if (!run || 'exhausted' in run) return null;
     const turns = await this.loadHistory(conversationId, false);
     if (!turns.length) return null;
 
@@ -218,61 +212,81 @@ export class AgentRunnerService {
     ].join('\n');
 
     try {
-      let raw: string;
-      // Included AI is OpenAI-only, whatever the provider column says.
-      if (agent.provider === 'OPENAI' || metered) {
-        const client = new OpenAI({ apiKey });
-        const res = await client.chat.completions.create({
-          model: agent.model,
-          messages: [
-            { role: 'system', content: system },
-            ...turns.map((t) => ({ role: t.role, content: t.text }) as const),
-          ],
-        });
-        // Classification burns tokens too — meter it like a reply.
-        if (metered) {
-          await this.quota.recordAiTokens(
-            agent.organizationId,
-            res.usage?.total_tokens ?? 0,
-            agent.id,
-          );
-        }
-        raw = res.choices[0]?.message?.content ?? '';
-      } else {
-        const client = new Anthropic({ apiKey });
-        const res = await client.messages.create({
-          model: agent.model,
-          max_tokens: 16,
-          system,
-          messages: turns.map((t) => ({ role: t.role, content: t.text })),
-        });
-        raw = res.content
-          .map((b) => (b.type === 'text' ? b.text : ''))
-          .join('');
-      }
+      // Classification burns tokens too — askShort meters included spend.
+      const raw = await this.askShort(run, system, turns, 16);
       const answer = raw.trim().toLowerCase().split(/\s+/)[0] ?? '';
       return keys.find((k) => k.toLowerCase() === answer) ?? null;
     } catch (e) {
-      this.log.warn(`Intent classify failed for agent "${agent.name}": ${e}`);
+      this.log.warn(`Intent classify failed: ${e}`);
       return null;
     }
   }
 
   /** Recent messages, chronological, starting from the first inbound turn. */
   /**
+   * Who pays for a classification or decision. An Agent brings its own
+   * provider, model and key; an org id alone runs on included tokens at the
+   * fixed model — the flow nodes only ever needed credentials and a model,
+   * never a persona, so requiring an agent was needless configuration.
+   */
+  private async resolveRunner(
+    target: Agent | { organizationId: string },
+  ): Promise<
+    | {
+        apiKey: string;
+        model: string;
+        openai: boolean;
+        metered: boolean;
+        organizationId: string;
+        agentId?: string;
+      }
+    | { exhausted: true }
+    | null
+  > {
+    if ('id' in target) {
+      const creds = await this.credentials(target);
+      if (!creds) return null;
+      if ('exhausted' in creds) return creds;
+      return {
+        apiKey: creds.apiKey,
+        model: target.model,
+        openai: target.provider === 'OPENAI' || creds.metered,
+        metered: creds.metered,
+        organizationId: target.organizationId,
+        agentId: target.id,
+      };
+    }
+    const apiKey = process.env.INCLUDED_AI_OPENAI_KEY;
+    if (!apiKey) {
+      this.log.error(
+        'Included AI requested but INCLUDED_AI_OPENAI_KEY is unset',
+      );
+      return null;
+    }
+    if (!(await this.quota.hasIncludedAiBudget(target.organizationId))) {
+      return { exhausted: true };
+    }
+    return {
+      apiKey,
+      model: INCLUDED_AI_MODEL,
+      openai: true,
+      metered: true,
+      organizationId: target.organizationId,
+    };
+  }
+
+  /**
    * Answer one yes/no question about the conversation with the agent's own
    * credentials. Null on any error, no budget, or an unreadable answer —
    * callers treat null as "no" so a flow never stalls on a failed decision.
    */
   async decide(
-    agent: Agent,
+    target: Agent | { organizationId: string },
     conversationId: string,
     question: string,
   ): Promise<boolean | null> {
-    if (!this.encryption.isConfigured()) return null;
-    const creds = await this.credentials(agent);
-    if (!creds || 'exhausted' in creds) return null;
-    const { apiKey, metered } = creds;
+    const run = await this.resolveRunner(target);
+    if (!run || 'exhausted' in run) return null;
 
     const turns = await this.loadHistory(conversationId, false);
     if (!turns.length) return null;
@@ -285,45 +299,64 @@ export class AgentRunnerService {
     ].join('\n');
 
     try {
-      let raw: string;
-      if (agent.provider === 'OPENAI' || metered) {
-        const client = new OpenAI({ apiKey });
-        const res = await client.chat.completions.create({
-          model: agent.model,
-          messages: [
-            { role: 'system', content: system },
-            ...turns.map((t) => ({ role: t.role, content: t.text }) as const),
-          ],
-        });
-        if (metered) {
-          await this.quota.recordAiTokens(
-            agent.organizationId,
-            res.usage?.total_tokens ?? 0,
-            agent.id,
-          );
-        }
-        raw = res.choices[0]?.message?.content ?? '';
-      } else {
-        const client = new Anthropic({ apiKey });
-        const res = await client.messages.create({
-          model: agent.model,
-          max_tokens: 8,
-          system,
-          messages: turns.map((t) => ({ role: t.role, content: t.text })),
-        });
-        raw = res.content
-          .map((c) => (c.type === 'text' ? c.text : ''))
-          .join('')
-          .trim();
-      }
+      const raw = await this.askShort(run, system, turns, 8);
       const answer = raw.trim().toLowerCase();
       if (answer.startsWith('yes') || answer.startsWith('sí')) return true;
       if (answer.startsWith('no')) return false;
       return null;
     } catch (e) {
-      this.log.warn(`Agent "${agent.name}" decision failed: ${e}`);
+      this.log.warn(`Flow decision failed: ${e}`);
       return null;
     }
+  }
+
+  /**
+   * One short completion on whichever credentials resolveRunner picked,
+   * metering included-token spend. Shared by classify and decide so the two
+   * cannot drift on provider handling.
+   */
+  private async askShort(
+    run: {
+      apiKey: string;
+      model: string;
+      openai: boolean;
+      metered: boolean;
+      organizationId: string;
+      agentId?: string;
+    },
+    system: string,
+    turns: Turn[],
+    maxTokens: number,
+  ): Promise<string> {
+    if (run.openai) {
+      const client = new OpenAI({ apiKey: run.apiKey });
+      const res = await client.chat.completions.create({
+        model: run.model,
+        messages: [
+          { role: 'system', content: system },
+          ...turns.map((t) => ({ role: t.role, content: t.text }) as const),
+        ],
+      });
+      if (run.metered) {
+        await this.quota.recordAiTokens(
+          run.organizationId,
+          res.usage?.total_tokens ?? 0,
+          run.agentId,
+        );
+      }
+      return res.choices[0]?.message?.content ?? '';
+    }
+    const client = new Anthropic({ apiKey: run.apiKey });
+    const res = await client.messages.create({
+      model: run.model,
+      max_tokens: maxTokens,
+      system,
+      messages: turns.map((t) => ({ role: t.role, content: t.text })),
+    });
+    return res.content
+      .map((c) => (c.type === 'text' ? c.text : ''))
+      .join('')
+      .trim();
   }
 
   private async loadHistory(

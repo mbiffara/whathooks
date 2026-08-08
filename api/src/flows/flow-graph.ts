@@ -257,10 +257,12 @@ export function validateGraph(
         break;
       }
       case 'aiDecision': {
-        if (!isStr(d.agentId, 64) || !refs.agentIds.has(d.agentId)) {
+        // No agent = run on the org's included tokens. Only a *wrong* id is
+        // an error; an empty one is the default.
+        if (d.agentId && !refs.agentIds.has(d.agentId as string)) {
           push(
             'decisionAgent',
-            `Node "${n.id}": pick an AI agent for the decision`,
+            `Node "${n.id}": that AI agent no longer exists`,
             n.id,
           );
         }
@@ -274,10 +276,11 @@ export function validateGraph(
         break;
       }
       case 'intent': {
-        if (!isStr(d.agentId, 64) || !refs.agentIds.has(d.agentId)) {
+        // Same as aiDecision: empty means included tokens.
+        if (d.agentId && !refs.agentIds.has(d.agentId as string)) {
           push(
             'intentAgent',
-            `Node "${n.id}": pick an AI agent for classification`,
+            `Node "${n.id}": that AI agent no longer exists`,
             n.id,
           );
         }

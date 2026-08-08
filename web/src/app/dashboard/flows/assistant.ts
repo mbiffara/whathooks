@@ -68,7 +68,8 @@ export function validateDraft(graph: DraftGraph, refs: FlowRefs): string[] {
         break;
       }
       case "aiDecision":
-        if (!inRefs(refs.agents, d.agentId)) {
+        // agentId is optional: empty runs on the org's included tokens.
+        if (d.agentId && !inRefs(refs.agents, d.agentId)) {
           errors.push(
             `Node "${n.id}": agentId must be one of the provided AI agent ids`,
           );
@@ -78,7 +79,8 @@ export function validateDraft(graph: DraftGraph, refs: FlowRefs): string[] {
         }
         break;
       case "intent":
-        if (!inRefs(refs.agents, d.agentId)) {
+        // agentId is optional here too.
+        if (d.agentId && !inRefs(refs.agents, d.agentId)) {
           errors.push(
             `Node "${n.id}": agentId must be one of the provided AI agent ids`,
           );

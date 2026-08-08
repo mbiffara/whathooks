@@ -146,17 +146,11 @@ export class WhathooksApiStack extends cdk.Stack {
     //     --name whathooks/included-ai-openai-key \
     //     --secret-string 'sk-proj-...' --region us-east-1 \
     //     --query ARN --output text
-    // Optional on purpose: until the secret exists the stack must still
-    // deploy, so agents on "included tokens" simply have no key and log that
-    // they cannot run. A hard-coded placeholder ARN fails synth instead.
-    const includedAiSecretArn = process.env.WH_INCLUDED_AI_SECRET_ARN;
-    const includedAiKeySecret = includedAiSecretArn
-      ? secretsmanager.Secret.fromSecretCompleteArn(
-          this,
-          'IncludedAiOpenAiKey',
-          includedAiSecretArn,
-        )
-      : undefined;
+    const includedAiKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'IncludedAiOpenAiKey',
+      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/included-ai-openai-key-fdRDpW',
+    );
     // X (Twitter) Conversion API pixel token — server-side ad attribution.
     const xPixelTokenSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
@@ -238,8 +232,8 @@ export class WhathooksApiStack extends cdk.Stack {
         STRIPE_PRICE_STARTER_YEAR: 'price_1TzHO0HVX3hp29uY2vW72tUc',
         STRIPE_PRICE_PRO_YEAR: 'price_1TzHO0HVX3hp29uYIxWEwrFo',
         STRIPE_PRICE_BUSINESS_YEAR: 'price_1TzHO1HVX3hp29uYG2Kbk37F',
-        // One-off 10M AI token pack ($9.99). Set once the Stripe price exists.
-        STRIPE_PRICE_TOKENS_10M: process.env.WH_PRICE_TOKENS_10M ?? '',
+        // One-off 10M AI token pack ($9.99), live price.
+        STRIPE_PRICE_TOKENS_10M: 'price_1U1y49HVX3hp29uYVKOX3IEl',
         // API-created portal configuration (not the Dashboard default).
         STRIPE_PORTAL_CONFIG: 'bpc_1TtBhkHVX3hp29uYjDbNpayS',
         // Sender for transactional email (Resend). notify.logicalminds.co is
@@ -262,12 +256,8 @@ export class WhathooksApiStack extends cdk.Stack {
           ecs.Secret.fromSecretsManager(stripeWebhookSecret),
         RESEND_API_KEY: ecs.Secret.fromSecretsManager(resendApiKeySecret),
         X_PIXEL_TOKEN: ecs.Secret.fromSecretsManager(xPixelTokenSecret),
-        ...(includedAiKeySecret
-          ? {
-              INCLUDED_AI_OPENAI_KEY:
-                ecs.Secret.fromSecretsManager(includedAiKeySecret),
-            }
-          : {}),
+        INCLUDED_AI_OPENAI_KEY:
+          ecs.Secret.fromSecretsManager(includedAiKeySecret),
       },
     });
 

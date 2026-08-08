@@ -3,7 +3,9 @@
 export type FlowNodeType =
   | "trigger"
   | "keyword"
+  | "keywordCases"
   | "intent"
+  | "aiDecision"
   | "agentReply"
   | "assignHuman"
   | "roundRobin"
@@ -19,6 +21,13 @@ export interface FlowIntent {
   description?: string;
 }
 
+/** One branch of a keywordCases node: its own keyword list and output. */
+export interface FlowKeywordCase {
+  key: string;
+  label: string;
+  keywords: string[];
+}
+
 export interface FlowRefs {
   agents: { id: string; name: string; enabled: boolean }[];
   humanAgents: { id: string; name: string; phoneNumber: string }[];
@@ -30,7 +39,9 @@ export interface FlowRefs {
 export const NODE_ICONS: Record<FlowNodeType, string> = {
   trigger: "⚡",
   keyword: "🔎",
+  keywordCases: "🗂️",
   intent: "🧭",
+  aiDecision: "🔀",
   agentReply: "🤖",
   assignHuman: "🧑‍💼",
   roundRobin: "🔁",
@@ -44,7 +55,9 @@ export const NODE_ICONS: Record<FlowNodeType, string> = {
 /** Palette (what can be added — trigger is fixed). */
 export const PALETTE: FlowNodeType[] = [
   "keyword",
+  "keywordCases",
   "intent",
+  "aiDecision",
   "agentReply",
   "assignHuman",
   "roundRobin",
@@ -59,8 +72,14 @@ export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
   switch (type) {
     case "keyword":
       return { keywords: [] };
+    case "keywordCases":
+      return {
+        cases: [{ key: "case1", label: "Case 1", keywords: [] }],
+      };
     case "intent":
       return { agentId: "", intents: [{ key: "sales", label: "Sales" }] };
+    case "aiDecision":
+      return { agentId: "", question: "" };
     case "agentReply":
       return { agentId: "" };
     case "assignHuman":
@@ -86,7 +105,12 @@ export function handlesFor(
 ): string[] {
   switch (type) {
     case "keyword":
+    case "aiDecision":
       return ["yes", "no"];
+    case "keywordCases": {
+      const cases = (data.cases as FlowKeywordCase[]) ?? [];
+      return [...cases.map((c) => c.key), "fallback"];
+    }
     case "intent": {
       const intents = (data.intents as FlowIntent[]) ?? [];
       return [...intents.map((i) => i.key), "fallback"];
@@ -111,8 +135,10 @@ export function summarize(
   refs: FlowRefs | null,
   t: (key: string, values?: Record<string, number>) => string,
 ): string {
-  const name = (list: { id: string; name: string }[] | undefined, id: unknown) =>
-    list?.find((x) => x.id === id)?.name ?? "—";
+  const name = (
+    list: { id: string; name: string }[] | undefined,
+    id: unknown,
+  ) => list?.find((x) => x.id === id)?.name ?? "—";
   switch (type) {
     case "keyword": {
       const kw = (data.keywords as string[]) ?? [];
@@ -120,9 +146,17 @@ export function summarize(
         ? kw.slice(0, 3).join(", ") + (kw.length > 3 ? "…" : "")
         : t("summaryNoKeywords");
     }
+    case "keywordCases": {
+      const cases = (data.cases as FlowKeywordCase[]) ?? [];
+      return t("summaryCases", { count: cases.length });
+    }
     case "intent": {
       const n = ((data.intents as FlowIntent[]) ?? []).length;
       return `${name(refs?.agents, data.agentId)} · ${t("summaryIntents", { count: n })}`;
+    }
+    case "aiDecision": {
+      const q = (data.question as string) ?? "";
+      return q ? (q.length > 40 ? `${q.slice(0, 40)}…` : q) : "—";
     }
     case "agentReply":
       return name(refs?.agents, data.agentId);

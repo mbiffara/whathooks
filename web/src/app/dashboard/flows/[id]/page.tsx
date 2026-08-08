@@ -32,6 +32,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import {
   FlowIntent,
+  FlowKeywordCase,
   FlowNodeType,
   FlowRefs,
   NODE_ICONS,
@@ -585,300 +586,303 @@ export default function FlowEditorPage() {
   return (
     <RefsContext.Provider value={refs}>
       <HighlightContext.Provider value={highlight}>
-      <div className="flex h-full flex-col overflow-hidden">
-        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
-          <button
-            onClick={() => router.push("/dashboard/flows")}
-            className="inline-flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
-          >
-            <Glyph name="chevronLeft" size={14} />
-            {t("backToFlows")}
-          </button>
-          <div className="font-semibold">{flowName}</div>
-          <select
-            className="input h-8 w-56 px-2 py-0 text-xs"
-            value={sessionId ?? ""}
-            onChange={(e) => void assignSession(e.target.value || null)}
-            disabled={busy}
-          >
-            <option value="">
-              {sessionId ? t("removeSession") : t("assignSession")}
-            </option>
-            {sessions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-                {s.phoneNumber ? ` (+${s.phoneNumber})` : ""}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto flex items-center gap-2">
-            {dirty && (
-              <span className="text-xs text-[var(--color-warning)]">
-                {t("unsaved")}
-              </span>
-            )}
+        <div className="flex h-full flex-col overflow-hidden">
+          <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
             <button
-              onClick={() => {
-                setRunsOpen((v) => !v);
-                setSelectedId(null);
-                if (runsOpen) setHighlight(new Set());
-              }}
-              className={`btn-ghost text-xs ${runsOpen ? "text-[var(--color-brand)]" : ""}`}
+              onClick={() => router.push("/dashboard/flows")}
+              className="inline-flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"
             >
-              {t("runs")}
+              <Glyph name="chevronLeft" size={14} />
+              {t("backToFlows")}
             </button>
-            <button
-              onClick={save}
-              disabled={busy || !dirty}
-              className="btn-primary text-xs disabled:opacity-50"
-            >
-              {busy ? "…" : tc("save")}
-            </button>
-            <span
-              className={`badge inline-flex items-center gap-1.5 ${
-                enabled
-                  ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                  : "bg-[var(--color-chip)] text-[var(--color-muted)]"
-              }`}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-current" />
-              {enabled ? tc("enabled") : tc("disabled")}
-            </span>
-            <button
-              onClick={toggleEnabled}
-              disabled={busy || dirty || (!enabled && !sessionId)}
-              title={
-                dirty
-                  ? t("saveFirst")
-                  : !enabled && !sessionId
-                    ? t("enableNeedsSession")
-                    : undefined
-              }
-              className={`${
-                enabled ? "btn-ghost" : "btn-primary"
-              } text-xs disabled:opacity-50`}
-            >
-              {enabled ? tc("disable") : tc("enable")}
-            </button>
-            <button
-              onClick={removeFlow}
+            <div className="font-semibold">{flowName}</div>
+            <select
+              className="input h-8 w-56 px-2 py-0 text-xs"
+              value={sessionId ?? ""}
+              onChange={(e) => void assignSession(e.target.value || null)}
               disabled={busy}
-              className="btn-danger text-xs"
             >
-              {tc("delete")}
-            </button>
-          </div>
-        </div>
-
-        {(error || graphErrors) && (
-          <div className="flex items-start gap-3 border-b border-[var(--color-border)] bg-[var(--color-danger-bg)] px-4 py-2.5 text-xs text-[var(--color-danger)]">
-            <div className="min-w-0 flex-1">
-              {graphErrors ? (
-                <>
-                  <div className="font-semibold">{t("validationTitle")}</div>
-                  <ul className="mt-1 flex flex-col gap-0.5">
-                    {graphErrors.map((ge, i) => (
-                      <li key={i} className="flex flex-wrap items-baseline gap-1">
-                        {ge.nodeId && (
-                          <button
-                            onClick={() => {
-                              setRunsOpen(false);
-                              setSelectedId(ge.nodeId ?? null);
-                            }}
-                            className="font-medium underline decoration-dotted underline-offset-2 hover:opacity-75"
-                          >
-                            {nodeLabelOf(ge.nodeId)}
-                          </button>
-                        )}
-                        <span>{validationTextOf(ge)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <span>{error}</span>
+              <option value="">
+                {sessionId ? t("removeSession") : t("assignSession")}
+              </option>
+              {sessions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                  {s.phoneNumber ? ` (+${s.phoneNumber})` : ""}
+                </option>
+              ))}
+            </select>
+            <div className="ml-auto flex items-center gap-2">
+              {dirty && (
+                <span className="text-xs text-[var(--color-warning)]">
+                  {t("unsaved")}
+                </span>
               )}
-            </div>
-            <button
-              onClick={() => {
-                setError(null);
-                setGraphErrors(null);
-              }}
-              aria-label={tc("close")}
-              className="shrink-0 rounded px-1 hover:opacity-75"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        <div className="flex min-h-0 flex-1">
-          <div className="flex w-44 shrink-0 flex-col gap-1.5 overflow-y-auto border-r border-[var(--color-border)] p-3">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-              {t("addNode")}
-            </div>
-            {PALETTE.map((pt) => (
               <button
-                key={pt}
-                onClick={() => addNode(pt)}
-                className="rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-left text-xs hover:border-[var(--color-brand)]/50"
+                onClick={() => {
+                  setRunsOpen((v) => !v);
+                  setSelectedId(null);
+                  if (runsOpen) setHighlight(new Set());
+                }}
+                className={`btn-ghost text-xs ${runsOpen ? "text-[var(--color-brand)]" : ""}`}
               >
-                {NODE_ICONS[pt]} {t(`nodes.${pt}.title`)}
+                {t("runs")}
               </button>
-            ))}
+              <button
+                onClick={save}
+                disabled={busy || !dirty}
+                className="btn-primary text-xs disabled:opacity-50"
+              >
+                {busy ? "…" : tc("save")}
+              </button>
+              <span
+                className={`badge inline-flex items-center gap-1.5 ${
+                  enabled
+                    ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
+                    : "bg-[var(--color-chip)] text-[var(--color-muted)]"
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                {enabled ? tc("enabled") : tc("disabled")}
+              </span>
+              <button
+                onClick={toggleEnabled}
+                disabled={busy || dirty || (!enabled && !sessionId)}
+                title={
+                  dirty
+                    ? t("saveFirst")
+                    : !enabled && !sessionId
+                      ? t("enableNeedsSession")
+                      : undefined
+                }
+                className={`${
+                  enabled ? "btn-ghost" : "btn-primary"
+                } text-xs disabled:opacity-50`}
+              >
+                {enabled ? tc("disable") : tc("enable")}
+              </button>
+              <button
+                onClick={removeFlow}
+                disabled={busy}
+                className="btn-danger text-xs"
+              >
+                {tc("delete")}
+              </button>
+            </div>
           </div>
 
-          <div className="relative min-w-0 flex-1" ref={flowWrapRef}>
-            {loaded &&
-              refs &&
-              !runsOpen &&
-              !aiDismissed &&
-              nodes.length <= 1 &&
-              edges.length === 0 && (
-                <div className="absolute inset-0 z-10 grid place-items-center p-6">
-                  <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xl">
-                    <h2 className="text-lg font-semibold">
-                      ✨ {t("assistantTitle")}
-                    </h2>
-                    <p className="mt-1 text-sm text-[var(--color-muted)]">
-                      {t("assistantHint")}
-                    </p>
-                    <textarea
-                      className="input mt-4 min-h-24 w-full text-sm"
-                      placeholder={t("assistantPlaceholder")}
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      disabled={aiBusy}
-                      autoFocus
-                    />
-                    {aiError && (
-                      <p className="mt-2 text-xs text-[var(--color-danger)]">
-                        {aiError}
+          {(error || graphErrors) && (
+            <div className="flex items-start gap-3 border-b border-[var(--color-border)] bg-[var(--color-danger-bg)] px-4 py-2.5 text-xs text-[var(--color-danger)]">
+              <div className="min-w-0 flex-1">
+                {graphErrors ? (
+                  <>
+                    <div className="font-semibold">{t("validationTitle")}</div>
+                    <ul className="mt-1 flex flex-col gap-0.5">
+                      {graphErrors.map((ge, i) => (
+                        <li
+                          key={i}
+                          className="flex flex-wrap items-baseline gap-1"
+                        >
+                          {ge.nodeId && (
+                            <button
+                              onClick={() => {
+                                setRunsOpen(false);
+                                setSelectedId(ge.nodeId ?? null);
+                              }}
+                              className="font-medium underline decoration-dotted underline-offset-2 hover:opacity-75"
+                            >
+                              {nodeLabelOf(ge.nodeId)}
+                            </button>
+                          )}
+                          <span>{validationTextOf(ge)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <span>{error}</span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setError(null);
+                  setGraphErrors(null);
+                }}
+                aria-label={tc("close")}
+                className="shrink-0 rounded px-1 hover:opacity-75"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          <div className="flex min-h-0 flex-1">
+            <div className="flex w-44 shrink-0 flex-col gap-1.5 overflow-y-auto border-r border-[var(--color-border)] p-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                {t("addNode")}
+              </div>
+              {PALETTE.map((pt) => (
+                <button
+                  key={pt}
+                  onClick={() => addNode(pt)}
+                  className="rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-left text-xs hover:border-[var(--color-brand)]/50"
+                >
+                  {NODE_ICONS[pt]} {t(`nodes.${pt}.title`)}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative min-w-0 flex-1" ref={flowWrapRef}>
+              {loaded &&
+                refs &&
+                !runsOpen &&
+                !aiDismissed &&
+                nodes.length <= 1 &&
+                edges.length === 0 && (
+                  <div className="absolute inset-0 z-10 grid place-items-center p-6">
+                    <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xl">
+                      <h2 className="text-lg font-semibold">
+                        ✨ {t("assistantTitle")}
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--color-muted)]">
+                        {t("assistantHint")}
                       </p>
-                    )}
-                    <div className="mt-4 flex items-center gap-3">
-                      <button
-                        onClick={() => void generateWithAi()}
-                        disabled={aiBusy || !aiPrompt.trim()}
-                        className="btn-primary text-sm disabled:opacity-50"
-                      >
-                        {aiBusy
-                          ? t("assistantGenerating")
-                          : t("assistantGenerate")}
-                      </button>
-                      <button
-                        onClick={() => setAiDismissed(true)}
+                      <textarea
+                        className="input mt-4 min-h-24 w-full text-sm"
+                        placeholder={t("assistantPlaceholder")}
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
                         disabled={aiBusy}
-                        className="btn-ghost text-sm disabled:opacity-50"
-                      >
-                        {t("assistantDismiss")}
-                      </button>
+                        autoFocus
+                      />
+                      {aiError && (
+                        <p className="mt-2 text-xs text-[var(--color-danger)]">
+                          {aiError}
+                        </p>
+                      )}
+                      <div className="mt-4 flex items-center gap-3">
+                        <button
+                          onClick={() => void generateWithAi()}
+                          disabled={aiBusy || !aiPrompt.trim()}
+                          className="btn-primary text-sm disabled:opacity-50"
+                        >
+                          {aiBusy
+                            ? t("assistantGenerating")
+                            : t("assistantGenerate")}
+                        </button>
+                        <button
+                          onClick={() => setAiDismissed(true)}
+                          disabled={aiBusy}
+                          className="btn-ghost text-sm disabled:opacity-50"
+                        >
+                          {t("assistantDismiss")}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+              {loaded ? (
+                <ReactFlow
+                  onInit={(inst) => {
+                    rfInstance.current = inst;
+                  }}
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={(c) => {
+                    if (c.some((ch) => ch.type === "remove")) snapshot();
+                    onNodesChange(c);
+                    if (c.some((ch) => ch.type === "position")) setDirty(true);
+                  }}
+                  onEdgesChange={(c) => {
+                    if (c.some((ch) => ch.type === "remove")) snapshot();
+                    onEdgesChange(c);
+                    if (c.some((ch) => ch.type === "remove")) setDirty(true);
+                  }}
+                  onNodeDragStart={() => snapshot()}
+                  onConnect={onConnect}
+                  onNodeClick={(_, n) => {
+                    setSelectedId(n.id);
+                    setRunsOpen(false);
+                  }}
+                  onPaneClick={() => setSelectedId(null)}
+                  nodeTypes={nodeTypes}
+                  fitView
+                  fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
+                  proOptions={{ hideAttribution: true }}
+                >
+                  <Background gap={18} />
+                  <Controls showInteractive={false} />
+                </ReactFlow>
+              ) : (
+                <p className="p-6 text-sm text-[var(--color-muted)]">
+                  {error ?? tc("loading")}
+                </p>
               )}
-            {loaded ? (
-              <ReactFlow
-                onInit={(inst) => {
-                  rfInstance.current = inst;
-                }}
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={(c) => {
-                  if (c.some((ch) => ch.type === "remove")) snapshot();
-                  onNodesChange(c);
-                  if (c.some((ch) => ch.type === "position")) setDirty(true);
-                }}
-                onEdgesChange={(c) => {
-                  if (c.some((ch) => ch.type === "remove")) snapshot();
-                  onEdgesChange(c);
-                  if (c.some((ch) => ch.type === "remove")) setDirty(true);
-                }}
-                onNodeDragStart={() => snapshot()}
-                onConnect={onConnect}
-                onNodeClick={(_, n) => {
-                  setSelectedId(n.id);
-                  setRunsOpen(false);
-                }}
-                onPaneClick={() => setSelectedId(null)}
-                nodeTypes={nodeTypes}
-                fitView
-                fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
-                proOptions={{ hideAttribution: true }}
-              >
-                <Background gap={18} />
-                <Controls showInteractive={false} />
-              </ReactFlow>
-            ) : (
-              <p className="p-6 text-sm text-[var(--color-muted)]">
-                {error ?? tc("loading")}
-              </p>
+            </div>
+
+            {selected && refs && !runsOpen && (
+              <div className="w-80 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
+                <NodePanel
+                  node={selected}
+                  refs={refs}
+                  onPatch={patchSelected}
+                  onDelete={deleteSelected}
+                  onCreateTag={createTag}
+                />
+              </div>
+            )}
+            {runsOpen && (
+              <div className="w-96 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
+                <RunsPanel
+                  runs={runs}
+                  onRefresh={loadRuns}
+                  onHighlight={(ids) => setHighlight(new Set(ids))}
+                />
+              </div>
             )}
           </div>
 
-          {selected && refs && !runsOpen && (
-            <div className="w-80 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
-              <NodePanel
-                node={selected}
-                refs={refs}
-                onPatch={patchSelected}
-                onDelete={deleteSelected}
-                onCreateTag={createTag}
-              />
-            </div>
-          )}
-          {runsOpen && (
-            <div className="w-96 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
-              <RunsPanel
-                runs={runs}
-                onRefresh={loadRuns}
-                onHighlight={(ids) => setHighlight(new Set(ids))}
-              />
+          {pendingAssign && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              onClick={() => setPendingAssign(null)}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div
+                className="card w-full max-w-md"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 className="text-lg font-semibold">{t("conflictTitle")}</h2>
+                <p className="mt-2 text-sm text-[var(--color-muted)]">
+                  {t("conflictBody", {
+                    session:
+                      sessions.find((s) => s.id === pendingAssign.sessionId)
+                        ?.label ?? pendingAssign.sessionId,
+                    flow: pendingAssign.holderName,
+                  })}
+                </p>
+                <div className="mt-5 flex justify-end gap-3">
+                  <button
+                    onClick={() => setPendingAssign(null)}
+                    className="btn-ghost"
+                  >
+                    {tc("cancel")}
+                  </button>
+                  <button
+                    onClick={() =>
+                      void assignSession(pendingAssign.sessionId, true)
+                    }
+                    disabled={busy}
+                    className="btn-primary"
+                  >
+                    {t("confirmReassign")}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
-
-        {pendingAssign && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            onClick={() => setPendingAssign(null)}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="card w-full max-w-md"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="text-lg font-semibold">{t("conflictTitle")}</h2>
-              <p className="mt-2 text-sm text-[var(--color-muted)]">
-                {t("conflictBody", {
-                  session:
-                    sessions.find((s) => s.id === pendingAssign.sessionId)
-                      ?.label ?? pendingAssign.sessionId,
-                  flow: pendingAssign.holderName,
-                })}
-              </p>
-              <div className="mt-5 flex justify-end gap-3">
-                <button
-                  onClick={() => setPendingAssign(null)}
-                  className="btn-ghost"
-                >
-                  {tc("cancel")}
-                </button>
-                <button
-                  onClick={() =>
-                    void assignSession(pendingAssign.sessionId, true)
-                  }
-                  disabled={busy}
-                  className="btn-primary"
-                >
-                  {t("confirmReassign")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
       </HighlightContext.Provider>
     </RefsContext.Provider>
   );
@@ -971,7 +975,7 @@ function NodePanel({
         />
       )}
 
-      {(nt === "intent" || nt === "agentReply") && (
+      {(nt === "intent" || nt === "agentReply" || nt === "aiDecision") && (
         <label className="flex flex-col gap-1 text-sm">
           {t("aiAgent")}
           <select
@@ -994,6 +998,30 @@ function NodePanel({
         <IntentListEditor
           intents={(d.intents as FlowIntent[]) ?? []}
           onChange={(intents) => onPatch({ intents })}
+        />
+      )}
+
+      {nt === "aiDecision" && (
+        <label className="flex flex-col gap-1 text-sm">
+          {t("decisionQuestion")}
+          <textarea
+            className="input min-h-20"
+            maxLength={500}
+            placeholder={t("decisionQuestionPlaceholder")}
+            value={(d.question as string) ?? ""}
+            onChange={(e) => onPatch({ question: e.target.value })}
+          />
+          <span className="text-xs text-[var(--color-muted)]">
+            {t("decisionQuestionHint")}
+          </span>
+        </label>
+      )}
+
+      {nt === "keywordCases" && (
+        <CaseListEditor
+          key={node.id}
+          cases={(d.cases as FlowKeywordCase[]) ?? []}
+          onChange={(cases) => onPatch({ cases })}
         />
       )}
 
@@ -1185,6 +1213,82 @@ function NodePanel({
   );
 }
 
+/**
+ * Cases for a keywordCases node: a key, a label and that branch's keywords.
+ * Keywords use the same raw-text field as the keyword node, so typing a
+ * newline is not eaten by parsing between renders.
+ */
+function CaseListEditor({
+  cases,
+  onChange,
+}: {
+  cases: FlowKeywordCase[];
+  onChange: (cases: FlowKeywordCase[]) => void;
+}) {
+  const t = useTranslations("dash.flows");
+  function patch(i: number, changes: Partial<FlowKeywordCase>) {
+    onChange(cases.map((c, j) => (j === i ? { ...c, ...changes } : c)));
+  }
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      {t("casesLabel")}
+      {cases.map((c, i) => (
+        <div
+          key={i}
+          className="flex flex-col gap-1 rounded-lg border border-[var(--color-border)] p-2"
+        >
+          <div className="flex gap-2">
+            <input
+              className="input h-8 w-28 px-2 py-0 font-mono text-xs"
+              placeholder={t("intentKeyPlaceholder")}
+              value={c.key}
+              onChange={(e) =>
+                patch(i, {
+                  key: e.target.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9_-]/g, "")
+                    .slice(0, 24),
+                })
+              }
+            />
+            <input
+              className="input h-8 flex-1 px-2 py-0 text-xs"
+              placeholder={t("intentLabelPlaceholder")}
+              value={c.label}
+              onChange={(e) => patch(i, { label: e.target.value })}
+            />
+            <button
+              type="button"
+              onClick={() => onChange(cases.filter((_, j) => j !== i))}
+              className="text-xs text-[var(--color-muted)] hover:text-[var(--color-danger)]"
+            >
+              ✕
+            </button>
+          </div>
+          <KeywordsField
+            label={t("keywordsLabel")}
+            keywords={c.keywords ?? []}
+            onPatch={(patchData) =>
+              patch(i, { keywords: patchData.keywords as string[] })
+            }
+          />
+        </div>
+      ))}
+      {cases.length < 10 && (
+        <button
+          type="button"
+          onClick={() =>
+            onChange([...cases, { key: "", label: "", keywords: [] }])
+          }
+          className="btn-ghost self-start text-xs"
+        >
+          {t("addCase")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function IntentListEditor({
   intents,
   onChange,
@@ -1317,9 +1421,7 @@ function RunsPanel({
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="font-mono">
-                  +{r.leadJid.split("@")[0]}
-                </span>
+                <span className="font-mono">+{r.leadJid.split("@")[0]}</span>
                 <span
                   className={`badge text-[10px] ${OUTCOME_STYLE[r.outcome] ?? OUTCOME_STYLE.completed}`}
                 >

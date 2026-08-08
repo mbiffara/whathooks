@@ -28,6 +28,16 @@ const nodeDataSchema = z.object({
       }),
     )
     .nullable(),
+  question: z.string().nullable(),
+  cases: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        keywords: z.array(z.string()),
+      }),
+    )
+    .nullable(),
   humanAgentId: z.string().nullable(),
   humanAgentIds: z.array(z.string()).nullable(),
   webhookId: z.string().nullable(),
@@ -67,12 +77,14 @@ function cleanGraph(g: z.infer<typeof graphSchema>): DraftGraph {
         Object.entries(n.data)
           .filter(([, v]) => v != null)
           .map(([k, v]) =>
-            k === "intents" && Array.isArray(v)
+            (k === "intents" || k === "cases") && Array.isArray(v)
               ? [
                   k,
                   v.map((i) =>
                     Object.fromEntries(
-                      Object.entries(i as object).filter(([, iv]) => iv != null),
+                      Object.entries(i as object).filter(
+                        ([, iv]) => iv != null,
+                      ),
                     ),
                   ),
                 ]
@@ -99,6 +111,8 @@ function systemPrompt(refs: FlowRefs, locale: string): string {
 NODE TYPES (type → data fields → output handles):
 - trigger → {} → "out". Exactly one, with id "trigger". Every graph starts here.
 - keyword → { keywords: string[] } → "yes", "no". Case/accent-insensitive contains-match on the inbound message.
+- keywordCases → { cases: [{ key, label, keywords: string[] }] } → one handle per case key, plus "fallback". Several keyword lists, each with its own branch; the FIRST case that matches wins. Use this instead of chaining keyword nodes when a message should route three or more ways on wording alone. Keys are short lowercase slugs; "fallback" is reserved.
+- aiDecision → { agentId, question } → "yes", "no". An AI agent answers ONE yes/no question about the conversation. Use it for judgements no keyword list can make ("is the customer angry?", "did they already pay?"). An unclear answer takes "no", so wire the safer outcome there.
 - intent → { agentId, intents: [{ key, label, description? }] } → one handle per intent key, plus "fallback". Keys are short lowercase slugs; "fallback" is reserved.
 - agentReply → { agentId } → optional "onHandoff". The AI agent answers; the walk ends after replying. Connect "onHandoff" to route the conversation when the agent decides a human is needed.
 - assignHuman → { humanAgentId, groupPrefix?, farewellText?, copyHistory? } → terminal. Creates a WhatsApp mirror group with that human.
@@ -121,6 +135,13 @@ RULES:
 - Leave unused data fields null.
 
 COMMON PATTERNS:
+- Routing on wording alone with 3+ destinations: ONE keywordCases node, not a
+  chain of keyword nodes. Wire "fallback" so unmatched messages still go
+  somewhere.
+- keyword vs keywordCases vs intent vs aiDecision: keyword for a single
+  yes/no on wording, keywordCases for many wordings to many branches, intent
+  when the AI must categorise, aiDecision when the AI must judge one
+  yes/no question.
 - "AI answers unless X": keyword → "no" → agentReply; "yes" → the exception.
 - Branch on intent AND reply: the intent node only CLASSIFIES (it never
   replies). Put it before the actions: route each intent key to its chain

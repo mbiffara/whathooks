@@ -778,6 +778,12 @@
       "teammateLabel": "Team member",
       "summaryNoKeywords": "no keywords",
       "summaryIntents": "{count, plural, one {# intent} other {# intents}}",
+      "casesLabel": "Cases",
+      "addCase": "Add case",
+      "summaryCases": "{count, plural, one {# case} other {# cases}}",
+      "decisionQuestion": "Yes/no question",
+      "decisionQuestionPlaceholder": "e.g. Is the customer asking to cancel their subscription?",
+      "decisionQuestionHint": "The agent reads the conversation and answers yes or no. An unclear answer takes the no branch.",
       "summaryHumanAgents": "{count, plural, one {# human agent} other {# human agents}}",
       "nodes": {
         "trigger": {
@@ -787,6 +793,14 @@
         "keyword": {
           "title": "Keyword match",
           "hint": "Routes yes/no on whether the message contains any keyword (accent-insensitive)."
+        },
+        "keywordCases": {
+          "title": "Keyword router",
+          "hint": "Several keyword lists, each with its own output. The first list that matches wins; anything else takes fallback."
+        },
+        "aiDecision": {
+          "title": "AI decision",
+          "hint": "An AI agent answers one yes/no question about the conversation and routes on the answer."
         },
         "intent": {
           "title": "Classify intent",

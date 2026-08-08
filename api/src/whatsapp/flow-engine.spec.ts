@@ -136,6 +136,7 @@ type AnyRecord = Record<string, unknown>;
 
 function makeEngine(overrides: {
   classify?: (...a: unknown[]) => Promise<string | null>;
+  decide?: (...a: unknown[]) => Promise<boolean | null>;
   counterValues?: number[];
 }) {
   const sent: Array<{ to: string; text: string }> = [];
@@ -206,6 +207,7 @@ function makeEngine(overrides: {
   };
   const agentRunner = {
     classify: jest.fn(overrides.classify ?? (() => Promise.resolve(null))),
+    decide: jest.fn(overrides.decide ?? (() => Promise.resolve(null))),
   };
   const webhooks = {
     dispatchTo: jest.fn((...args: unknown[]) => {
@@ -539,5 +541,111 @@ describe('FlowEngineService.run', () => {
     await t.engine.run({ id: 'f1', graph }, 's1', CTX, t.manager as never);
     expect(t.dispatched.length + t.updates.length).toBeLessThanOrEqual(20);
     expect(t.dispatched.length).toBeGreaterThan(3); // it did loop, then stopped
+  });
+});
+
+describe('keywordCases routing', () => {
+  const graph = (): FlowGraph => ({
+    nodes: [
+      node('t', 'trigger'),
+      node('c', 'keywordCases', {
+        cases: [
+          { key: 'billing', label: 'Billing', keywords: ['factura', 'pago'] },
+          { key: 'support', label: 'Support', keywords: ['no funciona'] },
+        ],
+      }),
+      node('tag', 'tagConversation', { tagId: 'tag1' }),
+      node('r', 'agentReply', { agentId: 'agent1' }),
+    ],
+    edges: [
+      edge('t', 'c'),
+      edge('c', 'tag', 'billing'),
+      edge('c', 'r', 'fallback'),
+    ],
+  });
+
+  it('takes the branch whose keywords match, ignoring accents', async () => {
+    const t = makeEngine({});
+    await t.engine.run(
+      { id: 'f1', graph: graph() },
+      's1',
+      { ...CTX, text: 'Necesito la FACTURA de marzo' },
+      t.manager as never,
+    );
+    expect(t.updates).toHaveLength(1); // tagged via the billing branch
+    expect(t.agentReplies).toHaveLength(0);
+  });
+
+  it('falls back when no case matches', async () => {
+    const t = makeEngine({});
+    await t.engine.run(
+      { id: 'f1', graph: graph() },
+      's1',
+      { ...CTX, text: 'hola, buenas tardes' },
+      t.manager as never,
+    );
+    expect(t.updates).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(1);
+  });
+
+  it('falls back when the matching case has no edge wired', async () => {
+    const t = makeEngine({});
+    await t.engine.run(
+      { id: 'f1', graph: graph() },
+      's1',
+      // "support" matches but only billing and fallback are connected.
+      { ...CTX, text: 'el bot no funciona' },
+      t.manager as never,
+    );
+    expect(t.agentReplies).toHaveLength(1);
+  });
+});
+
+describe('aiDecision routing', () => {
+  const graph = (): FlowGraph => ({
+    nodes: [
+      node('t', 'trigger'),
+      node('d', 'aiDecision', {
+        agentId: 'agent1',
+        question: 'Is the customer angry?',
+      }),
+      node('a', 'assignHuman', { humanAgentId: 'ha1' }),
+      node('r', 'agentReply', { agentId: 'agent1' }),
+    ],
+    edges: [edge('t', 'd'), edge('d', 'a', 'yes'), edge('d', 'r', 'no')],
+  });
+
+  it('takes yes when the agent decides yes', async () => {
+    const t = makeEngine({ decide: () => Promise.resolve(true) });
+    await t.engine.run(
+      { id: 'f1', graph: graph() },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.created).toHaveLength(1); // handed to a human
+  });
+
+  it('takes no when the agent decides no', async () => {
+    const t = makeEngine({ decide: () => Promise.resolve(false) });
+    await t.engine.run(
+      { id: 'f1', graph: graph() },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.created).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(1);
+  });
+
+  it('treats an undecided answer as no, so a flow never stalls', async () => {
+    const t = makeEngine({ decide: () => Promise.resolve(null) });
+    await t.engine.run(
+      { id: 'f1', graph: graph() },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.agentReplies).toHaveLength(1);
   });
 });

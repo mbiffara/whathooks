@@ -7,7 +7,9 @@
 export const FLOW_NODE_TYPES = [
   'trigger',
   'keyword',
+  'keywordCases',
   'intent',
+  'aiDecision',
   'agentReply',
   'assignHuman',
   'roundRobin',
@@ -49,6 +51,13 @@ export interface FlowIntent {
   key: string;
   label: string;
   description?: string;
+}
+
+/** One branch of a keywordCases node: its own keyword list and output. */
+export interface FlowKeywordCase {
+  key: string;
+  label: string;
+  keywords: string[];
 }
 
 /** Org-owned ids the graph is allowed to reference. */
@@ -97,6 +106,13 @@ export function defaultGraph(): FlowGraph {
     ],
     edges: [],
   };
+}
+
+/** The branches configured on a keywordCases node (typed accessor). */
+export function casesOf(node: FlowNode): FlowKeywordCase[] {
+  return Array.isArray(node.data.cases)
+    ? (node.data.cases as FlowKeywordCase[])
+    : [];
 }
 
 /** The intents configured on an intent node (typed accessor). */
@@ -186,6 +202,72 @@ export function validateGraph(
           push(
             'keywordList',
             `Node "${n.id}": keywords must be 1–20 short strings`,
+            n.id,
+          );
+        }
+        break;
+      }
+      case 'keywordCases': {
+        const cases = d.cases;
+        if (!Array.isArray(cases) || cases.length === 0 || cases.length > 10) {
+          push('caseCount', `Node "${n.id}": define 1–10 cases`, n.id);
+          break;
+        }
+        const caseKeys = new Set<string>();
+        for (const c of cases as FlowKeywordCase[]) {
+          if (!c || !INTENT_KEY.test(c.key ?? '')) {
+            push(
+              'caseKeySlug',
+              `Node "${n.id}": case keys must be short lowercase slugs`,
+              n.id,
+            );
+          } else if (caseKeys.has(c.key)) {
+            push(
+              'caseKeyDupe',
+              `Node "${n.id}": duplicate case key "${c.key}"`,
+              n.id,
+              { key: c.key },
+            );
+          } else if (c.key === 'fallback') {
+            push(
+              'caseKeyReserved',
+              `Node "${n.id}": "fallback" is a reserved case key`,
+              n.id,
+            );
+          } else {
+            caseKeys.add(c.key);
+          }
+          if (!isStr(c.label, 80)) {
+            push('caseLabel', `Node "${n.id}": every case needs a label`, n.id);
+          }
+          const kw = c?.keywords;
+          if (
+            !Array.isArray(kw) ||
+            kw.length === 0 ||
+            kw.length > 20 ||
+            !kw.every((k) => isStr(k, 80))
+          ) {
+            push(
+              'caseKeywords',
+              `Node "${n.id}": every case needs 1–20 keywords`,
+              n.id,
+            );
+          }
+        }
+        break;
+      }
+      case 'aiDecision': {
+        if (!isStr(d.agentId, 64) || !refs.agentIds.has(d.agentId)) {
+          push(
+            'decisionAgent',
+            `Node "${n.id}": pick an AI agent for the decision`,
+            n.id,
+          );
+        }
+        if (!isStr(d.question, 500)) {
+          push(
+            'decisionQuestion',
+            `Node "${n.id}": write the yes/no question the agent answers`,
             n.id,
           );
         }
@@ -380,7 +462,10 @@ export function validateGraph(
 export function allowedHandles(node: FlowNode): string[] {
   switch (node.type) {
     case 'keyword':
+    case 'aiDecision':
       return ['yes', 'no'];
+    case 'keywordCases':
+      return [...casesOf(node).map((c) => c.key), 'fallback'];
     case 'intent':
       return [...intentsOf(node).map((i) => i.key), 'fallback'];
     case 'agentReply':

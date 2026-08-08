@@ -778,6 +778,12 @@
       "teammateLabel": "Miembro del equipo",
       "summaryNoKeywords": "sin palabras clave",
       "summaryIntents": "{count, plural, one {# intención} other {# intenciones}}",
+      "casesLabel": "Casos",
+      "addCase": "Agregar caso",
+      "summaryCases": "{count, plural, one {# caso} other {# casos}}",
+      "decisionQuestion": "Pregunta de sí/no",
+      "decisionQuestionPlaceholder": "ej. ¿El cliente está pidiendo cancelar su suscripción?",
+      "decisionQuestionHint": "El agente lee la conversación y responde sí o no. Si la respuesta no es clara, se toma la rama no.",
       "summaryHumanAgents": "{count, plural, one {# agente humano} other {# agentes humanos}}",
       "nodes": {
         "trigger": {
@@ -787,6 +793,14 @@
         "keyword": {
           "title": "Palabras clave",
           "hint": "Rutea sí/no según si el mensaje contiene alguna palabra clave (ignora acentos)."
+        },
+        "keywordCases": {
+          "title": "Router por palabras clave",
+          "hint": "Varias listas de palabras clave, cada una con su propia salida. Gana la primera lista que coincide; el resto va por fallback."
+        },
+        "aiDecision": {
+          "title": "Decisión de IA",
+          "hint": "Un agente de IA responde una pregunta de sí/no sobre la conversación y enruta según la respuesta."
         },
         "intent": {
           "title": "Clasificar intención",

@@ -1,9 +1,4 @@
-import {
-  FlowNodeType,
-  FlowRefs,
-  handlesFor,
-  NODE_ICONS,
-} from "./flow-defs";
+import { FlowNodeType, FlowRefs, handlesFor, NODE_ICONS } from "./flow-defs";
 
 /** Graph draft as the model emits it — no positions, those are ours. */
 export interface DraftNode {
@@ -54,6 +49,34 @@ export function validateDraft(graph: DraftGraph, refs: FlowRefs): string[] {
         }
         break;
       }
+      case "keywordCases": {
+        const cases = d.cases;
+        if (!Array.isArray(cases) || cases.length === 0) {
+          errors.push(`Node "${n.id}": define at least one case`);
+          break;
+        }
+        for (const c of cases as { key?: string; keywords?: unknown }[]) {
+          if (!c?.key || c.key === "fallback") {
+            errors.push(
+              `Node "${n.id}": every case needs a key, and "fallback" is reserved`,
+            );
+          }
+          if (!Array.isArray(c?.keywords) || c.keywords.length === 0) {
+            errors.push(`Node "${n.id}": case "${c?.key}" needs keywords`);
+          }
+        }
+        break;
+      }
+      case "aiDecision":
+        if (!inRefs(refs.agents, d.agentId)) {
+          errors.push(
+            `Node "${n.id}": agentId must be one of the provided AI agent ids`,
+          );
+        }
+        if (typeof d.question !== "string" || !d.question.trim()) {
+          errors.push(`Node "${n.id}": write the yes/no question`);
+        }
+        break;
       case "intent":
         if (!inRefs(refs.agents, d.agentId)) {
           errors.push(

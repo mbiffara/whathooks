@@ -259,6 +259,73 @@ export class AgentRunnerService {
   }
 
   /** Recent messages, chronological, starting from the first inbound turn. */
+  /**
+   * Answer one yes/no question about the conversation with the agent's own
+   * credentials. Null on any error, no budget, or an unreadable answer —
+   * callers treat null as "no" so a flow never stalls on a failed decision.
+   */
+  async decide(
+    agent: Agent,
+    conversationId: string,
+    question: string,
+  ): Promise<boolean | null> {
+    if (!this.encryption.isConfigured()) return null;
+    const creds = await this.credentials(agent);
+    if (!creds || 'exhausted' in creds) return null;
+    const { apiKey, metered } = creds;
+
+    const turns = await this.loadHistory(conversationId, false);
+    if (!turns.length) return null;
+
+    const system = [
+      'You answer a single yes/no question about a WhatsApp conversation.',
+      `The question: ${question}`,
+      '',
+      'Respond with ONLY the word "yes" or the word "no". No other text.',
+    ].join('\n');
+
+    try {
+      let raw: string;
+      if (agent.provider === 'OPENAI' || metered) {
+        const client = new OpenAI({ apiKey });
+        const res = await client.chat.completions.create({
+          model: agent.model,
+          messages: [
+            { role: 'system', content: system },
+            ...turns.map((t) => ({ role: t.role, content: t.text }) as const),
+          ],
+        });
+        if (metered) {
+          await this.quota.recordAiTokens(
+            agent.organizationId,
+            res.usage?.total_tokens ?? 0,
+            agent.id,
+          );
+        }
+        raw = res.choices[0]?.message?.content ?? '';
+      } else {
+        const client = new Anthropic({ apiKey });
+        const res = await client.messages.create({
+          model: agent.model,
+          max_tokens: 8,
+          system,
+          messages: turns.map((t) => ({ role: t.role, content: t.text })),
+        });
+        raw = res.content
+          .map((c) => (c.type === 'text' ? c.text : ''))
+          .join('')
+          .trim();
+      }
+      const answer = raw.trim().toLowerCase();
+      if (answer.startsWith('yes') || answer.startsWith('sí')) return true;
+      if (answer.startsWith('no')) return false;
+      return null;
+    } catch (e) {
+      this.log.warn(`Agent "${agent.name}" decision failed: ${e}`);
+      return null;
+    }
+  }
+
   private async loadHistory(
     conversationId: string,
     isGroup: boolean,

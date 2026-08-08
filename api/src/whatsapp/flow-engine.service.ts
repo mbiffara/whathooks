@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MessageSource } from '@prisma/client';
 import { AgentRunnerService } from '../agents/agent-runner.service';
-import { FlowGraph, FlowNode, edgeFrom, intentsOf } from '../flows/flow-graph';
+import {
+  FlowGraph,
+  FlowNode,
+  casesOf,
+  edgeFrom,
+  intentsOf,
+} from '../flows/flow-graph';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import type {
@@ -137,6 +143,44 @@ export class FlowEngineService {
           note: hit ? 'yes' : 'no',
         });
         return this.follow(graph, node, hit ? 'yes' : 'no');
+      }
+
+      case 'keywordCases': {
+        // First case whose keyword list matches wins, so ordering in the
+        // editor is the tie-break the user can see and control.
+        const haystack = normalize(ctx.text ?? '');
+        const hit = casesOf(node).find((c) =>
+          (c.keywords ?? []).some((k) => haystack.includes(normalize(k))),
+        );
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: hit?.key ?? 'fallback',
+        });
+        const next = hit ? this.follow(graph, node, hit.key) : undefined;
+        return next ?? this.follow(graph, node, 'fallback');
+      }
+
+      case 'aiDecision': {
+        const agent = await this.prisma.agent.findUnique({
+          where: { id: node.data.agentId as string },
+        });
+        const yes = agent
+          ? await this.agentRunner.decide(
+              agent,
+              ctx.conversationId,
+              (node.data.question as string) ?? '',
+            )
+          : null;
+        // A failed or unreadable decision takes "no": the safer branch, and
+        // the one a user is likelier to have wired to a human.
+        const branch = yes === true ? 'yes' : 'no';
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: yes === null ? `${branch} (undecided)` : branch,
+        });
+        return this.follow(graph, node, branch);
       }
 
       case 'intent': {

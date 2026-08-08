@@ -29,6 +29,12 @@ interface RunRecorder {
   steps: Array<{ nodeId: string; type: string; note?: string }>;
   outcome: string;
   error?: string;
+  /**
+   * Simulation: walk the real graph with the real branching, but perform no
+   * side effect. Guarded inside execute() rather than in a second walker, so
+   * a routing change can never apply to one and not the other.
+   */
+  dryRun?: boolean;
 }
 const DEFAULT_GROUP_PREFIX = '🔒 Lead';
 
@@ -122,6 +128,47 @@ export class FlowEngineService {
     }
   }
 
+  /**
+   * Walk the graph for a hypothetical message without touching anything:
+   * no WhatsApp sends, no groups, no webhooks, no writes. Branching is the
+   * real thing, including the AI nodes, so intent and aiDecision genuinely
+   * call the agent (and spend its tokens) — a simulation that guessed those
+   * would not be worth running.
+   */
+  async simulate(
+    flow: { id: string; graph: FlowGraph },
+    ctx: InboundAutomationCtx,
+    manager: ConnectionManagerService,
+  ): Promise<RunRecorder> {
+    const rec: RunRecorder = { steps: [], outcome: 'completed', dryRun: true };
+    try {
+      const trigger = flow.graph.nodes.find((n) => n.type === 'trigger');
+      if (!trigger) {
+        rec.outcome = 'error';
+        rec.error = 'No trigger node';
+        return rec;
+      }
+      let current = this.follow(flow.graph, trigger, 'out');
+      let steps = 0;
+      while (current && steps < MAX_STEPS) {
+        steps++;
+        current = await this.execute(
+          flow,
+          'simulation',
+          ctx,
+          manager,
+          current,
+          rec,
+        );
+      }
+      if (steps >= MAX_STEPS) rec.outcome = 'step_limit';
+    } catch (e) {
+      rec.outcome = 'error';
+      rec.error = String(e);
+    }
+    return rec;
+  }
+
   /** Execute one node; returns the next node (undefined = stop). */
   private async execute(
     flow: { id: string; graph: FlowGraph },
@@ -203,6 +250,15 @@ export class FlowEngineService {
 
       case 'agentReply': {
         const handoffEdge = edgeFrom(graph, node.id, 'onHandoff');
+        if (rec.dryRun) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: 'would reply (not sent)',
+          });
+          rec.outcome = 'agent_replied';
+          return undefined;
+        }
         const outcome = await manager.runAgentReply(
           sessionId,
           ctx.conversationId,
@@ -224,6 +280,7 @@ export class FlowEngineService {
       }
 
       case 'assignHuman': {
+        if (rec.dryRun) return this.dryAssign(node, rec);
         const who = await this.assign(flow, sessionId, ctx, manager, node, [
           node.data.humanAgentId as string,
         ]);
@@ -237,6 +294,7 @@ export class FlowEngineService {
       }
 
       case 'roundRobin': {
+        if (rec.dryRun) return this.dryAssign(node, rec);
         const list = (node.data.humanAgentIds as string[]) ?? [];
         const who = await this.assign(
           flow,
@@ -256,6 +314,7 @@ export class FlowEngineService {
       }
 
       case 'assignGroup': {
+        if (rec.dryRun) return this.dryAssign(node, rec);
         const list = (node.data.humanAgentIds as string[]) ?? [];
         const who = await this.assign(
           flow,
@@ -276,6 +335,14 @@ export class FlowEngineService {
       }
 
       case 'webhook': {
+        if (rec.dryRun) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: 'would call webhook (not sent)',
+          });
+          return this.follow(graph, node, 'out');
+        }
         await this.webhooks
           .dispatchTo(node.data.webhookId as string, 'flow.action', {
             note: (node.data.note as string) ?? null,
@@ -295,6 +362,14 @@ export class FlowEngineService {
       }
 
       case 'tagConversation': {
+        if (rec.dryRun) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: 'would tag (not applied)',
+          });
+          return this.follow(graph, node, 'out');
+        }
         await this.prisma.conversation
           .update({
             where: { id: ctx.conversationId },
@@ -308,6 +383,14 @@ export class FlowEngineService {
       }
 
       case 'assignTeammate': {
+        if (rec.dryRun) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: 'would assign (not applied)',
+          });
+          return this.follow(graph, node, 'out');
+        }
         await this.prisma.conversation
           .update({
             where: { id: ctx.conversationId },
@@ -321,6 +404,14 @@ export class FlowEngineService {
       }
 
       case 'saveContact': {
+        if (rec.dryRun) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: 'would save contact (not saved)',
+          });
+          return this.follow(graph, node, 'out');
+        }
         const note = await this.saveContact(sessionId, ctx).catch((e) => {
           this.log.warn(`Flow ${flow.id}: saveContact failed: ${e}`);
           return 'error';
@@ -335,6 +426,23 @@ export class FlowEngineService {
   }
 
   /** Hand the conversation to a human agent through the mirror machinery. */
+  /**
+   * Simulated handoff: record who would receive it and end the walk, exactly
+   * where the real assign nodes are terminal.
+   */
+  private dryAssign(node: FlowNode, rec: RunRecorder): undefined {
+    const ids = (node.data.humanAgentIds as string[]) ?? [
+      node.data.humanAgentId as string,
+    ];
+    rec.steps.push({
+      nodeId: node.id,
+      type: node.type,
+      note: `would hand off to ${ids.filter(Boolean).length} agent(s) (no group created)`,
+    });
+    rec.outcome = 'handed_off';
+    return undefined;
+  }
+
   private async assign(
     flow: { id: string },
     sessionId: string,

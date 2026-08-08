@@ -649,3 +649,80 @@ describe('aiDecision routing', () => {
     expect(t.agentReplies).toHaveLength(1);
   });
 });
+
+describe('FlowEngineService.simulate', () => {
+  /** Every action node, so nothing can quietly stay live in a dry run. */
+  const graph = (): FlowGraph => ({
+    nodes: [
+      node('t', 'trigger'),
+      node('k', 'keyword', { keywords: ['precio'] }),
+      node('tag', 'tagConversation', { tagId: 'tag1' }),
+      node('wh', 'webhook', { webhookId: 'wh1' }),
+      node('sc', 'saveContact'),
+      node('at', 'assignTeammate', { userId: 'user1' }),
+      node('a', 'assignHuman', { humanAgentId: 'ha1' }),
+      node('r', 'agentReply', { agentId: 'agent1' }),
+    ],
+    edges: [
+      edge('t', 'k'),
+      edge('k', 'tag', 'yes'),
+      edge('tag', 'wh'),
+      edge('wh', 'sc'),
+      edge('sc', 'at'),
+      edge('at', 'a'),
+      edge('k', 'r', 'no'),
+    ],
+  });
+
+  it('walks the real branches but performs no side effect', async () => {
+    const t = makeEngine({});
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph() },
+      { ...CTX, text: 'cual es el PRECIO?' },
+      t.manager as never,
+    );
+
+    // Real routing: the accent/case-insensitive keyword match took "yes".
+    expect(rec.steps.map((s) => s.nodeId)).toEqual([
+      'k',
+      'tag',
+      'wh',
+      'sc',
+      'at',
+      'a',
+    ]);
+    expect(rec.outcome).toBe('handed_off');
+
+    // Nothing happened.
+    expect(t.sent).toHaveLength(0);
+    expect(t.created).toHaveLength(0); // no mirror group
+    expect(t.forwarded).toHaveLength(0);
+    expect(t.dispatched).toHaveLength(0); // no webhook
+    expect(t.updates).toHaveLength(0); // no tag, no assignment
+    expect(t.stateUpserts).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(0);
+  });
+
+  it('takes the no branch and reports the reply without sending it', async () => {
+    const t = makeEngine({});
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph() },
+      { ...CTX, text: 'hola' },
+      t.manager as never,
+    );
+    expect(rec.steps.map((s) => s.nodeId)).toEqual(['k', 'r']);
+    expect(rec.outcome).toBe('agent_replied');
+    expect(t.agentReplies).toHaveLength(0);
+    expect(t.sent).toHaveLength(0);
+  });
+
+  it('records no FlowRun — a simulation is not part of the history', async () => {
+    const t = makeEngine({});
+    await t.engine.simulate(
+      { id: 'f1', graph: graph() },
+      CTX,
+      t.manager as never,
+    );
+    expect(t.runs).toHaveLength(0);
+  });
+});

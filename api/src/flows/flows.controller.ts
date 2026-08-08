@@ -71,6 +71,12 @@ class UpdateFlowDto {
  * ADMINs bypass via OrgRolesGuard, so support mode keeps working). Flow
  * creation is plan-capped in the service.
  */
+class SimulateDto {
+  @IsString()
+  @Length(1, 2000)
+  text!: string;
+}
+
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
 @OrgRoles('ADMIN')
 @Controller('flows')
@@ -116,6 +122,16 @@ export class FlowsController {
       dto.sessionId,
       dto.force ?? false,
     );
+  }
+
+  /** Dry-run the flow against a made-up message. Nothing is sent or written. */
+  @Post(':id/simulate')
+  simulate(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: SimulateDto,
+  ) {
+    return this.flows.simulate(this.orgOf(user), id, body.text);
   }
 
   @Get(':id/runs')

@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
 import { FlowEngineService } from '../whatsapp/flow-engine.service';
 import {
   FlowGraph,
@@ -39,6 +40,7 @@ export class FlowsService {
     private readonly prisma: PrismaService,
     private readonly engine: FlowEngineService,
     private readonly quota: QuotaService,
+    private readonly manager: ConnectionManagerService,
   ) {}
 
   async list(organizationId: string) {
@@ -153,19 +155,29 @@ export class FlowsService {
   }
 
   /** Replace the graph (validated against org-owned references). */
+  /**
+   * Save the graph. A half-built draft is allowed through — editing is
+   * iterative and losing work to a validation error is worse than storing
+   * something incomplete. The findings come back as `graphErrors` for the
+   * editor to show as warnings.
+   *
+   * An ENABLED flow is different: the engine reads its graph on the next
+   * inbound message, so it must stay valid. Enabling already validates
+   * (see update), and this keeps that guarantee from being edited away.
+   */
   async saveGraph(organizationId: string, id: string, graph: unknown) {
-    await this.get(organizationId, id);
+    const flow = await this.get(organizationId, id);
     const refs = await this.refsFor(organizationId);
     const errors = validateGraph(graph, refs);
-    if (errors.length > 0) {
-      throw invalidGraph(errors);
+    if (errors.length > 0 && flow.enabled) {
+      throw invalidGraph(errors, 'This flow is live, so it must stay valid: ');
     }
     const updated = await this.prisma.flow.update({
       where: { id },
       data: { graph: graph as Prisma.InputJsonValue },
     });
     if (updated.sessionId) this.engine.invalidate(updated.sessionId);
-    return updated;
+    return { ...updated, graphErrors: errors };
   }
 
   async update(
@@ -196,6 +208,28 @@ export class FlowsService {
     });
     if (updated.sessionId) this.engine.invalidate(updated.sessionId);
     return updated;
+  }
+
+  /**
+   * Dry-run the flow against a made-up message. Nothing is sent, created or
+   * written; the AI nodes do run, so their branch decisions are real.
+   */
+  async simulate(organizationId: string, id: string, text: string) {
+    const flow = await this.get(organizationId, id);
+    const rec = await this.engine.simulate(
+      { id: flow.id, graph: flow.graph as unknown as FlowGraph },
+      {
+        conversationId: `sim_${flow.id}`,
+        remoteJid: 'simulation@s.whatsapp.net',
+        isGroup: false,
+        mentionedMe: false,
+        pushName: 'Simulation',
+        type: 'TEXT',
+        text,
+      },
+      this.manager,
+    );
+    return { steps: rec.steps, outcome: rec.outcome, error: rec.error ?? null };
   }
 
   async remove(organizationId: string, id: string) {

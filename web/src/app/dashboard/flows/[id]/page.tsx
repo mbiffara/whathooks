@@ -181,6 +181,16 @@ export default function FlowEditorPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [runsOpen, setRunsOpen] = useState(false);
+  // Simulator: a made-up message walked through the graph, nothing sent.
+  const [simOpen, setSimOpen] = useState(false);
+  const [savedAsDraft, setSavedAsDraft] = useState(false);
+  const [simText, setSimText] = useState("");
+  const [simBusy, setSimBusy] = useState(false);
+  const [simResult, setSimResult] = useState<{
+    steps: { nodeId: string; type: string; note?: string }[];
+    outcome: string;
+    error: string | null;
+  } | null>(null);
   const [runs, setRuns] = useState<FlowRun[] | null>(null);
   const [highlight, setHighlight] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -382,7 +392,7 @@ export default function FlowEditorPage() {
     setError(null);
     setGraphErrors(null);
     try {
-      await apiClient(`/flows/${id}/graph`, token, {
+      const saved = await apiClient<unknown>(`/flows/${id}/graph`, token, {
         method: "PUT",
         body: JSON.stringify({
           graph: {
@@ -402,12 +412,42 @@ export default function FlowEditorPage() {
         }),
       });
       setDirty(false);
+      // A draft saves even when incomplete; the API returns what is still
+      // wrong so it can be shown as a warning rather than a failure.
+      const warnings = (saved as { graphErrors?: GraphErrorEntry[] })
+        .graphErrors;
+      setGraphErrors(warnings?.length ? warnings : null);
+      setSavedAsDraft(Boolean(warnings?.length));
     } catch (e) {
       const ge = graphErrorsOf(e);
       if (ge) setGraphErrors(ge);
       else setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+      setSavedAsDraft(false);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function simulate() {
+    if (!token || simBusy || !simText.trim()) return;
+    setSimBusy(true);
+    setSimResult(null);
+    try {
+      const res = await apiClient<{
+        steps: { nodeId: string; type: string; note?: string }[];
+        outcome: string;
+        error: string | null;
+      }>(`/flows/${id}/simulate`, token, {
+        method: "POST",
+        body: JSON.stringify({ text: simText.trim() }),
+      });
+      setSimResult(res);
+      // Light the path the message actually took.
+      setHighlight(new Set(res.steps.map((st) => st.nodeId)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+    } finally {
+      setSimBusy(false);
     }
   }
 
@@ -620,7 +660,19 @@ export default function FlowEditorPage() {
               )}
               <button
                 onClick={() => {
+                  setSimOpen((v) => !v);
+                  setRunsOpen(false);
+                  setSelectedId(null);
+                  if (simOpen) setHighlight(new Set());
+                }}
+                className={`btn-ghost text-xs ${simOpen ? "text-[var(--color-brand)]" : ""}`}
+              >
+                {t("simulate")}
+              </button>
+              <button
+                onClick={() => {
                   setRunsOpen((v) => !v);
+                  setSimOpen(false);
                   setSelectedId(null);
                   if (runsOpen) setHighlight(new Set());
                 }}
@@ -672,11 +724,21 @@ export default function FlowEditorPage() {
           </div>
 
           {(error || graphErrors) && (
-            <div className="flex items-start gap-3 border-b border-[var(--color-border)] bg-[var(--color-danger-bg)] px-4 py-2.5 text-xs text-[var(--color-danger)]">
+            <div
+              className={`flex items-start gap-3 border-b border-[var(--color-border)] px-4 py-2.5 text-xs ${
+                savedAsDraft && !error
+                  ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
+                  : "bg-[var(--color-danger-bg)] text-[var(--color-danger)]"
+              }`}
+            >
               <div className="min-w-0 flex-1">
                 {graphErrors ? (
                   <>
-                    <div className="font-semibold">{t("validationTitle")}</div>
+                    <div className="font-semibold">
+                      {savedAsDraft && !error
+                        ? t("draftSavedTitle")
+                        : t("validationTitle")}
+                    </div>
                     <ul className="mt-1 flex flex-col gap-0.5">
                       {graphErrors.map((ge, i) => (
                         <li
@@ -820,7 +882,82 @@ export default function FlowEditorPage() {
               )}
             </div>
 
-            {selected && refs && !runsOpen && (
+            {simOpen && (
+              <div className="w-80 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold">{t("simulatorTitle")}</h2>
+                  <button
+                    onClick={() => {
+                      setSimOpen(false);
+                      setHighlight(new Set());
+                    }}
+                    className="text-xs text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  {t("simulatorHint")}
+                </p>
+                <textarea
+                  className="input mt-3 min-h-20 text-sm"
+                  maxLength={2000}
+                  placeholder={t("simulatorPlaceholder")}
+                  value={simText}
+                  onChange={(e) => setSimText(e.target.value)}
+                />
+                <button
+                  onClick={simulate}
+                  disabled={simBusy || !simText.trim()}
+                  className="btn-primary mt-2 w-full text-sm disabled:opacity-50"
+                >
+                  {simBusy ? tc("loading") : t("simulatorRun")}
+                </button>
+
+                {simResult && (
+                  <div className="mt-4">
+                    <div className="text-xs font-semibold text-[var(--color-muted)]">
+                      {t("simulatorOutcome", { outcome: simResult.outcome })}
+                    </div>
+                    {simResult.steps.length === 0 ? (
+                      <p className="mt-2 text-xs text-[var(--color-muted)]">
+                        {t("simulatorNoSteps")}
+                      </p>
+                    ) : (
+                      <ol className="mt-2 flex flex-col gap-1">
+                        {simResult.steps.map((st, i) => (
+                          <li key={i}>
+                            <button
+                              onClick={() => setSelectedId(st.nodeId)}
+                              className="flex w-full items-baseline gap-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-[var(--color-surface-2)]"
+                            >
+                              <span className="text-[var(--color-muted)]">
+                                {i + 1}.
+                              </span>
+                              <span className="font-medium">
+                                {nodeLabelOf(st.nodeId)}
+                              </span>
+                              {st.note && (
+                                <span className="text-[var(--color-muted)]">
+                                  {st.note}
+                                </span>
+                              )}
+                            </button>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                    {simResult.error && (
+                      <p className="mt-2 text-xs text-[var(--color-danger)]">
+                        {simResult.error}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selected && refs && !runsOpen && !simOpen && (
               <div className="w-80 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
                 <NodePanel
                   node={selected}

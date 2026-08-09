@@ -504,6 +504,9 @@ export default function FlowEditorPage() {
 
   async function removeFlow() {
     if (!token || busy) return;
+    // Irreversible, and it takes the run history with it — unlike deleting a
+    // node, which Cmd+Z undoes.
+    if (!confirm(t("confirmDeleteFlow", { name: flowName }))) return;
     setBusy(true);
     try {
       await apiClient(`/flows/${id}`, token, { method: "DELETE" });

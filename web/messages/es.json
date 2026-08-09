@@ -780,6 +780,7 @@
       "summaryIntents": "{count, plural, one {# intención} other {# intenciones}}",
       "casesLabel": "Casos",
       "simulate": "Probar",
+      "confirmDeleteFlow": "¿Eliminar el flow “{name}”? Se borran su grafo y su historial de ejecuciones. No se puede deshacer.",
       "aiIncludedOption": "Tokens incluidos (por defecto)",
       "aiIncludedHint": "Usa los tokens de IA de tu plan. Elegí un agente solo si querés usar su proveedor y modelo — acá no se usa su personalidad.",
       "simulatorTitle": "Probar este flow",

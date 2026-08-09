@@ -395,6 +395,62 @@ export default function FlowEditorPage() {
     setDirty(true);
   }
 
+  /**
+   * Create a minimal agent from inside the flow. Runs on included tokens, so
+   * no provider key is needed — which is what makes creating one here
+   * reasonable instead of sending the user to the agents page mid-build.
+   */
+  async function createAgent(draft: {
+    name: string;
+    soul: string;
+    instructions: string;
+  }): Promise<string | null> {
+    if (!token) return null;
+    try {
+      const agent = await apiClient<{ id: string; name: string }>(
+        "/agents",
+        token,
+        {
+          method: "POST",
+          body: JSON.stringify({ ...draft, useIncludedAi: true }),
+        },
+      );
+      setRefs((r) =>
+        r
+          ? {
+              ...r,
+              agents: [
+                ...r.agents.filter((x) => x.id !== agent.id),
+                { id: agent.id, name: agent.name, enabled: true },
+              ].sort((a, b) => a.name.localeCompare(b.name)),
+            }
+          : r,
+      );
+      return agent.id;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+      return null;
+    }
+  }
+
+  /** The graph exactly as the canvas has it. */
+  function currentGraph() {
+    return {
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: n.data,
+      })),
+      edges: edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        sourceHandle: e.sourceHandle ?? null,
+        target: e.target,
+      })),
+    };
+  }
+
   async function save() {
     if (!token || busy) return;
     setBusy(true);
@@ -403,22 +459,7 @@ export default function FlowEditorPage() {
     try {
       const saved = await apiClient<unknown>(`/flows/${id}/graph`, token, {
         method: "PUT",
-        body: JSON.stringify({
-          graph: {
-            nodes: nodes.map((n) => ({
-              id: n.id,
-              type: n.type,
-              position: n.position,
-              data: n.data,
-            })),
-            edges: edges.map((e) => ({
-              id: e.id,
-              source: e.source,
-              sourceHandle: e.sourceHandle ?? null,
-              target: e.target,
-            })),
-          },
-        }),
+        body: JSON.stringify({ graph: currentGraph() }),
       });
       setDirty(false);
       // A draft saves even when incomplete; the API returns what is still
@@ -457,7 +498,9 @@ export default function FlowEditorPage() {
         reply: string | null;
       }>(`/flows/${id}/simulate`, token, {
         method: "POST",
-        body: JSON.stringify({ messages }),
+        // Send the on-screen graph: testing the stored one would silently
+        // run a stale version of whatever you just changed.
+        body: JSON.stringify({ messages, graph: currentGraph() }),
       });
       setSimTurns((prev) => [
         ...prev,
@@ -1046,6 +1089,7 @@ export default function FlowEditorPage() {
                   onPatch={patchSelected}
                   onDelete={deleteSelected}
                   onCreateTag={createTag}
+                  onCreateAgent={createAgent}
                 />
               </div>
             )}
@@ -1147,16 +1191,30 @@ function NodePanel({
   onPatch,
   onDelete,
   onCreateTag,
+  onCreateAgent,
 }: {
   node: EditorNode;
   refs: FlowRefs;
   onPatch: (patch: FlowNodeData) => void;
   onDelete: () => void;
   onCreateTag?: (name: string) => Promise<string | null>;
+  onCreateAgent?: (draft: {
+    name: string;
+    soul: string;
+    instructions: string;
+  }) => Promise<string | null>;
 }) {
   const t = useTranslations("dash.flows");
+  const tcCommon = useTranslations("common");
   const nt = node.type as FlowNodeType;
   const d = node.data;
+  const [newAgentOpen, setNewAgentOpen] = useState(false);
+  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [agentDraft, setAgentDraft] = useState({
+    name: "",
+    soul: "",
+    instructions: "",
+  });
   const [newTag, setNewTag] = useState("");
   const [creatingTag, setCreatingTag] = useState(false);
 
@@ -1218,6 +1276,85 @@ function NodePanel({
             <span className="text-xs text-[var(--color-muted)]">
               {t("aiIncludedHint")}
             </span>
+          )}
+          {onCreateAgent && !newAgentOpen && (
+            <button
+              type="button"
+              onClick={() => setNewAgentOpen(true)}
+              className="self-start text-xs text-[var(--color-brand)] hover:underline"
+            >
+              {t("newAgent")}
+            </button>
+          )}
+          {onCreateAgent && newAgentOpen && (
+            <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] p-2">
+              <input
+                className="input h-8 px-2 py-0 text-xs"
+                placeholder={t("newAgentName")}
+                maxLength={80}
+                value={agentDraft.name}
+                onChange={(e) =>
+                  setAgentDraft({ ...agentDraft, name: e.target.value })
+                }
+              />
+              <textarea
+                className="input min-h-14 text-xs"
+                placeholder={t("newAgentSoul")}
+                value={agentDraft.soul}
+                onChange={(e) =>
+                  setAgentDraft({ ...agentDraft, soul: e.target.value })
+                }
+              />
+              <textarea
+                className="input min-h-14 text-xs"
+                placeholder={t("newAgentInstructions")}
+                value={agentDraft.instructions}
+                onChange={(e) =>
+                  setAgentDraft({
+                    ...agentDraft,
+                    instructions: e.target.value,
+                  })
+                }
+              />
+              <span className="text-[10px] text-[var(--color-muted)]">
+                {t("newAgentNote")}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={
+                    creatingAgent ||
+                    !agentDraft.name.trim() ||
+                    !agentDraft.soul.trim() ||
+                    !agentDraft.instructions.trim()
+                  }
+                  onClick={async () => {
+                    setCreatingAgent(true);
+                    const id = await onCreateAgent({
+                      name: agentDraft.name.trim(),
+                      soul: agentDraft.soul.trim(),
+                      instructions: agentDraft.instructions.trim(),
+                    });
+                    setCreatingAgent(false);
+                    if (id) {
+                      onPatch({ agentId: id });
+                      setNewAgentOpen(false);
+                      setAgentDraft({ name: "", soul: "", instructions: "" });
+                    }
+                  }}
+                  className="btn-primary flex-1 text-xs disabled:opacity-50"
+                >
+                  {creatingAgent ? "…" : t("newAgentCreate")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewAgentOpen(false)}
+                  className="btn-ghost text-xs"
+                >
+                  {tcCommon("cancel")}
+                </button>
+              </div>
+            </div>
           )}
         </label>
       )}

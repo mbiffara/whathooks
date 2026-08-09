@@ -91,6 +91,11 @@ class SimulateDto {
   @ValidateNested({ each: true })
   @Type(() => SimulateMessageDto)
   messages!: SimulateMessageDto[];
+
+  /** Unsaved editor graph to test instead of the stored one. */
+  @IsOptional()
+  @IsDefined()
+  graph?: unknown;
 }
 
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
@@ -147,7 +152,12 @@ export class FlowsController {
     @Param('id') id: string,
     @Body() body: SimulateDto,
   ) {
-    return this.flows.simulate(this.orgOf(user), id, body.messages);
+    return this.flows.simulate(
+      this.orgOf(user),
+      id,
+      body.messages,
+      body.graph,
+    );
   }
 
   @Get(':id/runs')

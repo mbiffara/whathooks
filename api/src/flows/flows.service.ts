@@ -18,6 +18,16 @@ import {
 import { FlowTemplate, buildTemplate } from './flow-templates';
 import type { GraphError } from './flow-graph';
 
+/** Loose shape check for a draft graph posted by the editor. */
+function isGraphShape(v: unknown): v is FlowGraph {
+  return (
+    !!v &&
+    typeof v === 'object' &&
+    Array.isArray((v as FlowGraph).nodes) &&
+    Array.isArray((v as FlowGraph).edges)
+  );
+}
+
 /**
  * 400 whose body carries the structured findings (`graphErrors`) so the
  * editor can render them in the user's language; `message` stays the
@@ -224,8 +234,17 @@ export class FlowsService {
     organizationId: string,
     id: string,
     messages: { from: 'contact' | 'business'; text: string }[],
+    /**
+     * The graph as it currently stands in the editor. Testing the STORED
+     * graph silently ran a stale version, so an edit you had not saved yet —
+     * the usual reason to hit Test — was invisible.
+     */
+    draft?: unknown,
   ) {
     const flow = await this.get(organizationId, id);
+    const graph = isGraphShape(draft)
+      ? draft
+      : (flow.graph as unknown as FlowGraph);
     const last = messages.at(-1);
     if (!last || last.from !== 'contact') {
       throw new BadRequestException(
@@ -238,11 +257,7 @@ export class FlowsService {
       text: m.text,
     }));
     const rec = await this.engine.simulate(
-      {
-        id: flow.id,
-        graph: flow.graph as unknown as FlowGraph,
-        organizationId,
-      },
+      { id: flow.id, graph, organizationId },
       {
         conversationId: `sim_${flow.id}`,
         remoteJid: 'simulation@s.whatsapp.net',

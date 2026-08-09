@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Agent, MessageSource } from '@prisma/client';
-import { AgentRunnerService } from '../agents/agent-runner.service';
+import { AgentRunnerService, Turn } from '../agents/agent-runner.service';
 import {
   FlowGraph,
   FlowNode,
@@ -42,6 +42,12 @@ interface RunRecorder {
    * a routing change can never apply to one and not the other.
    */
   dryRun?: boolean;
+  /**
+   * The pretend conversation so far. A simulation has no stored messages, so
+   * without this the AI nodes would see an empty history and always fall
+   * through — which is exactly the thing worth testing.
+   */
+  history?: Turn[];
 }
 const DEFAULT_GROUP_PREFIX = '🔒 Lead';
 
@@ -153,8 +159,14 @@ export class FlowEngineService {
     flow: FlowRef,
     ctx: InboundAutomationCtx,
     manager: ConnectionManagerService,
+    history: Turn[] = [],
   ): Promise<RunRecorder> {
-    const rec: RunRecorder = { steps: [], outcome: 'completed', dryRun: true };
+    const rec: RunRecorder = {
+      steps: [],
+      outcome: 'completed',
+      dryRun: true,
+      history,
+    };
     try {
       const trigger = flow.graph.nodes.find((n) => n.type === 'trigger');
       if (!trigger) {
@@ -247,6 +259,7 @@ export class FlowEngineService {
           await this.aiTarget(flow, node),
           ctx.conversationId,
           (node.data.question as string) ?? '',
+          rec.history,
         );
         // A failed or unreadable decision takes "no": the safer branch, and
         // the one a user is likelier to have wired to a human.
@@ -265,6 +278,7 @@ export class FlowEngineService {
           await this.aiTarget(flow, node),
           ctx.conversationId,
           intents,
+          rec.history,
         );
         const branch = key && intents.some((i) => i.key === key) ? key : null;
         rec.steps.push({

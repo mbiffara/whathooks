@@ -211,11 +211,32 @@ export class FlowsService {
   }
 
   /**
-   * Dry-run the flow against a made-up message. Nothing is sent, created or
-   * written; the AI nodes do run, so their branch decisions are real.
+   * Dry-run the flow against a pretend CONVERSATION. A flow runs on every
+   * inbound message and its AI nodes read the history, so simulating a
+   * single message in isolation would misreport exactly the branches worth
+   * testing. The caller sends the whole transcript; the last turn must be
+   * from the contact and is the message being delivered.
+   *
+   * Nothing is sent, created or written. The AI nodes do run, so their
+   * branch decisions are real.
    */
-  async simulate(organizationId: string, id: string, text: string) {
+  async simulate(
+    organizationId: string,
+    id: string,
+    messages: { from: 'contact' | 'business'; text: string }[],
+  ) {
     const flow = await this.get(organizationId, id);
+    const last = messages.at(-1);
+    if (!last || last.from !== 'contact') {
+      throw new BadRequestException(
+        'The last message must come from the contact',
+      );
+    }
+    // Same shape loadHistory produces from stored rows.
+    const history = messages.map((m) => ({
+      role: m.from === 'contact' ? ('user' as const) : ('assistant' as const),
+      text: m.text,
+    }));
     const rec = await this.engine.simulate(
       {
         id: flow.id,
@@ -229,11 +250,19 @@ export class FlowsService {
         mentionedMe: false,
         pushName: 'Simulation',
         type: 'TEXT',
-        text,
+        text: last.text,
       },
       this.manager,
+      history,
     );
-    return { steps: rec.steps, outcome: rec.outcome, error: rec.error ?? null };
+    return {
+      steps: rec.steps,
+      outcome: rec.outcome,
+      error: rec.error ?? null,
+      // Once a flow hands off, the real engine stops running it for that
+      // conversation — the caller needs to know to stop too.
+      handedOff: rec.outcome === 'handed_off',
+    };
   }
 
   async remove(organizationId: string, id: string) {

@@ -829,6 +829,7 @@ describe('AI nodes without an agent', () => {
       { organizationId: 'org1' },
       expect.any(String),
       expect.any(Array),
+      undefined, // a real run reads stored messages, not a supplied transcript
     );
   });
 
@@ -852,6 +853,44 @@ describe('AI nodes without an agent', () => {
       { organizationId: 'org1' },
       expect.any(String),
       'Angry?',
+      undefined,
     );
+  });
+});
+
+describe('simulate with a conversation', () => {
+  it('passes the supplied transcript to the AI nodes', async () => {
+    const t = makeEngine({ classify: () => Promise.resolve('sales') });
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('i', 'intent', { intents: [{ key: 'sales', label: 'Sales' }] }),
+        node('tag', 'tagConversation', { tagId: 'tag1' }),
+      ],
+      edges: [edge('t', 'i'), edge('i', 'tag', 'sales')],
+    };
+    const history = [
+      { role: 'user' as const, text: 'hola' },
+      { role: 'assistant' as const, text: '¿En qué te ayudo?' },
+      { role: 'user' as const, text: 'cuánto sale?' },
+    ];
+
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph, organizationId: 'org1' },
+      { ...CTX, text: 'cuánto sale?' },
+      t.manager as never,
+      history,
+    );
+
+    // Without this the classifier reads zero stored rows and always falls
+    // through — the branch a simulation most needs to get right.
+    expect(t.agentRunner.classify).toHaveBeenCalledWith(
+      { organizationId: 'org1' },
+      expect.any(String),
+      expect.any(Array),
+      history,
+    );
+    expect(rec.steps.map((s) => s.nodeId)).toEqual(['i', 'tag']);
+    expect(t.updates).toHaveLength(0); // still a dry run
   });
 });

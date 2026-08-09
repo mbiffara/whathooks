@@ -11,6 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDefined,
   IsIn,
@@ -18,7 +20,9 @@ import {
   IsString,
   Length,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -71,10 +75,22 @@ class UpdateFlowDto {
  * ADMINs bypass via OrgRolesGuard, so support mode keeps working). Flow
  * creation is plan-capped in the service.
  */
-class SimulateDto {
+class SimulateMessageDto {
+  @IsIn(['contact', 'business'])
+  from!: 'contact' | 'business';
+
   @IsString()
   @Length(1, 2000)
   text!: string;
+}
+
+class SimulateDto {
+  /** The pretend conversation so far; the last turn is the one delivered. */
+  @IsArray()
+  @ArrayMaxSize(40)
+  @ValidateNested({ each: true })
+  @Type(() => SimulateMessageDto)
+  messages!: SimulateMessageDto[];
 }
 
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
@@ -131,7 +147,7 @@ export class FlowsController {
     @Param('id') id: string,
     @Body() body: SimulateDto,
   ) {
-    return this.flows.simulate(this.orgOf(user), id, body.text);
+    return this.flows.simulate(this.orgOf(user), id, body.messages);
   }
 
   @Get(':id/runs')

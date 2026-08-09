@@ -186,11 +186,20 @@ export default function FlowEditorPage() {
   const [savedAsDraft, setSavedAsDraft] = useState(false);
   const [simText, setSimText] = useState("");
   const [simBusy, setSimBusy] = useState(false);
-  const [simResult, setSimResult] = useState<{
-    steps: { nodeId: string; type: string; note?: string }[];
-    outcome: string;
-    error: string | null;
-  } | null>(null);
+  /**
+   * The pretend conversation. Each contact turn carries what the flow did
+   * with it, because a flow runs per message — one message in isolation
+   * cannot show a handoff ending the flow, or an AI node reading history.
+   */
+  const [simTurns, setSimTurns] = useState<
+    {
+      from: "contact" | "business";
+      text: string;
+      steps?: { nodeId: string; type: string; note?: string }[];
+      outcome?: string;
+    }[]
+  >([]);
+  const [simHandedOff, setSimHandedOff] = useState(false);
   const [runs, setRuns] = useState<FlowRun[] | null>(null);
   const [highlight, setHighlight] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -429,26 +438,55 @@ export default function FlowEditorPage() {
   }
 
   async function simulate() {
-    if (!token || simBusy || !simText.trim()) return;
+    if (!token || simBusy || !simText.trim() || simHandedOff) return;
+    const text = simText.trim();
+    // The whole transcript goes up: the AI nodes read history, so sending
+    // only the new line would misreport exactly the branches worth testing.
+    const messages = [
+      ...simTurns.map((m) => ({ from: m.from, text: m.text })),
+      { from: "contact" as const, text },
+    ];
     setSimBusy(true);
-    setSimResult(null);
+    setSimText("");
     try {
       const res = await apiClient<{
         steps: { nodeId: string; type: string; note?: string }[];
         outcome: string;
         error: string | null;
+        handedOff: boolean;
       }>(`/flows/${id}/simulate`, token, {
         method: "POST",
-        body: JSON.stringify({ text: simText.trim() }),
+        body: JSON.stringify({ messages }),
       });
-      setSimResult(res);
-      // Light the path the message actually took.
+      setSimTurns((prev) => [
+        ...prev,
+        { from: "contact", text, steps: res.steps, outcome: res.outcome },
+      ]);
+      setSimHandedOff(res.handedOff);
+      // Light the path this message took.
       setHighlight(new Set(res.steps.map((st) => st.nodeId)));
+      if (res.error) setError(res.error);
     } catch (e) {
+      setSimText(text); // keep what they typed
       setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
     } finally {
       setSimBusy(false);
     }
+  }
+
+  /** Add a business reply, so AI nodes see a realistic back-and-forth. */
+  function addBusinessTurn() {
+    const text = simText.trim();
+    if (!text) return;
+    setSimTurns((prev) => [...prev, { from: "business", text }]);
+    setSimText("");
+  }
+
+  function resetSimulation() {
+    setSimTurns([]);
+    setSimHandedOff(false);
+    setSimText("");
+    setHighlight(new Set());
   }
 
   async function toggleEnabled() {
@@ -902,60 +940,92 @@ export default function FlowEditorPage() {
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
                   {t("simulatorHint")}
                 </p>
+                {simTurns.length > 0 && (
+                  <div className="mt-3 flex flex-col gap-2">
+                    {simTurns.map((m, i) => (
+                      <div key={i}>
+                        <div
+                          className={`max-w-[85%] rounded-xl px-3 py-1.5 text-xs ${
+                            m.from === "contact"
+                              ? "border border-[var(--color-border)] bg-[var(--color-surface-2)]"
+                              : "ml-auto border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/15"
+                          }`}
+                        >
+                          {m.text}
+                        </div>
+                        {m.steps && (
+                          <ol className="mt-1 flex flex-col gap-0.5">
+                            {m.steps.length === 0 ? (
+                              <li className="px-2 text-[10px] text-[var(--color-muted)]">
+                                {t("simulatorNoSteps")}
+                              </li>
+                            ) : (
+                              m.steps.map((st, j) => (
+                                <li key={j}>
+                                  <button
+                                    onClick={() => setSelectedId(st.nodeId)}
+                                    className="flex w-full items-baseline gap-1.5 rounded px-2 py-0.5 text-left text-[10px] hover:bg-[var(--color-surface-2)]"
+                                  >
+                                    <span className="text-[var(--color-muted)]">
+                                      {j + 1}.
+                                    </span>
+                                    <span className="font-medium">
+                                      {nodeLabelOf(st.nodeId)}
+                                    </span>
+                                    {st.note && (
+                                      <span className="text-[var(--color-muted)]">
+                                        {st.note}
+                                      </span>
+                                    )}
+                                  </button>
+                                </li>
+                              ))
+                            )}
+                          </ol>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {simHandedOff && (
+                  <p className="mt-3 rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning-bg)] px-2 py-1.5 text-[10px] text-[var(--color-warning)]">
+                    {t("simulatorHandedOff")}
+                  </p>
+                )}
+
                 <textarea
-                  className="input mt-3 min-h-20 text-sm"
+                  className="input mt-3 min-h-16 text-sm"
                   maxLength={2000}
+                  disabled={simHandedOff}
                   placeholder={t("simulatorPlaceholder")}
                   value={simText}
                   onChange={(e) => setSimText(e.target.value)}
                 />
-                <button
-                  onClick={simulate}
-                  disabled={simBusy || !simText.trim()}
-                  className="btn-primary mt-2 w-full text-sm disabled:opacity-50"
-                >
-                  {simBusy ? tc("loading") : t("simulatorRun")}
-                </button>
-
-                {simResult && (
-                  <div className="mt-4">
-                    <div className="text-xs font-semibold text-[var(--color-muted)]">
-                      {t("simulatorOutcome", { outcome: simResult.outcome })}
-                    </div>
-                    {simResult.steps.length === 0 ? (
-                      <p className="mt-2 text-xs text-[var(--color-muted)]">
-                        {t("simulatorNoSteps")}
-                      </p>
-                    ) : (
-                      <ol className="mt-2 flex flex-col gap-1">
-                        {simResult.steps.map((st, i) => (
-                          <li key={i}>
-                            <button
-                              onClick={() => setSelectedId(st.nodeId)}
-                              className="flex w-full items-baseline gap-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-[var(--color-surface-2)]"
-                            >
-                              <span className="text-[var(--color-muted)]">
-                                {i + 1}.
-                              </span>
-                              <span className="font-medium">
-                                {nodeLabelOf(st.nodeId)}
-                              </span>
-                              {st.note && (
-                                <span className="text-[var(--color-muted)]">
-                                  {st.note}
-                                </span>
-                              )}
-                            </button>
-                          </li>
-                        ))}
-                      </ol>
-                    )}
-                    {simResult.error && (
-                      <p className="mt-2 text-xs text-[var(--color-danger)]">
-                        {simResult.error}
-                      </p>
-                    )}
-                  </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    onClick={simulate}
+                    disabled={simBusy || !simText.trim() || simHandedOff}
+                    className="btn-primary flex-1 text-xs disabled:opacity-50"
+                  >
+                    {simBusy ? tc("loading") : t("simulatorSendAsContact")}
+                  </button>
+                  <button
+                    onClick={addBusinessTurn}
+                    disabled={!simText.trim() || simHandedOff}
+                    className="btn-ghost text-xs disabled:opacity-50"
+                    title={t("simulatorAsBusinessHint")}
+                  >
+                    {t("simulatorSendAsBusiness")}
+                  </button>
+                </div>
+                {simTurns.length > 0 && (
+                  <button
+                    onClick={resetSimulation}
+                    className="btn-ghost mt-2 w-full text-xs"
+                  >
+                    {t("simulatorReset")}
+                  </button>
                 )}
               </div>
             )}

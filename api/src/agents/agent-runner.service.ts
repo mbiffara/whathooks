@@ -14,7 +14,7 @@ const HISTORY_LIMIT = 20;
 const MAX_PAUSE_CONTINUATIONS = 4;
 const MCP_BETA = 'mcp-client-2025-11-20';
 
-type Turn = { role: 'user' | 'assistant'; text: string };
+export type Turn = { role: 'user' | 'assistant'; text: string };
 
 /** Outcome of a run: a reply to send (if any) and whether the agent handed off. */
 /**
@@ -189,12 +189,14 @@ export class AgentRunnerService {
     target: Agent | { organizationId: string },
     conversationId: string,
     intents: Array<{ key: string; label: string; description?: string }>,
+    /** Simulation: use this transcript instead of reading stored messages. */
+    history?: Turn[],
   ): Promise<string | null> {
     if (intents.length === 0) return null;
     const run = await this.resolveRunner(target);
     // No credentials or no budget: callers treat null as "fallback".
     if (!run || 'exhausted' in run) return null;
-    const turns = await this.loadHistory(conversationId, false);
+    const turns = history ?? (await this.loadHistory(conversationId, false));
     if (!turns.length) return null;
 
     const keys = intents.map((i) => i.key);
@@ -284,11 +286,13 @@ export class AgentRunnerService {
     target: Agent | { organizationId: string },
     conversationId: string,
     question: string,
+    /** Simulation: use this transcript instead of reading stored messages. */
+    history?: Turn[],
   ): Promise<boolean | null> {
     const run = await this.resolveRunner(target);
     if (!run || 'exhausted' in run) return null;
 
-    const turns = await this.loadHistory(conversationId, false);
+    const turns = history ?? (await this.loadHistory(conversationId, false));
     if (!turns.length) return null;
 
     const system = [

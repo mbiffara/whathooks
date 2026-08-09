@@ -155,7 +155,8 @@ export class AgentRunnerService {
       select: { isGroup: true },
     });
     const turns =
-      history ?? (await this.loadHistory(conversationId, convo?.isGroup ?? false));
+      history ??
+      (await this.loadHistory(conversationId, convo?.isGroup ?? false));
     if (!turns.length) return null;
 
     const knowledge = await this.prisma.agentKnowledgeDoc.findMany({

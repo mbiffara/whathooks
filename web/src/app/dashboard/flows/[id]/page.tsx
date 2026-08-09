@@ -1229,6 +1229,22 @@ function NodePanel({
         />
       )}
 
+      {nt === "agentReply" && (
+        <label className="flex flex-col gap-1 text-sm">
+          {t("stepPrompt")}
+          <textarea
+            className="input min-h-24"
+            maxLength={2000}
+            placeholder={t("stepPromptPlaceholder")}
+            value={(d.prompt as string) ?? ""}
+            onChange={(e) => onPatch({ prompt: e.target.value })}
+          />
+          <span className="text-xs text-[var(--color-muted)]">
+            {t("stepPromptHint")}
+          </span>
+        </label>
+      )}
+
       {nt === "aiDecision" && (
         <label className="flex flex-col gap-1 text-sm">
           {t("decisionQuestion")}

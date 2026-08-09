@@ -1211,7 +1211,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     conversationId: string,
     remoteJid: string,
     agentId: string,
-    opts: { pauseOnHandoff: boolean },
+    opts: { pauseOnHandoff: boolean; stepInstructions?: string | null },
   ): Promise<'replied' | 'handoff' | 'skipped'> {
     if (!this.agentRunner.isConfigured()) return 'skipped';
     const agent = await this.prisma.agent.findUnique({
@@ -1233,7 +1233,12 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     });
     if (convo?.agentPaused) return 'skipped';
 
-    const reply = await this.agentRunner.generateReply(agent, conversationId);
+    const reply = await this.agentRunner.generateReply(
+      agent,
+      conversationId,
+      undefined,
+      opts.stepInstructions,
+    );
     if (!reply) return 'skipped';
     if (!this.sessions.has(sessionId)) return 'skipped';
 

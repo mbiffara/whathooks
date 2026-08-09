@@ -29,6 +29,7 @@ const nodeDataSchema = z.object({
     )
     .nullable(),
   question: z.string().nullable(),
+  prompt: z.string().nullable(),
   cases: z
     .array(
       z.object({
@@ -114,7 +115,7 @@ NODE TYPES (type → data fields → output handles):
 - keywordCases → { cases: [{ key, label, keywords: string[] }] } → one handle per case key, plus "fallback". Several keyword lists, each with its own branch; the FIRST case that matches wins. Use this instead of chaining keyword nodes when a message should route three or more ways on wording alone. Keys are short lowercase slugs; "fallback" is reserved.
 - aiDecision → { agentId?, question } → "yes", "no". An AI agent answers ONE yes/no question about the conversation. Use it for judgements no keyword list can make ("is the customer angry?", "did they already pay?"). An unclear answer takes "no", so wire the safer outcome there.
 - intent → { agentId?, intents: [{ key, label, description? }] } → one handle per intent key, plus "fallback". Keys are short lowercase slugs; "fallback" is reserved.
-- agentReply → { agentId } → optional "onHandoff". The AI agent answers; the walk ends after replying. Connect "onHandoff" to route the conversation when the agent decides a human is needed.
+- agentReply → { agentId, prompt? } → optional "onHandoff". prompt is extra instructions for THIS step, appended to the agent's own (use it when one agent should answer differently on different branches). The AI agent answers; the walk ends after replying. Connect "onHandoff" to route the conversation when the agent decides a human is needed.
 - assignHuman → { humanAgentId, groupPrefix?, farewellText?, copyHistory? } → terminal. Creates a WhatsApp mirror group with that human.
 - roundRobin → { humanAgentIds: string[], same options } → terminal. Rotates leads across humans, one group per lead.
 - assignGroup → { humanAgentIds: string[], same options } → terminal. One shared group with every listed human.

@@ -136,6 +136,8 @@ export class AgentRunnerService {
     conversationId: string,
     /** Simulation: use this transcript instead of reading stored messages. */
     history?: Turn[],
+    /** Extra instructions from the flow node that triggered this reply. */
+    stepInstructions?: string | null,
   ): Promise<AgentReply | null> {
     if (!this.encryption.isConfigured()) return null;
 
@@ -166,6 +168,7 @@ export class AgentRunnerService {
       convo?.isGroup ?? false,
       agent.allowAutoStop,
       knowledge,
+      stepInstructions,
     );
     try {
       // Included AI is OpenAI-only; the provider column is irrelevant there.
@@ -641,6 +644,13 @@ function buildSystemPrompt(
   isGroup: boolean,
   allowAutoStop: boolean,
   knowledge: Array<{ fileName: string; text: string }> = [],
+  /**
+   * Extra instructions from the flow node that reached this reply. Appended
+   * rather than replacing the agent's own, so one agent can behave
+   * differently per branch without losing its character or knowledge — and
+   * placed last so it wins where the two disagree.
+   */
+  stepInstructions?: string | null,
 ): string {
   return [
     `You are ${agent.name}, an assistant replying to messages on WhatsApp.`,
@@ -679,6 +689,15 @@ function buildSystemPrompt(
           'this conversation. Prefer handing off over guessing or making things up.',
           'You may send a brief message (e.g. letting them know a human will follow',
           'up) together with the tool call, or hand off silently.',
+          '',
+        ]
+      : []),
+    ...(stepInstructions?.trim()
+      ? [
+          '# This step',
+          'Additional instructions for this point in the conversation. They',
+          'take precedence over the general instructions above.',
+          stepInstructions.trim(),
           '',
         ]
       : []),

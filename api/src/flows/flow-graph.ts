@@ -331,6 +331,15 @@ export function validateGraph(
         if (!isStr(d.agentId, 64) || !refs.agentIds.has(d.agentId)) {
           push('agentMissing', `Node "${n.id}": pick an AI agent`, n.id);
         }
+        // Optional per-step instructions appended to the agent's own.
+        if (!isOptStr(d.prompt, 2000)) {
+          push(
+            'stepPromptTooLong',
+            `Node "${n.id}": step instructions too long (max 2000)`,
+            n.id,
+            { max: 2000 },
+          );
+        }
         break;
       case 'assignHuman':
         if (

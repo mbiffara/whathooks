@@ -567,6 +567,7 @@ describe('FlowEngineService.run', () => {
     // pauseOnHandoff false because the edge exists
     expect((t.agentReplies[0] as { args: unknown[] }).args[4]).toEqual({
       pauseOnHandoff: false,
+      stepInstructions: null,
     });
     expect(t.created[0]).toMatchObject({ agents: [{ id: 'ha2' }] });
   });
@@ -903,5 +904,60 @@ describe('simulate with a conversation', () => {
     );
     expect(rec.steps.map((s) => s.nodeId)).toEqual(['i', 'tag']);
     expect(t.updates).toHaveLength(0); // still a dry run
+  });
+});
+
+describe('agentReply step instructions', () => {
+  it("passes the node's prompt through to the reply", async () => {
+    const t = makeEngine({});
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('r', 'agentReply', {
+          agentId: 'agent1',
+          prompt: 'Quote the plans and offer the trial.',
+        }),
+      ],
+      edges: [edge('t', 'r')],
+    };
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.agentReplies[0].args).toEqual([
+      's1',
+      'conv1',
+      expect.any(String),
+      'agent1',
+      expect.objectContaining({
+        stepInstructions: 'Quote the plans and offer the trial.',
+      }),
+    ]);
+  });
+
+  it('sends null when the node has no prompt', async () => {
+    const t = makeEngine({});
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('r', 'agentReply', { agentId: 'agent1' }),
+      ],
+      edges: [edge('t', 'r')],
+    };
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.agentReplies[0].args).toEqual([
+      's1',
+      'conv1',
+      expect.any(String),
+      'agent1',
+      expect.objectContaining({ stepInstructions: null }),
+    ]);
   });
 });

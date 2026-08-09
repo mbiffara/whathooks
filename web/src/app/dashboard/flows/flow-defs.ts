@@ -82,7 +82,7 @@ export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
     case "aiDecision":
       return { agentId: "", question: "" };
     case "agentReply":
-      return { agentId: "" };
+      return { agentId: "", prompt: "" };
     case "assignHuman":
       return { humanAgentId: "", groupPrefix: "", farewellText: "" };
     case "roundRobin":

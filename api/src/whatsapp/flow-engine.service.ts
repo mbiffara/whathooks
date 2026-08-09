@@ -306,6 +306,7 @@ export class FlowEngineService {
                 agent,
                 ctx.conversationId,
                 rec.history,
+                (node.data.prompt as string) ?? null,
               )
             : null;
           rec.reply = reply?.text ?? null;
@@ -326,7 +327,10 @@ export class FlowEngineService {
           ctx.conversationId,
           ctx.remoteJid,
           node.data.agentId as string,
-          { pauseOnHandoff: !handoffEdge },
+          {
+            pauseOnHandoff: !handoffEdge,
+            stepInstructions: (node.data.prompt as string) ?? null,
+          },
         );
         rec.steps.push({ nodeId: node.id, type: node.type, note: outcome });
         rec.outcome =

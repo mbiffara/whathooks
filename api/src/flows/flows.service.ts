@@ -259,6 +259,9 @@ export class FlowsService {
       steps: rec.steps,
       outcome: rec.outcome,
       error: rec.error ?? null,
+      // What an agentReply node would have sent, so the caller can show it
+      // and carry it into the next turn's transcript.
+      reply: rec.reply ?? null,
       // Once a flow hands off, the real engine stops running it for that
       // conversation — the caller needs to know to stop too.
       handedOff: rec.outcome === 'handed_off',

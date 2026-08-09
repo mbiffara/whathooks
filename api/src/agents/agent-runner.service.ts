@@ -134,6 +134,8 @@ export class AgentRunnerService {
   async generateReply(
     agent: Agent,
     conversationId: string,
+    /** Simulation: use this transcript instead of reading stored messages. */
+    history?: Turn[],
   ): Promise<AgentReply | null> {
     if (!this.encryption.isConfigured()) return null;
 
@@ -150,10 +152,8 @@ export class AgentRunnerService {
       where: { id: conversationId },
       select: { isGroup: true },
     });
-    const turns = await this.loadHistory(
-      conversationId,
-      convo?.isGroup ?? false,
-    );
+    const turns =
+      history ?? (await this.loadHistory(conversationId, convo?.isGroup ?? false));
     if (!turns.length) return null;
 
     const knowledge = await this.prisma.agentKnowledgeDoc.findMany({

@@ -454,6 +454,7 @@ export default function FlowEditorPage() {
         outcome: string;
         error: string | null;
         handedOff: boolean;
+        reply: string | null;
       }>(`/flows/${id}/simulate`, token, {
         method: "POST",
         body: JSON.stringify({ messages }),
@@ -461,6 +462,9 @@ export default function FlowEditorPage() {
       setSimTurns((prev) => [
         ...prev,
         { from: "contact", text, steps: res.steps, outcome: res.outcome },
+        // The agent's reply becomes a real turn, so the next message is
+        // classified against the same transcript production would see.
+        ...(res.reply ? [{ from: "business" as const, text: res.reply }] : []),
       ]);
       setSimHandedOff(res.handedOff);
       // Light the path this message took.

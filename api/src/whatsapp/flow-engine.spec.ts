@@ -137,6 +137,9 @@ type AnyRecord = Record<string, unknown>;
 function makeEngine(overrides: {
   classify?: (...a: unknown[]) => Promise<string | null>;
   decide?: (...a: unknown[]) => Promise<boolean | null>;
+  generateReply?: (
+    ...a: unknown[]
+  ) => Promise<{ text: string | null; handoff: boolean } | null>;
   counterValues?: number[];
 }) {
   const sent: Array<{ to: string; text: string }> = [];
@@ -208,6 +211,11 @@ function makeEngine(overrides: {
   const agentRunner = {
     classify: jest.fn(overrides.classify ?? (() => Promise.resolve(null))),
     decide: jest.fn(overrides.decide ?? (() => Promise.resolve(null))),
+    generateReply: jest.fn(
+      overrides.generateReply ??
+        (() =>
+          Promise.resolve({ text: 'Hola, ¿en qué te ayudo?', handoff: false })),
+    ),
   };
   const webhooks = {
     dispatchTo: jest.fn((...args: unknown[]) => {
@@ -758,7 +766,7 @@ describe('FlowEngineService.simulate', () => {
     expect(t.agentReplies).toHaveLength(0);
   });
 
-  it('takes the no branch and reports the reply without sending it', async () => {
+  it('generates the reply text but never sends it', async () => {
     const t = makeEngine({});
     const rec = await t.engine.simulate(
       { id: 'f1', graph: graph(), organizationId: 'org1' },
@@ -767,6 +775,9 @@ describe('FlowEngineService.simulate', () => {
     );
     expect(rec.steps.map((s) => s.nodeId)).toEqual(['k', 'r']);
     expect(rec.outcome).toBe('agent_replied');
+    // The caller needs the text to continue the conversation…
+    expect(rec.reply).toBe('Hola, ¿en qué te ayudo?');
+    // …but nothing reached WhatsApp.
     expect(t.agentReplies).toHaveLength(0);
     expect(t.sent).toHaveLength(0);
   });

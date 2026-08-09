@@ -48,6 +48,8 @@ interface RunRecorder {
    * through — which is exactly the thing worth testing.
    */
   history?: Turn[];
+  /** Simulation: what the agent would have replied, for the caller to show. */
+  reply?: string | null;
 }
 const DEFAULT_GROUP_PREFIX = '🔒 Lead';
 
@@ -293,12 +295,30 @@ export class FlowEngineService {
       case 'agentReply': {
         const handoffEdge = edgeFrom(graph, node.id, 'onHandoff');
         if (rec.dryRun) {
+          // Generate the reply for real but never send it: seeing what the
+          // agent would say is the point of a conversation simulator, and
+          // the transcript needs it to continue realistically.
+          const agent = await this.prisma.agent.findUnique({
+            where: { id: node.data.agentId as string },
+          });
+          const reply = agent
+            ? await this.agentRunner.generateReply(
+                agent,
+                ctx.conversationId,
+                rec.history,
+              )
+            : null;
+          rec.reply = reply?.text ?? null;
           rec.steps.push({
             nodeId: node.id,
             type: node.type,
-            note: 'would reply (not sent)',
+            note: reply?.handoff ? 'handoff' : 'replied (not sent)',
           });
-          rec.outcome = 'agent_replied';
+          if (reply?.handoff && handoffEdge) {
+            rec.outcome = 'handed_off';
+            return graph.nodes.find((n) => n.id === handoffEdge.target);
+          }
+          rec.outcome = reply?.handoff ? 'handed_off' : 'agent_replied';
           return undefined;
         }
         const outcome = await manager.runAgentReply(

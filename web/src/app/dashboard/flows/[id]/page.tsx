@@ -1034,8 +1034,12 @@ export default function FlowEditorPage() {
               </div>
             )}
 
-            {selected && refs && !runsOpen && !simOpen && (
-              <div className="w-80 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4">
+            {selected && refs && !runsOpen && (
+              <div
+                className={`shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-4 ${
+                  simOpen ? "w-72" : "w-80"
+                }`}
+              >
                 <NodePanel
                   node={selected}
                   refs={refs}

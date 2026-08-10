@@ -786,7 +786,7 @@
       "newAgentName": "Name (e.g. Sales assistant)",
       "newAgentSoul": "Character — who it is and how it speaks",
       "newAgentInstructions": "Instructions — what it should do",
-      "newAgentNote": "Runs on your plan's included AI tokens. Change the provider later on the Agents page.",
+      "newAgentNote": "Runs on your plan's included AI tokens, and may hand off to a human. Change either on the Agents page.",
       "newAgentCreate": "Create and use",
       "aiIncludedHint": "Runs on your plan's AI tokens. Pick an agent only to use its provider and model instead — the agent's personality is not used here.",
       "simulatorTitle": "Test this flow",

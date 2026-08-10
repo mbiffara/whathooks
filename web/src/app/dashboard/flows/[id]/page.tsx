@@ -412,7 +412,14 @@ export default function FlowEditorPage() {
         token,
         {
           method: "POST",
-          body: JSON.stringify({ ...draft, useIncludedAi: true }),
+          // allowAutoStop always on: an agent created inside a flow exists to
+          // be wired up, and an On-handoff branch is dead without it. That
+          // trap is exactly what this shortcut should not reproduce.
+          body: JSON.stringify({
+            ...draft,
+            useIncludedAi: true,
+            allowAutoStop: true,
+          }),
         },
       );
       setRefs((r) =>
@@ -421,7 +428,12 @@ export default function FlowEditorPage() {
               ...r,
               agents: [
                 ...r.agents.filter((x) => x.id !== agent.id),
-                { id: agent.id, name: agent.name, enabled: true },
+                {
+                  id: agent.id,
+                  name: agent.name,
+                  enabled: true,
+                  allowAutoStop: true,
+                },
               ].sort((a, b) => a.name.localeCompare(b.name)),
             }
           : r,

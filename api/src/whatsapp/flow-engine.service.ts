@@ -339,7 +339,9 @@ export class FlowEngineService {
               ? 'handed off to a human'
               : reply.text
                 ? 'replied (not sent)'
-                : 'the agent produced no text',
+                : handoffEdge && !agent.allowAutoStop
+                  ? `agent "${agent.name}" cannot hand off — turn on "let the agent pause itself" on the agent`
+                  : 'the agent produced no text',
           });
           if (reply.handoff && handoffEdge) {
             rec.outcome = 'handed_off';

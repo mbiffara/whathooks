@@ -305,7 +305,9 @@ export class FlowsService {
     const [agents, humanAgents, webhooks, tags, members] = await Promise.all([
       this.prisma.agent.findMany({
         where: { organizationId },
-        select: { id: true, name: true, enabled: true },
+        // allowAutoStop tells the editor whether an onHandoff branch on this
+        // agent can ever fire — without it the tool is never offered.
+        select: { id: true, name: true, enabled: true, allowAutoStop: true },
         orderBy: { name: 'asc' },
       }),
       this.prisma.humanAgent.findMany({

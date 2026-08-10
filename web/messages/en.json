@@ -803,6 +803,7 @@
       "summaryCases": "{count, plural, one {# case} other {# cases}}",
       "decisionQuestion": "Yes/no question",
       "stepPrompt": "Extra instructions (optional)",
+      "handoffDisabledWarning": "This node has an On-handoff branch, but the selected agent is not allowed to hand off, so that branch will never run. Turn on \"let the agent pause itself\" on the agent.",
       "stepPromptPlaceholder": "e.g. The customer asked about pricing. Quote the plans and offer the free trial.",
       "stepPromptHint": "Added to the agent's own instructions for this step only, and takes precedence over them. Its character and knowledge base still apply.",
       "decisionQuestionPlaceholder": "e.g. Is the customer asking to cancel their subscription?",

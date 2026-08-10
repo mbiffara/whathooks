@@ -29,7 +29,13 @@ export interface FlowKeywordCase {
 }
 
 export interface FlowRefs {
-  agents: { id: string; name: string; enabled: boolean }[];
+  agents: {
+    id: string;
+    name: string;
+    enabled: boolean;
+    /** False = the agent has no handoff tool, so an onHandoff edge is dead. */
+    allowAutoStop?: boolean;
+  }[];
   humanAgents: { id: string; name: string; phoneNumber: string }[];
   webhooks: { id: string; url: string; active: boolean }[];
   tags: { id: string; name: string; color: string }[];

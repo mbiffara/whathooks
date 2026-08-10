@@ -803,6 +803,7 @@
       "summaryCases": "{count, plural, one {# caso} other {# casos}}",
       "decisionQuestion": "Pregunta de sí/no",
       "stepPrompt": "Instrucciones extra (opcional)",
+      "handoffDisabledWarning": "Este nodo tiene una salida On-handoff, pero el agente elegido no tiene permitido derivar, así que esa rama nunca se va a ejecutar. Activá \"que el agente pueda pausarse solo\" en el agente.",
       "stepPromptPlaceholder": "ej. El cliente preguntó por precios. Nombrá los planes y ofrecé la prueba gratuita.",
       "stepPromptHint": "Se suman a las instrucciones del agente solo en este paso, y tienen prioridad sobre ellas. Su carácter y su base de conocimiento siguen aplicando.",
       "decisionQuestionPlaceholder": "ej. ¿El cliente está pidiendo cancelar su suscripción?",

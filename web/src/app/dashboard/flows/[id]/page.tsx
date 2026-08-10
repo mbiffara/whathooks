@@ -1090,6 +1090,11 @@ export default function FlowEditorPage() {
                   onDelete={deleteSelected}
                   onCreateTag={createTag}
                   onCreateAgent={createAgent}
+                  handoffWired={edges.some(
+                    (e) =>
+                      e.source === selected.id &&
+                      e.sourceHandle === "onHandoff",
+                  )}
                 />
               </div>
             )}
@@ -1192,6 +1197,7 @@ function NodePanel({
   onDelete,
   onCreateTag,
   onCreateAgent,
+  handoffWired = false,
 }: {
   node: EditorNode;
   refs: FlowRefs;
@@ -1203,6 +1209,8 @@ function NodePanel({
     soul: string;
     instructions: string;
   }) => Promise<string | null>;
+  /** True when this node has an onHandoff edge drawn from it. */
+  handoffWired?: boolean;
 }) {
   const t = useTranslations("dash.flows");
   const tcCommon = useTranslations("common");
@@ -1215,6 +1223,11 @@ function NodePanel({
     soul: "",
     instructions: "",
   });
+  // An onHandoff edge is dead unless the agent may pause itself, so warn
+  // rather than let the branch sit there silently never firing.
+  const hasHandoffEdge = handoffWired;
+  const agentCanHandOff =
+    refs.agents.find((a) => a.id === d.agentId)?.allowAutoStop !== false;
   const [newTag, setNewTag] = useState("");
   const [creatingTag, setCreatingTag] = useState(false);
 
@@ -1364,6 +1377,12 @@ function NodePanel({
           intents={(d.intents as FlowIntent[]) ?? []}
           onChange={(intents) => onPatch({ intents })}
         />
+      )}
+
+      {nt === "agentReply" && hasHandoffEdge && !agentCanHandOff && (
+        <p className="rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning-bg)] px-3 py-2 text-xs text-[var(--color-warning)]">
+          ⚠ {t("handoffDisabledWarning")}
+        </p>
       )}
 
       {nt === "agentReply" && (

@@ -273,7 +273,7 @@ included tokens, or your own Anthropic/OpenAI key) are on every plan;
 MCP tools need Pro+.
 Starter $8.99/mo: 1 number, 5,000 messages/mo, 2 team members, 2 human
 agents, 1 flow, 1 webhook, 30-day history. Pro $24.99/mo: 3 numbers,
-10,000 messages/mo, 10 team members, 10 human agents, 3 flows, unlimited
+20,000 messages/mo, 10 team members, 10 human agents, 3 flows, unlimited
 webhooks, 90-day history. Business $79.99/mo: 10 numbers, 100,000
 messages/mo, unlimited team/human agents/flows/webhooks, full history.
 Annual billing on every plan at 10x monthly (2 months free): $89.90 /

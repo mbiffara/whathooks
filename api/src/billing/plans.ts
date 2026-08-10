@@ -56,7 +56,7 @@ export const PLANS: Record<Plan, PlanLimits> = {
   },
   PRO: {
     label: 'Pro',
-    messagesPerMonth: 10_000,
+    messagesPerMonth: 20_000,
     historyDays: 90,
     waNumbers: 3,
     teamMembers: 10,

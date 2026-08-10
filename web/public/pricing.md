@@ -6,7 +6,7 @@ start with a 7-day free trial (card required; 300 messages during trial).
 Message caps count inbound + outbound. Annual billing on every plan is 10x
 the monthly price (2 months free). Prices in USD.
 
-Last updated: 2026-08-07. Source of truth: https://www.whathooks.app/#pricing
+Last updated: 2026-08-10. Source of truth: https://www.whathooks.app/#pricing
 
 ## Starter
 - Price: $8.99/month | $89.90/year
@@ -24,7 +24,7 @@ Last updated: 2026-08-07. Source of truth: https://www.whathooks.app/#pricing
 ## Pro
 - Price: $24.99/month | $249.90/year
 - WhatsApp numbers: 3
-- Messages: 10,000/month
+- Messages: 20,000/month
 - Team members: 10 (roles: admin, member, operator)
 - Human agents: 10
 - Automation flows: 3

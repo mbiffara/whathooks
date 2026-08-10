@@ -10,6 +10,7 @@ import {
 } from '../flows/flow-graph';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
+import { agentActiveNow } from './agent-schedule';
 import type {
   ConnectionManagerService,
   InboundAutomationCtx,
@@ -298,28 +299,53 @@ export class FlowEngineService {
           // Generate the reply for real but never send it: seeing what the
           // agent would say is the point of a conversation simulator, and
           // the transcript needs it to continue realistically.
-          const agent = await this.prisma.agent.findUnique({
-            where: { id: node.data.agentId as string },
-          });
-          const reply = agent
-            ? await this.agentRunner.generateReply(
-                agent,
-                ctx.conversationId,
-                rec.history,
-                (node.data.prompt as string) ?? null,
-              )
+          //
+          // Every branch below reports WHY nothing came back. Reporting
+          // "replied" when the agent produced nothing sends you looking for
+          // a UI bug instead of the misconfiguration that caused it.
+          const stop = (note: string) => {
+            rec.steps.push({ nodeId: node.id, type: node.type, note });
+            rec.outcome = 'agent_skipped';
+            return undefined;
+          };
+          const agentId = node.data.agentId as string | undefined;
+          const agent = agentId
+            ? await this.prisma.agent.findUnique({ where: { id: agentId } })
             : null;
-          rec.reply = reply?.text ?? null;
+          if (!agent) return stop('no AI agent selected on this node');
+          // Mirror the checks the live path makes, or the simulation would
+          // promise a reply production would never send.
+          if (!agent.enabled) return stop(`agent "${agent.name}" is disabled`);
+          if (!agentActiveNow(agent)) {
+            return stop(`agent "${agent.name}" is outside its active hours`);
+          }
+
+          const reply = await this.agentRunner.generateReply(
+            agent,
+            ctx.conversationId,
+            rec.history,
+            (node.data.prompt as string) ?? null,
+          );
+          if (!reply) {
+            return stop(
+              `agent "${agent.name}" could not reply — check its API key or token balance`,
+            );
+          }
+          rec.reply = reply.text ?? null;
           rec.steps.push({
             nodeId: node.id,
             type: node.type,
-            note: reply?.handoff ? 'handoff' : 'replied (not sent)',
+            note: reply.handoff
+              ? 'handed off to a human'
+              : reply.text
+                ? 'replied (not sent)'
+                : 'the agent produced no text',
           });
-          if (reply?.handoff && handoffEdge) {
+          if (reply.handoff && handoffEdge) {
             rec.outcome = 'handed_off';
             return graph.nodes.find((n) => n.id === handoffEdge.target);
           }
-          rec.outcome = reply?.handoff ? 'handed_off' : 'agent_replied';
+          rec.outcome = reply.handoff ? 'handed_off' : 'agent_replied';
           return undefined;
         }
         const outcome = await manager.runAgentReply(

@@ -167,7 +167,16 @@ function makeEngine(overrides: {
       }),
     },
     agent: {
-      findUnique: jest.fn().mockResolvedValue({ id: 'agent1', name: 'A' }),
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'agent1',
+        name: 'A',
+        enabled: true,
+        scheduleEnabled: false,
+        scheduleDays: [],
+        scheduleStartMinute: 0,
+        scheduleEndMinute: 0,
+        scheduleTimezone: 'UTC',
+      }),
     },
     humanAgent: {
       findUnique: jest.fn((args: { where: { id: string } }) =>
@@ -959,5 +968,53 @@ describe('agentReply step instructions', () => {
       'agent1',
       expect.objectContaining({ stepInstructions: null }),
     ]);
+  });
+});
+
+describe('simulate reports why an agent did not reply', () => {
+  const graph = (data: Record<string, unknown>): FlowGraph => ({
+    nodes: [node('t', 'trigger'), node('r', 'agentReply', data)],
+    edges: [edge('t', 'r')],
+  });
+
+  it('says so when the node has no agent selected', async () => {
+    const t = makeEngine({});
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph({}), organizationId: 'org1' },
+      CTX,
+      t.manager as never,
+    );
+    expect(rec.steps[0].note).toMatch(/no AI agent selected/);
+    expect(rec.reply).toBeUndefined();
+  });
+
+  it('says so when the agent is disabled, like production would skip', async () => {
+    const t = makeEngine({});
+    t.prisma.agent.findUnique.mockResolvedValue({
+      id: 'agent1',
+      name: 'A',
+      enabled: false,
+      scheduleEnabled: false,
+      scheduleDays: [],
+      scheduleStartMinute: 0,
+      scheduleEndMinute: 0,
+      scheduleTimezone: 'UTC',
+    });
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph({ agentId: 'agent1' }), organizationId: 'org1' },
+      CTX,
+      t.manager as never,
+    );
+    expect(rec.steps[0].note).toMatch(/disabled/);
+  });
+
+  it('says so when the agent returns nothing', async () => {
+    const t = makeEngine({ generateReply: () => Promise.resolve(null) });
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph({ agentId: 'agent1' }), organizationId: 'org1' },
+      CTX,
+      t.manager as never,
+    );
+    expect(rec.steps[0].note).toMatch(/could not reply/);
   });
 });

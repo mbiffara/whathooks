@@ -1,6 +1,7 @@
 "use client";
 
 import { AgentKnowledge } from "@/components/agent-knowledge";
+import { Glyph } from "@/components/glyphs";
 import { apiClient } from "@/lib/client-api";
 import Link from "next/link";
 import { AiTokensCard } from "@/components/ai-tokens-card";
@@ -14,7 +15,7 @@ import {
 } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, Fragment } from "react";
 
 type McpServerDraft = {
   name: string;
@@ -195,24 +196,24 @@ export default function AgentsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
         </div>
-
-        <AiTokensCard isOwner={isOwner} />
         {!draft && (
           <button
             onClick={() =>
               setDraft({ ...EMPTY, scheduleTimezone: browserTz() })
             }
-            className="btn-primary"
+            className="btn-primary shrink-0"
           >
             {t("newAgent")}
           </button>
         )}
       </div>
+
+      <AiTokensCard isOwner={isOwner} />
 
       {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
@@ -809,111 +810,154 @@ export default function AgentsPage() {
           {t("noAgents")}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {agents.map((a) => (
-            <div key={a.id} className="card flex flex-col gap-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-medium">{a.name}</div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
-                    <span className="pill">
-                      {a.provider === "OPENAI" ? "OpenAI" : "Anthropic"}
-                    </span>
-                    <span className="pill">{a.model}</span>
-                    {(a.mcpServers?.length ?? 0) > 0 && (
-                      <span className="pill border-[var(--color-brand)]/40 text-[var(--color-brand)]">
-                        MCP · {a.mcpServers.length}
-                      </span>
-                    )}
-                    <span>{t("sessionCount", { count: a.sessionCount })}</span>
-                    {a.scheduleEnabled && (
-                      <span className="pill">
-                        🕒 {toHHMM(a.scheduleStartMinute)}–
-                        {toHHMM(a.scheduleEndMinute)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => toggle(a)}
-                  className={`badge ${
-                    a.enabled
-                      ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                      : "bg-[var(--color-chip)] text-[var(--color-muted)]"
-                  }`}
-                >
-                  {a.enabled ? tc("enabled") : tc("disabled")}
-                </button>
-              </div>
-              <p className="line-clamp-2 text-sm text-[var(--color-muted)]">
-                {a.soul}
-              </p>
-              {a.enabled && a.sessionCount === 0 && (
-                <p className="rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning-bg)] px-3 py-2 text-xs text-[var(--color-warning)]">
-                  ⚠ {t("unlinkedWarning")}{" "}
-                  <Link
-                    href="/dashboard/sessions"
-                    className="font-medium underline"
-                  >
-                    {t("goToSessions")}
-                  </Link>
-                </p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() =>
-                    setDraft({
-                      id: a.id,
-                      name: a.name,
-                      soul: a.soul,
-                      instructions: a.instructions,
-                      provider: a.provider,
-                      model: a.model,
-                      apiKey: "",
-                      apiKeyHint: a.apiKeyHint,
-                      useIncludedAi: a.useIncludedAi,
-                      allowAutoStop: a.allowAutoStop,
-                      notifyOnHandoff: a.notifyOnHandoff,
-                      replyDelayMinSeconds: a.replyDelayMinSeconds,
-                      replyDelayMaxSeconds: a.replyDelayMaxSeconds,
-                      scheduleEnabled: a.scheduleEnabled,
-                      scheduleDays: a.scheduleDays,
-                      scheduleStart: toHHMM(a.scheduleStartMinute),
-                      scheduleEnd: toHHMM(a.scheduleEndMinute),
-                      scheduleTimezone: a.scheduleTimezone,
-                      enabled: a.enabled,
-                      mcpServers: (a.mcpServers ?? []).map((s) => ({
-                        name: s.name,
-                        url: s.url,
-                        authToken: "",
-                        hasAuth: s.hasAuth,
-                        authTokenHint: s.authTokenHint,
-                      })),
-                    })
-                  }
-                  className="btn-ghost"
-                >
-                  {tc("edit")}
-                </button>
-                <button
-                  onClick={() =>
-                    setKnowledgeId((v) => (v === a.id ? null : a.id))
-                  }
-                  className="btn-ghost"
-                >
-                  {knowledgeId === a.id ? tc("close") : t("knowledge.button")}
-                </button>
-                <button onClick={() => remove(a.id)} className="btn-danger">
-                  {tc("delete")}
-                </button>
-              </div>
-              {knowledgeId === a.id && (
-                <div className="border-t border-[var(--color-border)] pt-3">
-                  <AgentKnowledge agentId={a.id} />
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
+                <th className="px-4 py-3 font-medium">{t("colAgent")}</th>
+                <th className="px-4 py-3 font-medium">{t("colModel")}</th>
+                <th className="px-4 py-3 font-medium">{t("colSessions")}</th>
+                <th className="px-4 py-3 font-medium">{t("colStatus")}</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {agents.map((a) => (
+                <Fragment key={a.id}>
+                  <tr className="border-b border-[var(--color-border)] last:border-0">
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{a.name}</div>
+                      <div className="mt-0.5 line-clamp-1 max-w-xs text-xs text-[var(--color-muted)]">
+                        {a.soul}
+                      </div>
+                      {a.enabled && a.sessionCount === 0 && (
+                        <div className="mt-1 text-xs text-[var(--color-warning)]">
+                          ⚠ {t("unlinkedWarning")}{" "}
+                          <Link
+                            href="/dashboard/sessions"
+                            className="font-medium underline"
+                          >
+                            {t("goToSessions")}
+                          </Link>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="pill">
+                          {a.useIncludedAi
+                            ? t("aiIncluded")
+                            : a.provider === "OPENAI"
+                              ? "OpenAI"
+                              : "Anthropic"}
+                        </span>
+                        <span className="pill">{a.model}</span>
+                        {(a.mcpServers?.length ?? 0) > 0 && (
+                          <span className="pill border-[var(--color-brand)]/40 text-[var(--color-brand)]">
+                            MCP · {a.mcpServers.length}
+                          </span>
+                        )}
+                      </div>
+                      {a.scheduleEnabled && (
+                        <div className="mt-1 text-xs text-[var(--color-muted)]">
+                          🕒 {toHHMM(a.scheduleStartMinute)}–
+                          {toHHMM(a.scheduleEndMinute)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-muted)]">
+                      {a.sessionCount}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => toggle(a)}
+                        className={`badge ${
+                          a.enabled
+                            ? "bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
+                            : "bg-[var(--color-chip)] text-[var(--color-muted)]"
+                        }`}
+                      >
+                        {a.enabled ? tc("enabled") : tc("disabled")}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() =>
+                            setDraft({
+                              id: a.id,
+                              name: a.name,
+                              soul: a.soul,
+                              instructions: a.instructions,
+                              provider: a.provider,
+                              model: a.model,
+                              apiKey: "",
+                              apiKeyHint: a.apiKeyHint,
+                              useIncludedAi: a.useIncludedAi,
+                              allowAutoStop: a.allowAutoStop,
+                              notifyOnHandoff: a.notifyOnHandoff,
+                              replyDelayMinSeconds: a.replyDelayMinSeconds,
+                              replyDelayMaxSeconds: a.replyDelayMaxSeconds,
+                              scheduleEnabled: a.scheduleEnabled,
+                              scheduleDays: a.scheduleDays,
+                              scheduleStart: toHHMM(a.scheduleStartMinute),
+                              scheduleEnd: toHHMM(a.scheduleEndMinute),
+                              scheduleTimezone: a.scheduleTimezone,
+                              enabled: a.enabled,
+                              mcpServers: (a.mcpServers ?? []).map((srv) => ({
+                                name: srv.name,
+                                url: srv.url,
+                                authToken: "",
+                                hasAuth: srv.hasAuth,
+                                authTokenHint: srv.authTokenHint,
+                              })),
+                            })
+                          }
+                          aria-label={tc("edit")}
+                          title={tc("edit")}
+                          className="rounded-lg p-1.5 text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                        >
+                          <Glyph name="pencil" size={16} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            setKnowledgeId((v) => (v === a.id ? null : a.id))
+                          }
+                          aria-label={t("knowledge.button")}
+                          title={t("knowledge.button")}
+                          className={`rounded-lg p-1.5 hover:text-[var(--color-fg)] ${
+                            knowledgeId === a.id
+                              ? "text-[var(--color-brand)]"
+                              : "text-[var(--color-muted)]"
+                          }`}
+                        >
+                          <Glyph name="docs" size={16} />
+                        </button>
+                        <button
+                          onClick={() => remove(a.id)}
+                          aria-label={tc("delete")}
+                          title={tc("delete")}
+                          className="rounded-lg p-1.5 text-[var(--color-muted)] hover:text-[var(--color-danger)]"
+                        >
+                          <Glyph name="trash" size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {knowledgeId === a.id && (
+                    <tr className="border-b border-[var(--color-border)]">
+                      <td
+                        colSpan={5}
+                        className="bg-[var(--color-surface-2)] px-4 py-3"
+                      >
+                        <AgentKnowledge agentId={a.id} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

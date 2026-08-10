@@ -19,7 +19,8 @@ export type GlyphName =
   | "pause"
   | "play"
   | "pencil"
-  | "moreVertical";
+  | "moreVertical"
+  | "docs";
 
 const PATHS: Record<GlyphName, ReactNode> = {
   chevronRight: <path d="M9 6l6 6-6 6" />,
@@ -68,6 +69,12 @@ const PATHS: Record<GlyphName, ReactNode> = {
     <>
       <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
       <path d="M13.5 6.5l3 3" />
+    </>
+  ),
+  docs: (
+    <>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" />
+      <path d="M14 3v5h5M9 13h6M9 17h6" />
     </>
   ),
   // Filled dots: a 1.8 stroke on a 1px circle renders as a smudge.

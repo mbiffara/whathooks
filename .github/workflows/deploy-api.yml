@@ -27,9 +27,14 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    # QEMU-emulated arm64 builds occasionally hang; normal deploys take ~12
-    # minutes. Fail fast instead of blocking the concurrency queue for hours.
+    # Native arm64: the image targets Graviton, so building on an arm runner
+    # removes the QEMU emulation entirely. That emulation was crashing with
+    # "uncaught target signal 4 (Illegal instruction)" partway through the
+    # pnpm install, hanging the build until the timeout — three times in six
+    # attempts on 2026-08-09/10, each costing the full 30 minutes.
+    runs-on: ubuntu-24.04-arm
+    # Native builds are faster than the old ~12 min cross-compile, so this is
+    # a generous ceiling rather than an expected duration.
     timeout-minutes: 30
     defaults:
       run:
@@ -48,12 +53,8 @@ jobs:
 
       - run: npm ci
 
-      # The api image targets linux/arm64 (Graviton); x86 runners need QEMU +
-      # buildx so the CDK asset build can cross-compile.
-      - uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-      - uses: docker/setup-buildx-action@v3
+      # No QEMU or buildx setup: the runner is already arm64, so docker
+      # builds the image natively.
 
       - name: CDK deploy
         run: npx cdk deploy --require-approval never

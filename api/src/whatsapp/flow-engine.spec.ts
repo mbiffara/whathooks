@@ -1018,3 +1018,45 @@ describe('simulate reports why an agent did not reply', () => {
     expect(rec.steps[0].note).toMatch(/could not reply/);
   });
 });
+
+describe('simulated handoff shows the farewell', () => {
+  const graph = (data: Record<string, unknown>): FlowGraph => ({
+    nodes: [node('t', 'trigger'), node('a', 'assignHuman', data)],
+    edges: [edge('t', 'a')],
+  });
+
+  it('returns the farewell the lead would receive', async () => {
+    const t = makeEngine({});
+    const rec = await t.engine.simulate(
+      {
+        id: 'f1',
+        graph: graph({
+          humanAgentId: 'ha1',
+          farewellText: '  Gracias, te conectamos con Marcelo.  ',
+        }),
+        organizationId: 'org1',
+      },
+      CTX,
+      t.manager as never,
+    );
+    expect(rec.outcome).toBe('handed_off');
+    expect(rec.reply).toBe('Gracias, te conectamos con Marcelo.');
+    expect(t.sent).toHaveLength(0); // shown, never sent
+    expect(t.created).toHaveLength(0); // and no group
+  });
+
+  it('leaves reply unset when the node has no farewell', async () => {
+    const t = makeEngine({});
+    const rec = await t.engine.simulate(
+      {
+        id: 'f1',
+        graph: graph({ humanAgentId: 'ha1' }),
+        organizationId: 'org1',
+      },
+      CTX,
+      t.manager as never,
+    );
+    expect(rec.outcome).toBe('handed_off');
+    expect(rec.reply).toBeUndefined();
+  });
+});

@@ -533,6 +533,11 @@ export class FlowEngineService {
       type: node.type,
       note: `would hand off to ${ids.filter(Boolean).length} agent(s) (no group created)`,
     });
+    // The farewell is the last thing the customer actually receives on a
+    // handoff, so a simulation that omitted it hid the end of the
+    // conversation it exists to show.
+    const farewell = ((node.data.farewellText as string) ?? '').trim();
+    if (farewell) rec.reply = farewell;
     rec.outcome = 'handed_off';
     return undefined;
   }

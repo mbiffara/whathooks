@@ -551,7 +551,19 @@ export class AgentRunnerService {
         { role: 'system', content: system },
         ...turns.map((t) => ({ role: t.role, content: t.text }) as const),
       ],
-      ...(tools.length ? { tools, tool_choice: 'auto' as const } : {}),
+      ...(tools.length
+        ? {
+            tools,
+            tool_choice: 'auto' as const,
+            // gpt-5.6 rejects function tools on /v1/chat/completions unless
+            // reasoning is off ("Function tools with reasoning_effort are not
+            // supported"). Scoped to that family: older models do not accept
+            // the parameter at all, and BYOK agents may still be on one.
+            ...(agent.model.startsWith('gpt-5.6')
+              ? { reasoning_effort: 'none' as const }
+              : {}),
+          }
+        : {}),
     });
 
     if (metered) {

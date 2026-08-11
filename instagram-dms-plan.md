@@ -1,9 +1,11 @@
 # Instagram DMs as a paid channel (Zernio), sold per account
 
-> **Status: design only, not started.** Filed 2026-08-11 after an exploration pass over the
-> codebase and the Zernio docs. Nothing here has been built. Two assumptions must be verified
-> against the live Zernio API before any of it is committed to — see "What Zernio gives us,
-> and what it doesn't".
+> **Status: SHIPPED, 2026-08-11.** Phases 0 through 4 are built, deployed and in production.
+> The cross-channel mirror round trip (Instagram DM → WhatsApp group → reply back on Instagram)
+> was confirmed with a real message. What remains: the purchase path has never run against
+> Stripe, several subscribed webhook events are still dropped, and no customer-facing surface
+> mentions the add-on. Sections below that read as future tense are the original design; the
+> "verified" notes record what the live API actually does.
 
 ## Context
 

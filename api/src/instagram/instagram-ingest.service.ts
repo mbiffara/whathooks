@@ -9,6 +9,12 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { AgentReplyService } from '../channels/agent-reply.service';
 import type { ChannelRouterService } from '../channels/channel-router.service';
+import { FlowEngineService } from '../whatsapp/flow-engine.service';
+import type {
+  ConnectionManagerService,
+  InboundAutomationCtx,
+} from '../whatsapp/connection-manager.service';
+import { CONNECTION_MANAGER } from '../whatsapp/connection-manager.token';
 import { CHANNEL_ROUTER } from '../channels/channel-router.token';
 import { MessageStoreService } from '../channels/message-store.service';
 import type { StagedMedia } from '../channels/message-store.service';
@@ -53,6 +59,7 @@ export class InstagramIngestService {
     private readonly agentReply: AgentReplyService,
     private readonly driver: InstagramChannelDriver,
     private readonly health: InstagramHealthService,
+    private readonly flows: FlowEngineService,
     private readonly moduleRef: ModuleRef,
   ) {}
 
@@ -60,6 +67,18 @@ export class InstagramIngestService {
    * Resolved lazily: ChannelsModule imports this module to register the
    * Instagram driver, so injecting the router here would be a cycle.
    */
+  /**
+   * The flow engine takes the WhatsApp manager as its operations host. That is
+   * not a WhatsApp-only choice any more: its agent replies and farewells route
+   * by the session's channel, and its assign nodes host groups on a WhatsApp
+   * number because mirror groups are WhatsApp groups whatever the lead used.
+   */
+  private get whatsapp(): ConnectionManagerService {
+    return this.moduleRef.get<ConnectionManagerService>(CONNECTION_MANAGER, {
+      strict: false,
+    });
+  }
+
   private get channels(): ChannelRouterService {
     return this.moduleRef.get<ChannelRouterService>(CHANNEL_ROUTER, {
       strict: false,
@@ -241,6 +260,24 @@ export class InstagramIngestService {
     });
     if (thread) {
       await this.forwardToGroup(thread, handle, e, result.mediaUrl);
+      return;
+    }
+
+    // An enabled flow takes over the session's automation, exactly as on
+    // WhatsApp. Without this a flow can be built, enabled and validated
+    // against an Instagram session and then quietly do nothing.
+    const ctx: InboundAutomationCtx = {
+      conversationId: result.conversationId,
+      remoteJid,
+      isGroup: false,
+      mentionedMe: false,
+      pushName: handle,
+      type,
+      text: e.message.text ?? null,
+    };
+    const flow = await this.flows.enabledFlowFor(session.id);
+    if (flow) {
+      await this.flows.run(flow, session.id, ctx, this.whatsapp);
       return;
     }
 

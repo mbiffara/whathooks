@@ -261,6 +261,12 @@ function makeEngine(overrides: {
       sent.push({ to, text });
       return Promise.resolve({ messageId: 'm', waMessageId: 'w' });
     }),
+    // Channel-routed send: the engine uses this wherever the destination may
+    // not be WhatsApp (farewells go to the lead, whatever channel they used).
+    sendOnSession: jest.fn((sessionId: string, to: string, text: string) => {
+      sent.push({ to, text });
+      return Promise.resolve();
+    }),
   };
 
   const engine = new FlowEngineService(

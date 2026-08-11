@@ -1363,12 +1363,25 @@ export class ConnectionManagerService
       opts.stepInstructions,
     );
     if (!reply) return 'skipped';
-    if (!this.sessions.has(sessionId)) return 'skipped';
+
+    // Flows run on any channel, so the reply goes out through that session's
+    // driver rather than this socket. Checking `this.sessions` directly would
+    // report every Instagram session as disconnected and skip silently.
+    const channel = await this.channelOf(sessionId);
+    const driver = this.channels.driverFor(channel);
+    if (!driver.isLive(sessionId)) return 'skipped';
 
     if (reply.text) {
       const delayMs = randomDelayMs(agent);
-      if (delayMs > 0) await this.typeAndWait(sessionId, remoteJid, delayMs);
-      await this.sendText(sessionId, remoteJid, reply.text, {
+      if (delayMs > 0) {
+        // Only WhatsApp can show "typing…"; elsewhere the pause is just a pause.
+        if (channel === Channel.WHATSAPP) {
+          await this.typeAndWait(sessionId, remoteJid, delayMs);
+        } else {
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+      }
+      await driver.sendText(sessionId, remoteJid, reply.text, {
         source: MessageSource.AGENT,
         agentId: agent.id,
       });
@@ -1427,6 +1440,30 @@ export class ConnectionManagerService
       // waits when a channel cannot.
       onTyping: (ms) => this.typeAndWait(sessionId, remoteJid, ms),
     });
+  }
+
+  /** The channel a session belongs to. */
+  private async channelOf(sessionId: string): Promise<Channel> {
+    const s = await this.prisma.waSession.findUnique({
+      where: { id: sessionId },
+      select: { channel: true },
+    });
+    return s?.channel ?? Channel.WHATSAPP;
+  }
+
+  /**
+   * Send on whatever channel this session uses. `sendText` below is the
+   * WhatsApp driver's own implementation; callers that may be handed a
+   * session on another channel (the flow engine) need this instead.
+   */
+  async sendOnSession(
+    sessionId: string,
+    to: string,
+    text: string,
+    opts: Parameters<ChannelDriver['sendText']>[3] = {},
+  ): Promise<void> {
+    const channel = await this.channelOf(sessionId);
+    await this.channels.driverFor(channel).sendText(sessionId, to, text, opts);
   }
 
   /** Send a text message. Returns the WhatsApp message id + stored message id. */

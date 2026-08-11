@@ -9,6 +9,7 @@ import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { BillingModule } from '../billing/billing.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { ConnectionManagerService } from './connection-manager.service';
+import { CONNECTION_MANAGER } from './connection-manager.token';
 import { FlowEngineService } from './flow-engine.service';
 import { MirrorController } from './mirror.controller';
 import { MirrorService } from './mirror.service';
@@ -31,10 +32,18 @@ import { WhatsappService } from './whatsapp.service';
   controllers: [SessionsController, PublicConnectController, MirrorController],
   providers: [
     ConnectionManagerService,
+    // Same instance under a token, so another channel can hand it to the flow
+    // engine without importing the class and cycling the module graph.
+    { provide: CONNECTION_MANAGER, useExisting: ConnectionManagerService },
     WhatsappService,
     MirrorService,
     FlowEngineService,
   ],
-  exports: [ConnectionManagerService, WhatsappService, FlowEngineService],
+  exports: [
+    ConnectionManagerService,
+    CONNECTION_MANAGER,
+    WhatsappService,
+    FlowEngineService,
+  ],
 })
 export class WhatsappModule {}

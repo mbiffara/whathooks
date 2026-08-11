@@ -6,6 +6,7 @@ import { MessageStoreModule } from '../channels/message-store.module';
 import { AgentReplyModule } from '../channels/agent-reply.module';
 import { SessionAlertModule } from '../channels/session-alert.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { InstagramController } from './instagram.controller';
 import { InstagramChannelDriver } from './instagram-channel.driver';
 import { InstagramHealthService } from './instagram-health.service';
@@ -24,6 +25,7 @@ import { ZernioService } from './zernio.service';
     AgentReplyModule,
     SessionAlertModule,
     WebhooksModule,
+    WhatsappModule,
   ],
   controllers: [InstagramController, InstagramWebhookController],
   providers: [

@@ -181,7 +181,10 @@ export class InstagramIngestService {
     }
 
     if (kind === 'reaction.received') {
-      const emoji = e.reaction?.emoji ?? e.emoji ?? e.message?.reaction ?? '';
+      // A removal arrives as action:"removed" and still carries the emoji, so
+      // keying off the emoji alone would re-add the reaction being taken away.
+      const removed = e.reaction?.action === 'removed';
+      const emoji = removed ? '' : (e.reaction?.emoji ?? e.emoji ?? '');
       await this.applyReaction(session.id, targetId, emoji, e);
       return true;
     }
@@ -221,10 +224,13 @@ export class InstagramIngestService {
       select: { id: true, reactions: true },
     });
     if (!target) return; // reacting to something outside our history
+    // One reaction per person per message: the sender id is the identity to
+    // replace on, so a second emoji from the same person supersedes the first.
     const key =
-      e.reaction?.senderId ?? e.message?.sender?.id ?? 'instagram-participant';
+      e.reaction?.sender?.id ??
+      e.message?.sender?.id ??
+      'instagram-participant';
     const by =
-      e.reaction?.senderName ??
       e.conversation?.participantUsername ??
       e.message?.sender?.name ??
       'Instagram';

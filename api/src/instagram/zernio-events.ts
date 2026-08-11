@@ -116,11 +116,15 @@ export interface ZernioSignalEvent extends ZernioEnvelope {
     reaction?: string;
     sender?: { id?: string; name?: string | null };
   };
+  /** Confirmed shape, captured from a live delivery on 2026-08-11. */
   reaction?: {
     emoji?: string;
+    /** "added" | "removed". A removal still carries the emoji. */
+    action?: string;
+    messageId?: string;
     platformMessageId?: string;
-    senderId?: string;
-    senderName?: string | null;
+    sender?: { id?: string; contactId?: string };
+    reactedAt?: string;
   };
   conversation?: { participantUsername?: string | null };
   account?: { id?: string; accountId?: string; username?: string };

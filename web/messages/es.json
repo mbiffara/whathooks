@@ -292,7 +292,7 @@
       "title": "Cuentas de Instagram",
       "none": "Todavía no hay cuentas de Instagram en tu suscripción.",
       "summary": "{seats} pagas, {connected} conectadas. US${total} por mes.",
-      "proration": "US${price} por cuenta por mes. Agregar una cobra ahora la parte proporcional de este período; quitarla acredita a tu cuenta en lugar de reembolsar.",
+      "proration": "US${price} por cuenta por mes, y cada una suma 5.000 mensajes y 1.000.000 de tokens de IA a tu cupo mensual. Agregar una cobra ahora la parte proporcional de este período; quitarla acredita a tu cuenta en lugar de reembolsar.",
       "unused": "{n} pagas sin conectar. Conectalas en Cuentas conectadas, o bajá el número para dejar de pagarlas.",
       "disconnectFirst": "Primero desconectá una cuenta"
     },
@@ -1088,7 +1088,7 @@
       }
     },
     "addonTitle": "Sumá los DM de Instagram",
-    "addonDesc": "Respondé Instagram desde la misma bandeja, con los mismos agentes de IA y flows. O espejalos en un grupo de WhatsApp y contestá desde tu teléfono.",
+    "addonDesc": "Respondé Instagram desde la misma bandeja, con los mismos agentes de IA y flows. Cada cuenta suma 5.000 mensajes y 1.000.000 de tokens de IA a tu cupo mensual.",
     "addonPrice": "US$8.99 por cuenta / mes",
     "pricingFootnote": "Los límites de mensajes cuentan tanto los entrantes como los salientes. ¿Necesitas más? <link>Escríbenos</link>.",
     "ctaTitle": "Pon tu WhatsApp a trabajar hoy",

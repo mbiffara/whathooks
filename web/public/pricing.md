@@ -49,7 +49,10 @@ Last updated: 2026-08-11. Source of truth: https://www.whathooks.app/#pricing
 ## Add-ons
 
 ### Instagram DMs
-- Price: $8.99/month per connected Instagram account, added to any paid plan
+- Price: $8.99/month per Instagram seat, added to any paid plan
+- Each seat adds 5,000 messages/month and 1,000,000 included AI tokens/month
+  to the organization's allowance, so an Instagram account does not consume the
+  WhatsApp quota the plan already includes
 - Billed per account, charged immediately and prorated when added; removing an
   account credits the balance rather than refunding
 - Included with SPONSORED/comped accounts at no extra cost

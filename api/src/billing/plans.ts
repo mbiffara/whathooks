@@ -116,6 +116,18 @@ export const INSTAGRAM_SEAT = {
   priceEnv: 'STRIPE_PRICE_INSTAGRAM_SEAT',
   /** Display only; Stripe remains the source of truth for what is charged. */
   monthlyUsd: 8.99,
+  /**
+   * Allowance each seat adds to the org's monthly caps.
+   *
+   * Without this a seat is worse than neutral: Instagram traffic counts
+   * against the plan's message cap and Instagram AI replies burn the plan's
+   * included tokens, so paying for a channel would eat the WhatsApp quota the
+   * customer already bought. Granted per *seat*, not per connected account —
+   * the seat is what they pay for, so it carries the allowance whether or not
+   * an account is attached to it.
+   */
+  messagesPerMonth: 5_000,
+  includedAiTokens: 1_000_000,
 } as const;
 
 /**

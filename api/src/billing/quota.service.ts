@@ -9,6 +9,7 @@ import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ACTIVE_SUBSCRIPTION_STATUSES,
+  INSTAGRAM_SEAT,
   PLANS,
   TRIAL_LIMITS,
   currentMonthStart,
@@ -73,6 +74,19 @@ export class QuotaService {
         // this object, and mutating the singleton would leak one org's limit
         // onto every other org on the same tier for the life of the process.
         { ...plan };
+    // Each paid Instagram seat carries its own allowance. Applied before the
+    // admin override so the override stays an absolute ceiling, and skipped
+    // where the plan is already unlimited (null + a number would cap it).
+    if (org.instagramSeats > 0) {
+      if (limits.messagesPerMonth != null) {
+        limits.messagesPerMonth +=
+          org.instagramSeats * INSTAGRAM_SEAT.messagesPerMonth;
+      }
+      if (limits.includedAiTokens != null) {
+        limits.includedAiTokens +=
+          org.instagramSeats * INSTAGRAM_SEAT.includedAiTokens;
+      }
+    }
     // A manual admin override beats both the plan and the trial cap.
     if (org.messageLimitOverride != null) {
       limits.messagesPerMonth = org.messageLimitOverride;

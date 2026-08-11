@@ -11,6 +11,7 @@ import { HealthController } from './health/health.controller';
 import { MediaModule } from './media/media.module';
 import { MessagesModule } from './messages/messages.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { InstagramModule } from './instagram/instagram.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -40,6 +41,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     AgentsModule,
     OrganizationsModule,
     MetricsModule,
+    InstagramModule,
     AdminModule,
   ],
   controllers: [HealthController],

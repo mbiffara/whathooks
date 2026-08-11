@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  Channel,
   Conversation,
   MediaAsset,
   Message,
@@ -16,6 +17,7 @@ type MessageWithRelations = Message & {
 };
 type ConversationWithAgent = Conversation & {
   session?: {
+    channel?: Channel;
     agent: { id: string; name: string; enabled: boolean } | null;
   } | null;
   assignedTo?: { id: string; name: string | null; email: string } | null;
@@ -24,6 +26,7 @@ type ConversationWithAgent = Conversation & {
 const AGENT_INCLUDE = {
   session: {
     select: {
+      channel: true,
       agent: { select: { id: true, name: true, enabled: true } },
     },
   },
@@ -684,6 +687,9 @@ export class ConversationsService {
     return {
       id: c.id,
       sessionId: c.sessionId,
+      // The inbox renders a thread differently per channel: Instagram has no
+      // phone number and its address is an opaque provider id.
+      channel: c.session?.channel ?? Channel.WHATSAPP,
       remoteJid: redactNumbers ? null : c.remoteJid,
       // The raw addressing identity: a phone number, or a LID when WhatsApp
       // hides it. `phoneNumber` carries the real number in the LID case.

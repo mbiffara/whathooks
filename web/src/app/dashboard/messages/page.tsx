@@ -8,6 +8,7 @@ import type {
   MessagesPage,
   QuickReply,
 } from "@/components/messages/types";
+import { ChannelBadge } from "@/components/channel-badge";
 import {
   contactNumber,
   previewText,
@@ -973,7 +974,10 @@ function MessagesInbox() {
             </div>
           ) : (
             conversations.map((c) => {
-              const display = c.name || contactNumber(c) || t("hiddenNumber");
+              const display =
+                (c.channel === "INSTAGRAM" && c.name ? `@${c.name}` : c.name) ||
+                contactNumber(c) ||
+                t("hiddenNumber");
               const preview = previewText(
                 c.lastMessageText,
                 c.lastMessageType,
@@ -1004,8 +1008,11 @@ function MessagesInbox() {
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-[var(--color-fg)]">
-                        {display}
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <ChannelBadge channel={c.channel} />
+                        <span className="truncate text-sm font-medium text-[var(--color-fg)]">
+                          {display}
+                        </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1 text-[10px] text-[var(--color-muted)]">
                         {c.status === "RESOLVED" && (
@@ -1076,10 +1083,16 @@ function MessagesInbox() {
                   </span>
                 )}
                 <div className="min-w-0">
-                  <div className="truncate font-medium text-[var(--color-fg)]">
-                    {selectedConv.name ||
-                      contactNumber(selectedConv) ||
-                      t("hiddenNumber")}
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <ChannelBadge channel={selectedConv.channel} />
+                    <span className="truncate font-medium text-[var(--color-fg)]">
+                      {(selectedConv.channel === "INSTAGRAM" &&
+                      selectedConv.name
+                        ? `@${selectedConv.name}`
+                        : selectedConv.name) ||
+                        contactNumber(selectedConv) ||
+                        t("hiddenNumber")}
+                    </span>
                   </div>
                   <div className="truncate text-xs text-[var(--color-muted)]">
                     {[

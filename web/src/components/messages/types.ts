@@ -68,6 +68,8 @@ export interface MessagesPage {
 export interface Conversation {
   id: string;
   sessionId: string;
+  /** Which channel this thread arrived on. */
+  channel: "WHATSAPP" | "INSTAGRAM";
   /** All three are null for operators: they never see customer numbers. */
   remoteJid: string | null;
   /** Raw addressing identity: a phone number, or a LID when WhatsApp hides it. */

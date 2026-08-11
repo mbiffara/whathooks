@@ -34,6 +34,7 @@ export default function WebhooksPage() {
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<string[]>(["message.received"]);
   const [sessionId, setSessionId] = useState("");
+  const [channel, setChannel] = useState("");
   const [mappingRows, setMappingRows] = useState<Record<string, RuleRow[]>>(
     {},
   );
@@ -82,6 +83,7 @@ export default function WebhooksPage() {
           url,
           events,
           sessionId: sessionId || undefined,
+          channel: channel || undefined,
           ...(Object.keys(payloadMapping).length ? { payloadMapping } : {}),
         }),
       });
@@ -150,6 +152,21 @@ export default function WebhooksPage() {
               </button>
             ))}
           </div>
+        </div>
+        <div>
+          <label className="label">{t("channelOptional")}</label>
+          <select
+            className="input"
+            value={channel}
+            onChange={(e) => setChannel(e.target.value)}
+          >
+            <option value="">{t("allChannels")}</option>
+            <option value="WHATSAPP">WhatsApp</option>
+            <option value="INSTAGRAM">Instagram</option>
+          </select>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">
+            {t("channelHint")}
+          </p>
         </div>
         <div>
           <label className="label">{t("scopeOptional")}</label>

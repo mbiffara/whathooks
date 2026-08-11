@@ -100,7 +100,13 @@ export function contactNumber(c: {
   contact: string | null;
   phoneNumber: string | null;
   remoteJid: string | null;
+  channel?: "WHATSAPP" | "INSTAGRAM";
 }): string | null {
+  // Instagram threads have no phone number at all; the @handle is the
+  // identity and lives in `name`, which the caller already renders. Showing
+  // the raw address here would print an opaque provider id as if it were a
+  // number the customer could dial.
+  if (c.channel === "INSTAGRAM") return null;
   if (c.phoneNumber) return `+${c.phoneNumber}`;
   // Redacted for operators, or a LID we could not resolve: no number to show.
   if (!c.contact || c.remoteJid?.endsWith("@lid")) return null;

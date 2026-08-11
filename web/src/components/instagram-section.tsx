@@ -94,7 +94,7 @@ export function InstagramSection({
           disabled={busy || !sub?.subscribed}
           onClick={() => (hasFreeSeat ? add() : setConfirming(true))}
         >
-          {hasFreeSeat ? t("connect") : t("addPaid", { price })}
+          {hasFreeSeat ? t("connect") : t("addPaid")}
         </button>
       </div>
 

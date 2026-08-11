@@ -212,7 +212,7 @@
         "subtitle": "Answer Instagram DMs alongside WhatsApp.",
         "seatsUsed": "{used} of {total} accounts connected",
         "connect": "Connect account",
-        "addPaid": "Add account — ${price}/mo",
+        "addPaid": "Add account",
         "needsPlan": "Choose a plan before adding Instagram accounts.",
         "none": "No Instagram accounts connected yet.",
         "pending": "Waiting for authorisation",

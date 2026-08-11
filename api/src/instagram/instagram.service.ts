@@ -33,23 +33,30 @@ export class InstagramService {
   }
 
   /** Zernio profile for this org, created on first use. */
-  private async profileFor(organizationId: string): Promise<string> {
+  /**
+   * A fresh Zernio profile for one Instagram account.
+   *
+   * **A profile holds one account per platform, not many.** The docs describe
+   * it as "a container that groups connected accounts" and say to create one
+   * per customer, which is what this used to do — and connecting a second
+   * Instagram account then silently overwrote the first, reusing the same
+   * Zernio account id under a new username. The first account simply ceased to
+   * exist, with no error anywhere.
+   *
+   * So: one profile per account. Named after the org plus the session so
+   * Zernio's own dashboard stays legible when support has to look at it.
+   */
+  private async createProfileFor(
+    organizationId: string,
+    sessionId: string,
+  ): Promise<string> {
     const org = await this.prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
-      select: { zernioProfileId: true, name: true },
+      select: { name: true },
     });
-    if (org.zernioProfileId) return org.zernioProfileId;
-
-    // Name it after the org so Zernio's own dashboard stays legible when
-    // support has to look at it.
-    const profileId = await this.zernio.createProfile(
-      `${org.name} (${organizationId.slice(0, 8)})`,
+    return this.zernio.createProfile(
+      `${org.name} ${sessionId.slice(-6)}`.slice(0, 60),
     );
-    await this.prisma.organization.update({
-      where: { id: organizationId },
-      data: { zernioProfileId: profileId },
-    });
-    return profileId;
   }
 
   /**
@@ -75,9 +82,6 @@ export class InstagramService {
     });
     if (!pending) await this.quota.assertCanAddInstagramAccount(organizationId);
 
-    const profileId =
-      pending?.externalProfileId ?? (await this.profileFor(organizationId));
-
     const session =
       pending ??
       (await this.prisma.waSession.create({
@@ -86,10 +90,21 @@ export class InstagramService {
           channel: 'INSTAGRAM',
           label: label?.trim() || 'Instagram',
           status: 'CONNECTING',
-          externalProfileId: profileId,
         },
-        select: { id: true },
+        select: { id: true, externalProfileId: true },
       }));
+
+    // Each account needs its own profile, so the profile is created per
+    // session rather than per organization. A resumed pending session keeps
+    // the one it already has.
+    let profileId = session.externalProfileId;
+    if (!profileId) {
+      profileId = await this.createProfileFor(organizationId, session.id);
+      await this.prisma.waSession.update({
+        where: { id: session.id },
+        data: { externalProfileId: profileId },
+      });
+    }
 
     const authUrl = await this.zernio.instagramAuthUrl(
       profileId,
@@ -106,63 +121,40 @@ export class InstagramService {
    * the customer returns from the redirect, and safe to call repeatedly.
    */
   async reconcile(organizationId: string): Promise<{ connected: number }> {
-    const org = await this.prisma.organization.findUniqueOrThrow({
-      where: { id: organizationId },
-      select: { zernioProfileId: true },
-    });
-    if (!org.zernioProfileId) return { connected: 0 };
-
-    const accounts = (await this.zernio.listAccounts()).filter((a) => {
-      if (a.platform !== 'instagram') return false;
-      const pid =
-        typeof a.profileId === 'string' ? a.profileId : a.profileId?._id;
-      return pid === org.zernioProfileId;
-    });
-
     const ours = await this.prisma.waSession.findMany({
       where: { organizationId, channel: 'INSTAGRAM' },
-      select: { id: true, externalAccountId: true },
+      select: { id: true, externalProfileId: true, externalAccountId: true },
     });
-    const claimed = new Set(
-      ours.map((s) => s.externalAccountId).filter(Boolean),
+    if (ours.length === 0) return { connected: 0 };
+
+    const accounts = (await this.zernio.listAccounts()).filter(
+      (a) => a.platform === 'instagram',
     );
+    const profileOf = (a: (typeof accounts)[number]) =>
+      typeof a.profileId === 'string' ? a.profileId : a.profileId?._id;
 
     let connected = 0;
-    for (const account of accounts) {
-      if (claimed.has(account._id)) {
-        // Already ours: keep status and handle fresh (they can change on
-        // Zernio's side without telling us).
-        await this.prisma.waSession.updateMany({
-          where: { organizationId, externalAccountId: account._id },
-          data: {
-            externalHandle: account.username,
-            status: account.needsReconnection ? 'DISCONNECTED' : 'CONNECTED',
-          },
-        });
-        continue;
-      }
-      // A newly authorised account: attach it to the oldest session still
-      // waiting for one. Without a slot the customer authorised an account we
-      // never asked for, so leave it rather than inventing an unpaid session.
-      const waiting = ours.find((s) => !s.externalAccountId);
-      if (!waiting) {
-        this.log.warn(
-          `Zernio account ${account._id} has no pending session in org ${organizationId}`,
-        );
-        continue;
-      }
+    for (const session of ours) {
+      if (!session.externalProfileId) continue;
+      // Match on the session's OWN profile. Matching on the organization's
+      // would let one account claim another's session, which is exactly how
+      // a second connection came to overwrite the first.
+      const account = accounts.find(
+        (a) => profileOf(a) === session.externalProfileId,
+      );
+      if (!account) continue;
+
+      const isNew = session.externalAccountId !== account._id;
       await this.prisma.waSession.update({
-        where: { id: waiting.id },
+        where: { id: session.id },
         data: {
           externalAccountId: account._id,
           externalHandle: account.username,
           label: `@${account.username}`,
-          status: 'CONNECTED',
+          status: account.needsReconnection ? 'DISCONNECTED' : 'CONNECTED',
         },
       });
-      waiting.externalAccountId = account._id;
-      claimed.add(account._id);
-      connected += 1;
+      if (isNew) connected += 1;
     }
     return { connected };
   }
@@ -199,17 +191,24 @@ export class InstagramService {
         typeof a.profileId === 'string' ? a.profileId : a.profileId?._id;
       return a.platform === 'instagram' && pid === profileId;
     });
-    const existing = await this.prisma.waSession.count({
+    // One session per account in the profile, each carrying the profile id so
+    // reconcile can match it. Only accounts we do not already hold.
+    const held = await this.prisma.waSession.findMany({
       where: { organizationId, channel: 'INSTAGRAM' },
+      select: { externalAccountId: true },
     });
-    for (let i = existing; i < accounts.length; i++) {
+    const have = new Set(held.map((h) => h.externalAccountId).filter(Boolean));
+    for (const account of accounts) {
+      if (have.has(account._id)) continue;
       await this.prisma.waSession.create({
         data: {
           organizationId,
           channel: 'INSTAGRAM',
-          label: 'Instagram',
+          label: `@${account.username}`,
           status: 'CONNECTING',
           externalProfileId: profileId,
+          externalAccountId: account._id,
+          externalHandle: account.username,
         },
       });
     }

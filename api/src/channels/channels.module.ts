@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { InstagramModule } from '../instagram/instagram.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { ChannelRouterService } from './channel-router.service';
 
@@ -8,7 +9,7 @@ import { ChannelRouterService } from './channel-router.service';
  * exists today; further channels register their driver here.
  */
 @Module({
-  imports: [WhatsappModule],
+  imports: [WhatsappModule, InstagramModule],
   providers: [ChannelRouterService],
   exports: [ChannelRouterService],
 })

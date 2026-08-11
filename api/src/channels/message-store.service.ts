@@ -90,8 +90,14 @@ export class MessageStoreService {
     let mediaUrl: string | undefined;
     if (p.media?.buffer) {
       const ext = extForMedia(p.media.mimeType, p.media.fileName);
-      const key = this.media.newKey(p.organizationId, p.sessionId, ext);
-      await this.media.put(key, p.media.buffer, p.media.mimeType);
+      // Reuse the caller's object when it already uploaded one, so sending by
+      // URL does not leave a duplicate in the bucket.
+      const key =
+        p.media.storageKey ??
+        this.media.newKey(p.organizationId, p.sessionId, ext);
+      if (!p.media.storageKey) {
+        await this.media.put(key, p.media.buffer, p.media.mimeType);
+      }
       await this.prisma.mediaAsset.create({
         data: {
           messageId: message.id,
@@ -134,6 +140,12 @@ export interface MediaMeta {
 
 export interface StagedMedia extends MediaMeta {
   buffer: Buffer;
+  /**
+   * Set when the caller already uploaded this object. Channels that send media
+   * by URL rather than by bytes (Instagram: Zernio fetches an `attachmentUrl`)
+   * must upload before sending, and would otherwise store a second copy here.
+   */
+  storageKey?: string;
 }
 
 export interface PersistMessageParams {

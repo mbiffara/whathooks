@@ -3,6 +3,7 @@ import { Channel } from '@prisma/client';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
+import { InstagramChannelDriver } from '../instagram/instagram-channel.driver';
 import type { ChannelDriver } from './channel-driver';
 
 /**
@@ -19,18 +20,21 @@ export class ChannelRouterService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly whatsapp: ConnectionManagerService,
+    private readonly instagram: InstagramChannelDriver,
   ) {}
 
   driverFor(channel: Channel): ChannelDriver {
     switch (channel) {
       case Channel.WHATSAPP:
         return this.whatsapp;
+      case Channel.INSTAGRAM:
+        return this.instagram;
       default:
-        // Reachable only if a channel is added to the enum (or a session is
-        // created for one) before its driver is registered here.
-        throw new ServiceUnavailableException(
-          `The ${channel} channel is not available on this server.`,
-        );
+        // `channel` narrows to never once every member is handled, so adding
+        // one to the enum without a driver becomes a compile error rather
+        // than a runtime surprise. The throw covers a value arriving from the
+        // database that TypeScript cannot know about.
+        return exhausted(channel);
     }
   }
 
@@ -42,4 +46,11 @@ export class ChannelRouterService {
     if (!session) throw new NotFoundException('Session not found');
     return this.driverFor(session.channel);
   }
+}
+
+/** Compile-time exhaustiveness guard for the channel switch. */
+function exhausted(channel: never): never {
+  throw new ServiceUnavailableException(
+    `The ${String(channel)} channel is not available on this server.`,
+  );
 }

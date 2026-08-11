@@ -5,6 +5,7 @@ import { BillingModule } from '../billing/billing.module';
 import { MessageStoreModule } from '../channels/message-store.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { InstagramController } from './instagram.controller';
+import { InstagramChannelDriver } from './instagram-channel.driver';
 import { InstagramIngestService } from './instagram-ingest.service';
 import { InstagramService } from './instagram.service';
 import { InstagramWebhookController } from './instagram-webhook.controller';
@@ -20,7 +21,12 @@ import { ZernioService } from './zernio.service';
     WebhooksModule,
   ],
   controllers: [InstagramController, InstagramWebhookController],
-  providers: [InstagramService, ZernioService, InstagramIngestService],
-  exports: [ZernioService],
+  providers: [
+    InstagramService,
+    ZernioService,
+    InstagramIngestService,
+    InstagramChannelDriver,
+  ],
+  exports: [ZernioService, InstagramChannelDriver],
 })
 export class InstagramModule {}

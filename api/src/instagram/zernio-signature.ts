@@ -9,12 +9,28 @@ import { createHmac, timingSafeEqual } from 'crypto';
  * *we* supply when registering the endpoint, so there is nothing to discover
  * about key material.
  *
- * What is *not* known is which bytes are signed, and Zernio documents none of
- * it. Rather than guess and either reject real deliveries or accept forged
- * ones, `identifyScheme` computes every plausible candidate and reports which
- * matched. Run it in report-only mode until the logs show a scheme matching
- * consistently, then set that scheme and enforce.
+ * **Resolved 2026-08-11 by running `identifyScheme` against real deliveries.**
+ * Two of them, a `message.received` and a `message.sent`, both reported
+ * `body→x-zernio-signature, body→x-late-signature`: the digest is HMAC-SHA256
+ * over the **raw request body**, and the two headers carry the same value
+ * (`x-late-signature` appears to be a duplicate or legacy alias). Hence
+ * `ZERNIO_SCHEME` below.
+ *
+ * `identifyScheme` is kept rather than deleted: it is how we would diagnose a
+ * silent scheme change, which — given this API has returned "200 and quietly
+ * wrong" three separate times — is worth being able to answer quickly.
  */
+
+/** The scheme confirmed against live deliveries. */
+export const ZERNIO_SCHEME: ZernioScheme = 'body';
+
+/**
+ * The authoritative header. `x-late-signature` carried an identical digest in
+ * every observed delivery, so it is accepted as a fallback rather than relied
+ * on.
+ */
+export const ZERNIO_SIGNATURE_HEADER = 'x-zernio-signature';
+export const ZERNIO_SIGNATURE_HEADER_ALT = 'x-late-signature';
 
 export type ZernioScheme =
   'body' | 'timestamp.body' | 'id.body' | 'timestamp+body';

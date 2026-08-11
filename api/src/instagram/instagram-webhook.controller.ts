@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Headers,
   HttpCode,
   Logger,
@@ -9,23 +10,26 @@ import {
 import type { RawBodyRequest } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
-import { identifyScheme } from './zernio-signature';
+import {
+  ZERNIO_SCHEME,
+  ZERNIO_SIGNATURE_HEADER,
+  ZERNIO_SIGNATURE_HEADER_ALT,
+  identifyScheme,
+  verifyZernioSignature,
+} from './zernio-signature';
 
 /**
  * Zernio webhook receiver for Instagram DMs.
  *
- * CAPTURE PHASE, now with report-only signature analysis. Zernio documents
- * neither the payload nor what its `X-Zernio-Signature` covers, and a real
- * delivery carries *two* 64-hex headers (`x-zernio-signature` and
- * `x-late-signature`). Rather than guess which bytes are signed — and either
- * reject genuine deliveries or wave through forged ones — every plausible
- * scheme is computed and the matching one logged. Once the logs agree across
- * several deliveries, switch to `verifyZernioSignature` with that scheme and
- * reject on failure.
+ * Signature enforcement is on: the digest is HMAC-SHA256 over the raw body
+ * with the secret we chose at registration, confirmed against two real
+ * deliveries (see zernio-signature.ts). An unsigned or mismatched request is
+ * refused, because this route is public and will shortly be persisting
+ * messages and triggering AI replies.
  *
- * Until then this endpoint still persists nothing, touches no conversation and
- * starts no automation, so remaining unauthenticated cannot be used to inject
- * messages.
+ * Still capture-phase in what it *does*: it logs the payload and stores
+ * nothing. The real ingest — dedupe on the envelope id, persist, run automation
+ * asynchronously — comes next (see instagram-dms-plan.md).
  */
 @Controller('instagram')
 export class InstagramWebhookController {
@@ -41,34 +45,59 @@ export class InstagramWebhookController {
   ) {
     const raw = req.rawBody?.toString('utf8') ?? '';
 
-    // Envelope fields feed the candidate schemes; a malformed body must not
-    // take the endpoint down, so parsing is best-effort.
+    // Best-effort: a malformed body must be rejected by the signature check,
+    // not by a parse error before it.
     let envelope: { id?: string; event?: string; timestamp?: string } = {};
     try {
       envelope = JSON.parse(raw) as typeof envelope;
     } catch {
-      /* logged below via bytes/event=none */
+      /* surfaces below as event=none */
     }
 
     const secret = this.config.get<string>('ZERNIO_WEBHOOK_SECRET');
-    const report = secret
-      ? identifyScheme(raw, secret, headers, {
-          id: envelope.id,
-          timestamp: envelope.timestamp,
-        })
-      : { matches: [], present: ['(no ZERNIO_WEBHOOK_SECRET configured)'] };
+    if (!secret) {
+      // Fail closed. A missing secret must not silently downgrade a public
+      // endpoint to unauthenticated.
+      this.log.error('ZERNIO_WEBHOOK_SECRET is not configured; refusing');
+      throw new ForbiddenException('Webhook verification unavailable');
+    }
+
+    const fields = { id: envelope.id, timestamp: envelope.timestamp };
+    const ok =
+      verifyZernioSignature(
+        raw,
+        secret,
+        headers[ZERNIO_SIGNATURE_HEADER],
+        ZERNIO_SCHEME,
+        fields,
+      ) ||
+      verifyZernioSignature(
+        raw,
+        secret,
+        headers[ZERNIO_SIGNATURE_HEADER_ALT],
+        ZERNIO_SCHEME,
+        fields,
+      );
+
+    if (!ok) {
+      // Report which candidate (if any) would have matched — that is what
+      // turns "they changed the scheme" from a mystery into a log line.
+      const report = identifyScheme(raw, secret, headers, fields);
+      this.log.warn(
+        `zernio webhook REJECTED: event=${envelope.event ?? 'none'} ` +
+          `bytes=${raw.length} sig-headers=[${report.present.join(', ')}] ` +
+          `would-match=[${report.matches.join(', ') || 'NONE'}]`,
+      );
+      throw new ForbiddenException('Invalid signature');
+    }
 
     this.log.log(
-      `zernio webhook: event=${envelope.event ?? 'none'} id=${envelope.id ?? 'none'} ` +
-        `bytes=${raw.length} sig-headers=[${report.present.join(', ')}] ` +
-        `sig-match=[${report.matches.join(', ') || 'NONE'}]`,
+      `zernio webhook: event=${envelope.event ?? 'none'} id=${envelope.id ?? 'none'} bytes=${raw.length}`,
     );
     // Truncated: a DM body is personal data and this is a diagnostic, not a
     // store. 4 KB is enough to see every field name and the event envelope.
     this.log.log(`zernio payload: ${raw.slice(0, 4096)}`);
 
-    // Always 200: Zernio retries on failure, and during the capture phase a
-    // retry storm would add nothing.
     return { received: true };
   }
 }

@@ -44,10 +44,11 @@ import { MailService } from '../mail/mail.service';
 import { agentActiveNow } from './agent-schedule';
 import { FlowEngineService } from './flow-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { addressLabel, isGroupAddress } from '../common/address';
+import { isGroupAddress } from '../common/address';
 import { Channel } from '@prisma/client';
 import type { ChannelDriver } from '../channels/channel-driver';
 import { MessageStoreService } from '../channels/message-store.service';
+import { AgentReplyService } from '../channels/agent-reply.service';
 import type {
   MediaMeta,
   PersistMessageParams,
@@ -135,6 +136,7 @@ export class ConnectionManagerService
     private readonly flowEngine: FlowEngineService,
     @Inject(REDIS_PUB) private readonly redis: Redis,
     private readonly store: MessageStoreService,
+    private readonly agentReply: AgentReplyService,
   ) {}
 
   /**
@@ -1270,7 +1272,7 @@ export class ConnectionManagerService
       });
     }
     if (reply.notify) {
-      void this.notifyOwner(
+      void this.agentReply.notifyOwner(
         agent.organizationId,
         conversationId,
         agent.name,
@@ -1286,7 +1288,7 @@ export class ConnectionManagerService
           data: { agentPaused: true, agentPausedReason: reason },
         });
         if (agent.notifyOnHandoff) {
-          void this.notifyHandoff(
+          void this.agentReply.notifyHandoff(
             agent.organizationId,
             sessionId,
             conversationId,
@@ -1306,94 +1308,23 @@ export class ConnectionManagerService
     conversationId: string,
     mention?: { jid: string; number: string },
   ) {
-    if (!this.agentRunner.isConfigured()) return;
     const session = await this.prisma.waSession.findUnique({
       where: { id: sessionId },
       include: { agent: true },
     });
-    const agent = session?.agent;
-    if (!agent || !agent.enabled) return;
-    if (!agentActiveNow(agent)) return; // outside its scheduled hours
-
-    // Agents send on the org's behalf, so they respect the same quota gate as
-    // manual sends (subscription + monthly cap). Skip quietly — an inbound
-    // message must never fail because the reply was over quota. Checked before
-    // generateReply so no LLM tokens are spent on a reply we can't send.
-    try {
-      await this.quota.assertCanSend(session.organizationId);
-    } catch {
-      this.log.warn(
-        `Agent reply skipped for org ${session.organizationId}: over quota or no active subscription`,
-      );
-      return;
-    }
-
-    // An operator can pause the agent on a single conversation to reply manually.
-    const convo = await this.prisma.conversation.findUnique({
-      where: { id: conversationId },
-      select: { agentPaused: true },
+    if (!session?.agent) return;
+    await this.agentReply.maybeReply({
+      driver: this,
+      agent: session.agent,
+      sessionId,
+      organizationId: session.organizationId,
+      conversationId,
+      remoteJid,
+      mention,
+      // WhatsApp can show "typing…" for the delay; the shared service just
+      // waits when a channel cannot.
+      onTyping: (ms) => this.typeAndWait(sessionId, remoteJid, ms),
     });
-    if (convo?.agentPaused) return;
-
-    try {
-      const reply = await this.agentRunner.generateReply(agent, conversationId);
-      if (!reply) return;
-      if (!this.sessions.has(sessionId)) return; // disconnected meanwhile
-
-      // Send the reply text (if the agent produced any). In a group, tag the
-      // sender — the text must carry the "@<number>" token to render a mention.
-      if (reply.text) {
-        const text = mention ? `@${mention.number} ${reply.text}` : reply.text;
-        // Optional human-like pause: show a "typing…" indicator for a random
-        // time in the agent's [min,max] window before actually sending.
-        const delayMs = randomDelayMs(agent);
-        if (delayMs > 0) await this.typeAndWait(sessionId, remoteJid, delayMs);
-        await this.sendText(sessionId, remoteJid, text, {
-          source: MessageSource.AGENT,
-          agentId: agent.id,
-          mentions: mention ? [mention.jid] : undefined,
-        });
-      }
-
-      // The agent called notify_owner → email the account owner. Does not
-      // pause the agent (unlike handoff).
-      if (reply.notify) {
-        void this.notifyOwner(
-          session.organizationId,
-          conversationId,
-          agent.name,
-          reply.notify,
-        );
-      }
-
-      // The agent asked to hand off → pause it on this conversation until an
-      // operator resumes. Same flag the operator toggles manually.
-      if (reply.handoff) {
-        await this.prisma.conversation.update({
-          where: { id: conversationId },
-          data: {
-            agentPaused: true,
-            agentPausedReason:
-              reply.reason?.trim() || 'The agent wasn’t sure how to respond.',
-          },
-        });
-        this.log.log(
-          `Agent "${agent.name}" handed off conversation ${conversationId}` +
-            (reply.reason ? `: ${reply.reason}` : ''),
-        );
-        if (agent.notifyOnHandoff) {
-          void this.notifyHandoff(
-            session.organizationId,
-            sessionId,
-            conversationId,
-            agent.name,
-            reply.reason?.trim() || 'The agent wasn’t sure how to respond.',
-          );
-        }
-      }
-    } catch (e) {
-      this.log.error(`Agent reply failed for ${sessionId}: ${e}`);
-    }
   }
 
   /** Send a text message. Returns the WhatsApp message id + stored message id. */
@@ -1562,99 +1493,6 @@ export class ConnectionManagerService
       this.log.log(`Session ${sessionId} alert sent: ${kind}`);
     } catch (e) {
       this.log.warn(`Session alert failed for ${sessionId}: ${e}`);
-    }
-  }
-
-  /** The agent's notify_owner tool: email the organization owner. */
-  private async notifyOwner(
-    organizationId: string,
-    conversationId: string,
-    agentName: string,
-    message: string,
-  ): Promise<void> {
-    try {
-      const [convo, owner] = await Promise.all([
-        this.prisma.conversation.findUnique({
-          where: { id: conversationId },
-          select: { name: true, remoteJid: true },
-        }),
-        this.prisma.membership.findFirst({
-          where: { organizationId, role: 'OWNER' },
-          include: { user: { select: { email: true, locale: true } } },
-        }),
-      ]);
-      if (!owner) return;
-      const contact = addressLabel(convo?.remoteJid ?? '', convo?.name);
-      const base = this.config
-        .get<string>('WEB_ORIGIN', 'http://localhost:3000')
-        .split(',')[0]
-        .trim();
-      await this.mail.sendAgentNotify({
-        to: owner.user.email,
-        locale: owner.user.locale,
-        agentName,
-        contact,
-        message,
-        conversationUrl: `${base}/dashboard/messages?c=${conversationId}`,
-      });
-      this.log.log(
-        `Agent "${agentName}" notified the owner about ${conversationId}`,
-      );
-    } catch (e) {
-      this.log.warn(`notify_owner email failed: ${e}`);
-    }
-  }
-
-  /**
-   * Email the teammates who can actually work this session (respecting
-   * per-member session restrictions) that the agent handed off.
-   */
-  private async notifyHandoff(
-    organizationId: string,
-    sessionId: string,
-    conversationId: string,
-    agentName: string,
-    reason: string,
-  ): Promise<void> {
-    try {
-      const [convo, memberships] = await Promise.all([
-        this.prisma.conversation.findUnique({
-          where: { id: conversationId },
-          select: { name: true, remoteJid: true },
-        }),
-        this.prisma.membership.findMany({
-          where: { organizationId },
-          include: { user: { select: { email: true, locale: true } } },
-          take: 20,
-        }),
-      ]);
-      const contact = addressLabel(convo?.remoteJid ?? '', convo?.name);
-      const base = this.config
-        .get<string>('WEB_ORIGIN', 'http://localhost:3000')
-        .split(',')[0]
-        .trim();
-      const url = `${base}/dashboard/messages?c=${conversationId}`;
-      const recipients = memberships.filter(
-        (m) =>
-          m.role === 'OWNER' ||
-          m.role === 'ADMIN' ||
-          (m.role === 'MEMBER' &&
-            (m.sessionIds.length === 0 || m.sessionIds.includes(sessionId))),
-      );
-      await Promise.all(
-        recipients.map((m) =>
-          this.mail.sendAgentHandoff({
-            to: m.user.email,
-            locale: m.user.locale,
-            agentName,
-            contact,
-            reason,
-            conversationUrl: url,
-          }),
-        ),
-      );
-    } catch (e) {
-      this.log.warn(`Handoff notification failed: ${e}`);
     }
   }
 

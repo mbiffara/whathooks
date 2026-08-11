@@ -6,10 +6,12 @@ import {
   MessageStatus,
   MessageType,
 } from '@prisma/client';
+import { AgentReplyService } from '../channels/agent-reply.service';
 import { MessageStoreService } from '../channels/message-store.service';
 import { instagramAddress } from '../common/address';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
+import { InstagramChannelDriver } from './instagram-channel.driver';
 import {
   isMessageEvent,
   typeForAttachment,
@@ -42,6 +44,8 @@ export class InstagramIngestService {
     private readonly prisma: PrismaService,
     private readonly store: MessageStoreService,
     private readonly webhooks: WebhookDispatchService,
+    private readonly agentReply: AgentReplyService,
+    private readonly driver: InstagramChannelDriver,
   ) {}
 
   /**
@@ -175,5 +179,40 @@ export class InstagramIngestService {
     this.log.log(
       `instagram ${outbound ? 'out' : 'in'} on ${session.id}: ${type}`,
     );
+
+    // Automation runs on inbound only: an outbound message is either ours
+    // already or something the owner typed in the Instagram app, and replying
+    // to either would be a loop.
+    if (!outbound) {
+      await this.maybeAgentReply(session.id, result.conversationId, remoteJid);
+    }
+  }
+
+  /**
+   * Let the session's agent answer. Fire-and-forget from the caller's point of
+   * view: the message is already stored, so a failure here must not look like
+   * a failed delivery.
+   */
+  private async maybeAgentReply(
+    sessionId: string,
+    conversationId: string,
+    remoteJid: string,
+  ): Promise<void> {
+    const session = await this.prisma.waSession.findUnique({
+      where: { id: sessionId },
+      include: { agent: true },
+    });
+    if (!session?.agent) return;
+    await this.agentReply.maybeReply({
+      driver: this.driver,
+      agent: session.agent,
+      sessionId,
+      organizationId: session.organizationId,
+      conversationId,
+      remoteJid,
+      // No typing indicator on Instagram, so the shared service just waits out
+      // the agent's configured delay. No mentions either: Instagram DMs are
+      // one-to-one, so there is nobody to tag.
+    });
   }
 }

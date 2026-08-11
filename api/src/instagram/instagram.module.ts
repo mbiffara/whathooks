@@ -3,6 +3,7 @@ import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
 import { MessageStoreModule } from '../channels/message-store.module';
+import { AgentReplyModule } from '../channels/agent-reply.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { InstagramController } from './instagram.controller';
 import { InstagramChannelDriver } from './instagram-channel.driver';
@@ -18,6 +19,7 @@ import { ZernioService } from './zernio.service';
     ApiKeysModule,
     BillingModule,
     MessageStoreModule,
+    AgentReplyModule,
     WebhooksModule,
   ],
   controllers: [InstagramController, InstagramWebhookController],

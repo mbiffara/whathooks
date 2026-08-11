@@ -172,13 +172,21 @@ export class WhatsappService {
     return {
       id: s.id,
       label: s.label,
+      channel: s.channel,
       status: s.status,
       phoneNumber: s.phoneNumber,
+      // The @handle stands in for phoneNumber on channels that have no msisdn.
+      handle: s.externalHandle,
       agentId: s.agentId,
       saveContacts: s.saveContacts,
       lastConnectedAt: s.lastConnectedAt,
       createdAt: s.createdAt,
-      live: this.manager.isLive(s.id),
+      // Liveness is a socket concept; a webhook-delivered channel is "live"
+      // whenever the provider says the account is connected.
+      live:
+        s.channel === 'WHATSAPP'
+          ? this.manager.isLive(s.id)
+          : s.status === 'CONNECTED',
     };
   }
 }

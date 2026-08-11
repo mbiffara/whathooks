@@ -12,9 +12,11 @@ import { XConversionsService } from '../marketing/x-conversions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ACTIVE_SUBSCRIPTION_STATUSES,
+  INSTAGRAM_SEAT,
   PLANS,
   TOKEN_PACK,
   TRIAL_DAYS,
+  isAddonPriceId,
   planForPriceId,
   planRequiresSubscription,
 } from './plans';
@@ -77,6 +79,7 @@ export class BillingService {
         subscriptionStatus: true,
         currentPeriodEnd: true,
         stripeCustomerId: true,
+        instagramSeats: true,
       },
     });
     if (!org) throw new NotFoundException('Organization not found');
@@ -97,6 +100,13 @@ export class BillingService {
       hasCustomer: Boolean(org.stripeCustomerId),
       usage,
       aiTokens,
+      instagram: {
+        seats: org.instagramSeats,
+        connected: await this.prisma.waSession.count({
+          where: { organizationId, channel: 'INSTAGRAM' },
+        }),
+        monthlyUsd: INSTAGRAM_SEAT.monthlyUsd,
+      },
     };
   }
 
@@ -188,6 +198,82 @@ export class BillingService {
     });
     if (!session.url) throw new BadRequestException('Could not start checkout');
     return { url: session.url };
+  }
+
+  /**
+   * Set how many Instagram accounts the org pays for, as an item on their
+   * existing subscription.
+   *
+   * `always_invoice` rather than `create_prorations`: it cuts a prorated
+   * invoice and charges the card now, so a seat is paid for before it can be
+   * connected — which matches our own cost, since Zernio starts billing per
+   * account-day the moment an account connects. The flip side is that reducing
+   * mid-cycle leaves a credit balance rather than a refund; the UI says so
+   * before the customer confirms.
+   *
+   * Deliberately does **not** write `instagramSeats`. That is
+   * `syncSubscription`'s job, driven by the resulting webhook, so a declined
+   * card cannot hand out a seat.
+   */
+  async setInstagramSeats(
+    organizationId: string,
+    quantity: number,
+  ): Promise<{ quantity: number; status: string | null }> {
+    const price = this.config.get<string>(INSTAGRAM_SEAT.priceEnv);
+    if (!price) {
+      throw new BadRequestException('The Instagram add-on is not configured');
+    }
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { stripeSubscriptionId: true, plan: true },
+    });
+    if (!org?.stripeSubscriptionId) {
+      throw new BadRequestException(
+        'An active subscription is required before adding Instagram accounts.',
+      );
+    }
+    // Never strand a connected account on an unpaid seat: the customer
+    // disconnects first, which is also the only order Zernio's billing agrees
+    // with (it charges us per account-day while the account stays connected).
+    const connected = await this.prisma.waSession.count({
+      where: { organizationId, channel: 'INSTAGRAM' },
+    });
+    if (quantity < connected) {
+      throw new BadRequestException(
+        `${connected} Instagram account(s) are still connected. Disconnect down to ${quantity} first.`,
+      );
+    }
+
+    const sub = await this.client().subscriptions.retrieve(
+      org.stripeSubscriptionId,
+    );
+    const existing = sub.items.data.find((i) =>
+      isAddonPriceId(i.price.id, process.env),
+    );
+
+    const item =
+      quantity === 0
+        ? existing
+          ? { id: existing.id, deleted: true as const }
+          : null
+        : existing
+          ? { id: existing.id, quantity }
+          : { price, quantity };
+
+    if (!item) return { quantity: 0, status: sub.status };
+
+    const updated = await this.client().subscriptions.update(
+      org.stripeSubscriptionId,
+      { items: [item], proration_behavior: 'always_invoice' },
+    );
+    const now = updated.items.data.find((i) =>
+      isAddonPriceId(i.price.id, process.env),
+    );
+    this.log.log(
+      `Org ${organizationId} instagram seats -> ${now?.quantity ?? 0}`,
+    );
+    // The webhook writes the entitlement; this is only what Stripe now shows.
+    return { quantity: now?.quantity ?? 0, status: updated.status };
   }
 
   /** Create a Customer Portal session (manage/cancel/update card). */
@@ -286,13 +372,26 @@ export class BillingService {
       return;
     }
 
-    const priceId = sub.items.data[0]?.price.id;
+    // A subscription can now carry a plan tier *and* add-on items, and Stripe
+    // does not guarantee their order — reading items.data[0] would sometimes
+    // pick the add-on and write its price id and period end onto the org.
+    const tierItem = sub.items.data.find((i) =>
+      planForPriceId(i.price.id, process.env),
+    );
+    const addonItem = sub.items.data.find((i) =>
+      isAddonPriceId(i.price.id, process.env),
+    );
+
+    const priceId = tierItem?.price.id;
     const plan =
       planForPriceId(priceId, process.env) ??
       // deleted/canceled subs keep the last known tier
       org.plan;
     const canceled = sub.status === 'canceled';
-    const periodEnd = sub.items.data[0]?.current_period_end;
+    const periodEnd = tierItem?.current_period_end;
+    // Stripe is the only writer of entitlement: a seat exists once it is on a
+    // live subscription item, so a declined card simply never gets here.
+    const instagramSeats = canceled ? 0 : (addonItem?.quantity ?? 0);
 
     // First PAID activation → X ads conversion. `trialing` doesn't count as
     // "was paying", so trial→active (the first real charge) fires it, while
@@ -313,9 +412,12 @@ export class BillingService {
         plan,
         subscriptionStatus: sub.status,
         currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
+        instagramSeats,
       },
     });
-    this.log.log(`Org ${org.id} -> plan=${plan} status=${sub.status}`);
+    this.log.log(
+      `Org ${org.id} -> plan=${plan} status=${sub.status} igSeats=${instagramSeats}`,
+    );
   }
 
   /** Email the org owner ahead of the first charge ("we'll remind you"). */

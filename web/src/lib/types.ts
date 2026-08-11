@@ -1,11 +1,17 @@
 export type WaStatus =
   "PENDING" | "QR" | "CONNECTING" | "CONNECTED" | "DISCONNECTED" | "LOGGED_OUT";
 
+/** WhatsApp numbers and Instagram accounts are the same row, discriminated. */
+export type Channel = "WHATSAPP" | "INSTAGRAM";
+
 export interface WaSession {
   id: string;
   label: string;
+  channel: Channel;
   status: WaStatus;
   phoneNumber: string | null;
+  /** The @handle, where a channel has no phone number. */
+  handle: string | null;
   agentId: string | null;
   /** Auto-save inbound DM senders into the org's contact book. */
   saveContacts: boolean;
@@ -318,6 +324,8 @@ export interface Subscription {
   usage: { used: number; limit: number | null };
   /** Included-AI tokens burnt this month against the plan's allowance. */
   aiTokens: { used: number; limit: number | null };
+  /** Instagram add-on: seats paid for vs accounts actually connected. */
+  instagram: { seats: number; connected: number; monthlyUsd: number };
 }
 
 export const PLAN_PRICING: Record<

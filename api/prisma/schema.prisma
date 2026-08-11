@@ -55,6 +55,14 @@ model Organization {
   // X ads click id captured at signup (twclid) — used to attribute the later
   // paid-subscription conversion via X's Conversion API. Never shown in UI.
   adClickId            String?
+  // Instagram accounts the org is paying for, as a subscription add-on. Written
+  // ONLY by syncSubscription from the Stripe item quantity, never by the
+  // endpoint that requests a change: that way a declined card cannot grant a
+  // seat. Compare against the count of INSTAGRAM sessions to gate connecting.
+  instagramSeats       Int       @default(0)
+  // Zernio profile for this org — their tenant boundary, one per organization.
+  // Created lazily on the first Instagram connection.
+  zernioProfileId      String?
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?   @unique
   stripePriceId        String?

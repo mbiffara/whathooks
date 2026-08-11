@@ -49,6 +49,7 @@ export class QuotaService {
         plan: true,
         subscriptionStatus: true,
         messageLimitOverride: true,
+        instagramSeats: true,
       },
     });
     if (!org) throw new NotFoundException('Organization not found');
@@ -364,14 +365,40 @@ export class QuotaService {
     this.assertSubscribed(org);
     const limit = org.limits.waNumbers;
     if (limit == null) return;
+    // Scoped to WhatsApp: sessions on other channels are paid for separately
+    // (Instagram by the seat add-on), so they must not eat a number allowance.
     const count = await this.prisma.waSession.count({
-      where: { organizationId },
+      where: { organizationId, channel: 'WHATSAPP' },
     });
     if (count >= limit) {
       throw new ForbiddenException(
         org.trialing
           ? `Trials include ${limit} WhatsApp number. Full plan limits unlock when your trial converts.`
           : `Your plan allows ${limit} WhatsApp number(s). Upgrade to add more.`,
+      );
+    }
+  }
+
+  /**
+   * Throw unless the org has a paid, unused Instagram seat.
+   *
+   * Unlike every other gate here the ceiling is *purchased*, not a plan
+   * constant: seats come from the Stripe subscription item quantity, written
+   * only by the billing webhook. Comped orgs skip the check entirely, matching
+   * how `assertSubscribed` treats them.
+   */
+  async assertCanAddInstagramAccount(organizationId: string): Promise<void> {
+    const org = await this.orgBilling(organizationId);
+    this.assertSubscribed(org);
+    if (!planRequiresSubscription(org.plan)) return; // SPONSORED: unlimited
+    const count = await this.prisma.waSession.count({
+      where: { organizationId, channel: 'INSTAGRAM' },
+    });
+    if (count >= org.instagramSeats) {
+      throw new ForbiddenException(
+        org.instagramSeats === 0
+          ? 'Add an Instagram account to your subscription to connect one.'
+          : `You are paying for ${org.instagramSeats} Instagram account(s) and all are connected. Add another to connect more.`,
       );
     }
   }

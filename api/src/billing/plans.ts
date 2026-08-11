@@ -106,6 +106,31 @@ export const TOKEN_PACK = {
   priceEnv: 'STRIPE_PRICE_TOKENS_10M',
 } as const;
 
+/**
+ * Instagram accounts, sold per connected account as a **subscription add-on**:
+ * a second item on the org's existing subscription whose `quantity` is the
+ * number of accounts they may connect. Unlike TOKEN_PACK this recurs, because
+ * our own cost (Zernio bills per account-day) recurs too.
+ */
+export const INSTAGRAM_SEAT = {
+  priceEnv: 'STRIPE_PRICE_INSTAGRAM_SEAT',
+  /** Display only; Stripe remains the source of truth for what is charged. */
+  monthlyUsd: 8.99,
+} as const;
+
+/**
+ * Is this price an add-on rather than a plan tier? `planForPriceId` scans only
+ * PLANS, so without this an add-on item would look like an unknown price and
+ * could be mistaken for a tier change.
+ */
+export function isAddonPriceId(
+  priceId: string | null | undefined,
+  env: Record<string, string | undefined>,
+): boolean {
+  if (!priceId) return false;
+  return env[INSTAGRAM_SEAT.priceEnv] === priceId;
+}
+
 /** Warn the owner once the monthly allowance drops to this share. */
 export const LOW_TOKENS_THRESHOLD = 0.1;
 

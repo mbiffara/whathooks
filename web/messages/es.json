@@ -202,7 +202,26 @@
       "creating": "Creando…",
       "upgradeAction": "Conectar un número de WhatsApp",
       "noSessions": "Aún no hay sesiones. Crea una arriba para obtener un código QR.",
-      "notLinked": "Aún sin vincular"
+      "notLinked": "Aún sin vincular",
+      "whatsapp": {
+        "title": "WhatsApp",
+        "subtitle": "Números conectados escaneando un código QR."
+      },
+      "instagram": {
+        "title": "Instagram",
+        "subtitle": "Respondé los DM de Instagram junto con WhatsApp.",
+        "seatsUsed": "{used} de {total} cuentas conectadas",
+        "connect": "Conectar cuenta",
+        "addPaid": "Agregar cuenta — US${price}/mes",
+        "needsPlan": "Elegí un plan antes de agregar cuentas de Instagram.",
+        "none": "Todavía no hay cuentas de Instagram conectadas.",
+        "pending": "Esperando autorización",
+        "instagram": "Instagram",
+        "disconnect": "Desconectar",
+        "confirmTitle": "Agregar una cuenta de Instagram",
+        "confirmBody": "Esto agrega una cuenta de Instagram a tu suscripción por US${price} al mes. Se cobrará ahora la parte proporcional de este período y luego US${price} por mes. Si la quitás más adelante se acredita a tu cuenta en lugar de reembolsarse.",
+        "confirmCta": "Agregar y conectar"
+      }
     },
     "sessionDetail": {
       "back": "Sesiones",

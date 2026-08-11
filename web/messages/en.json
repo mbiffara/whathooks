@@ -202,7 +202,26 @@
       "creating": "Creating…",
       "upgradeAction": "Connecting a WhatsApp number",
       "noSessions": "No sessions yet. Create one above to get a QR code.",
-      "notLinked": "Not linked yet"
+      "notLinked": "Not linked yet",
+      "whatsapp": {
+        "title": "WhatsApp",
+        "subtitle": "Numbers connected by scanning a QR code."
+      },
+      "instagram": {
+        "title": "Instagram",
+        "subtitle": "Answer Instagram DMs alongside WhatsApp.",
+        "seatsUsed": "{used} of {total} accounts connected",
+        "connect": "Connect account",
+        "addPaid": "Add account — ${price}/mo",
+        "needsPlan": "Choose a plan before adding Instagram accounts.",
+        "none": "No Instagram accounts connected yet.",
+        "pending": "Waiting for authorisation",
+        "instagram": "Instagram",
+        "disconnect": "Disconnect",
+        "confirmTitle": "Add an Instagram account",
+        "confirmBody": "This adds one Instagram account to your subscription at ${price}/month. You'll be charged now for the rest of this billing period, then ${price} each month. Removing it later credits your account rather than refunding.",
+        "confirmCta": "Add and connect"
+      }
     },
     "sessionDetail": {
       "back": "Sessions",

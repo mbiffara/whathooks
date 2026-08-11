@@ -1,5 +1,6 @@
 "use client";
 
+import { InstagramSection } from "@/components/instagram-section";
 import { NewSessionDialog } from "@/components/new-session-dialog";
 import { StatusBadge } from "@/components/status-badge";
 import { UpgradeModal } from "@/components/upgrade-modal";
@@ -8,6 +9,7 @@ import type { Subscription, WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 export default function SessionsPage() {
@@ -15,7 +17,9 @@ export default function SessionsPage() {
   const tc = useTranslations("common");
   const { data: auth } = useSession();
   const token = auth?.accessToken;
+  const params = useSearchParams();
   const [sessions, setSessions] = useState<WaSession[]>([]);
+  const [sub, setSub] = useState<Subscription | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,13 +40,29 @@ export default function SessionsPage() {
     }
     // Best-effort; if it fails we just fall back to the API 403 path.
     apiClient<Subscription>("/billing/subscription", token)
-      .then((sub) => setNeedsPlan(!sub.subscribed))
+      .then((s) => {
+        setSub(s);
+        setNeedsPlan(!s.subscribed);
+      })
       .catch(() => {});
   }, [token, tc]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Returning from Instagram's OAuth. Zernio's callback lands on Zernio, not
+  // on us, so nothing of ours observes the completion — reconcile matches the
+  // newly authorised account onto the session that was waiting for it.
+  const returned = params.get("instagram");
+  useEffect(() => {
+    if (!returned || !token) return;
+    apiClient("/instagram/reconcile", token, { method: "POST" })
+      .then(() => load())
+      .catch(() => load());
+  }, [returned, token, load]);
+
+  const whatsapp = sessions.filter((s) => s.channel !== "INSTAGRAM");
 
   return (
     <div className="flex flex-col gap-8">
@@ -51,15 +71,7 @@ export default function SessionsPage() {
         <p className="text-sm text-[var(--color-muted)]">{t("subtitle")}</p>
       </div>
 
-      <div>
-        <button
-          className="btn-primary"
-          // Same gate as the overview: no plan, no name prompt first.
-          onClick={() => (needsPlan ? setShowUpgrade(true) : setNewOpen(true))}
-        >
-          {t("newSessionTitle")}
-        </button>
-      </div>
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
       <NewSessionDialog
         open={newOpen}
@@ -69,8 +81,6 @@ export default function SessionsPage() {
         onSubscriptionRequired={() => setShowUpgrade(true)}
       />
 
-      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
-
       <UpgradeModal
         open={showUpgrade}
         onClose={() => setShowUpgrade(false)}
@@ -79,28 +89,59 @@ export default function SessionsPage() {
 
       {loading ? (
         <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
-      ) : sessions.length === 0 ? (
-        <div className="card text-center text-sm text-[var(--color-muted)]">
-          {t("noSessions")}
-        </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {sessions.map((s) => (
-            <Link
-              key={s.id}
-              href={`/dashboard/sessions/${s.id}`}
-              className="card flex items-center justify-between hover:border-[var(--color-brand)]/50"
-            >
+        <>
+          <section className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="font-medium">{s.label}</div>
-                <div className="text-sm text-[var(--color-muted)]">
-                  {s.phoneNumber ? `+${s.phoneNumber}` : t("notLinked")}
-                </div>
+                <h2 className="font-semibold">{t("whatsapp.title")}</h2>
+                <p className="text-sm text-[var(--color-muted)]">
+                  {t("whatsapp.subtitle")}
+                </p>
               </div>
-              <StatusBadge status={s.status} />
-            </Link>
-          ))}
-        </div>
+              <button
+                className="btn-primary"
+                // Same gate as the overview: no plan, no name prompt first.
+                onClick={() =>
+                  needsPlan ? setShowUpgrade(true) : setNewOpen(true)
+                }
+              >
+                {t("newSessionTitle")}
+              </button>
+            </div>
+
+            {whatsapp.length === 0 ? (
+              <div className="card text-center text-sm text-[var(--color-muted)]">
+                {t("noSessions")}
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {whatsapp.map((s) => (
+                  <Link
+                    key={s.id}
+                    href={`/dashboard/sessions/${s.id}`}
+                    className="card flex items-center justify-between hover:border-[var(--color-brand)]/50"
+                  >
+                    <div>
+                      <div className="font-medium">{s.label}</div>
+                      <div className="text-sm text-[var(--color-muted)]">
+                        {s.phoneNumber ? `+${s.phoneNumber}` : t("notLinked")}
+                      </div>
+                    </div>
+                    <StatusBadge status={s.status} />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <InstagramSection
+            sessions={sessions}
+            sub={sub}
+            token={token}
+            onChanged={load}
+          />
+        </>
       )}
     </div>
   );

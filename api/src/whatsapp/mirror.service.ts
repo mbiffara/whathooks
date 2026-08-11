@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { QuotaService } from '../billing/quota.service';
+import { Channel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { addressIdentity } from '../common/address';
 import { ConnectionManagerService } from './connection-manager.service';
@@ -185,6 +186,20 @@ export class MirrorService {
       where: { id: dto.sessionId, organizationId },
     });
     if (!session) throw new NotFoundException('Session not found');
+    // Mirror groups are WhatsApp groups. A link on a channel without them
+    // still works — the group is hosted on a WhatsApp number — but only if
+    // the org has one, so refuse now rather than failing on first contact
+    // when a real customer is waiting.
+    if (session.channel !== Channel.WHATSAPP) {
+      const host = await this.prisma.waSession.count({
+        where: { organizationId, channel: Channel.WHATSAPP },
+      });
+      if (host === 0) {
+        throw new BadRequestException(
+          'Connect a WhatsApp number first: mirror groups are WhatsApp groups.',
+        );
+      }
+    }
     const agent = await this.prisma.humanAgent.findFirst({
       where: { id: dto.humanAgentId, organizationId },
     });

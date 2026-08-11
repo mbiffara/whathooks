@@ -1048,6 +1048,33 @@ export class ConnectionManagerService
   }
 
   /**
+   * Which WhatsApp session hosts a mirror group for a lead on `sessionId`.
+   *
+   * A WhatsApp lead uses their own session. A lead on a channel with no groups
+   * borrows the org's first WhatsApp number. Deciding it here rather than at
+   * each call site means the inbox, the flow assign nodes and the static link
+   * cannot drift apart on the answer.
+   */
+  private async groupHostFor(sessionId: string): Promise<string> {
+    const own = await this.prisma.waSession.findUnique({
+      where: { id: sessionId },
+      select: { channel: true, organizationId: true },
+    });
+    if (!own || own.channel === Channel.WHATSAPP) return sessionId;
+    const host = await this.prisma.waSession.findFirst({
+      where: { organizationId: own.organizationId, channel: Channel.WHATSAPP },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (!host) {
+      throw new BadRequestException(
+        'Connect a WhatsApp number first: mirror groups are WhatsApp groups.',
+      );
+    }
+    return host.id;
+  }
+
+  /**
    * Create the WhatsApp group + thread row binding a lead to one or more
    * human agents (any listed agent may reply as the brand). Shared by the
    * static MirrorLink path and the Flow assign nodes.
@@ -1071,7 +1098,8 @@ export class ConnectionManagerService
     },
   ) {
     if (agents.length === 0) throw new Error('Mirror thread needs an agent');
-    const groupSessionId = opts.groupSessionId ?? sessionId;
+    const groupSessionId =
+      opts.groupSessionId ?? (await this.groupHostFor(sessionId));
     // Groups only exist on WhatsApp, so refuse early with something an
     // operator can act on rather than failing inside the Baileys call.
     const host = await this.prisma.waSession.findUnique({

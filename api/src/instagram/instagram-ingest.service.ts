@@ -281,6 +281,42 @@ export class InstagramIngestService {
       return;
     }
 
+    // A static mirror link opens the group on first contact. Same order as
+    // WhatsApp: thread, then flow, then link, then the session's own agent.
+    // Without this the Mirror page would accept a link on an Instagram
+    // account and then never act on it.
+    const link = await this.prisma.mirrorLink.findFirst({
+      where: { sessionId: session.id, enabled: true },
+      select: {
+        id: true,
+        agentNumber: true,
+        humanAgentId: true,
+        groupPrefix: true,
+        showLeadName: true,
+        groupSessionId: true,
+      },
+    });
+    if (link) {
+      try {
+        const created = await this.whatsapp.createMirrorThread(
+          session.id,
+          remoteJid,
+          [{ id: link.humanAgentId, number: link.agentNumber }],
+          {
+            prefix: link.groupPrefix,
+            showLeadName: link.showLeadName,
+            linkId: link.id,
+            conversationId: result.conversationId,
+            groupSessionId: link.groupSessionId,
+          },
+        );
+        await this.forwardToGroup(created, handle, e, result.mediaUrl);
+      } catch (err) {
+        this.log.warn(`instagram mirror link failed: ${String(err)}`);
+      }
+      return;
+    }
+
     await this.maybeAgentReply(session.id, result.conversationId, remoteJid);
   }
 

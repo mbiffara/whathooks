@@ -110,29 +110,6 @@ export class FlowEngineService {
   }
 
   /** Walk the graph for one inbound DM. Never throws into the caller. */
-  /**
-   * Which WhatsApp session hosts mirror groups for a flow on `sessionId`.
-   * Null when the flow's own session is WhatsApp, which is the common case.
-   */
-  private async groupHostFor(
-    organizationId: string,
-    channel: Channel | undefined,
-  ): Promise<string | null> {
-    // Undefined means a hand-built FlowRef, which only the WhatsApp path and
-    // the simulator produce — treat it as WhatsApp, i.e. host on itself.
-    if (!channel || channel === Channel.WHATSAPP) return null;
-    const host = await this.prisma.waSession.findFirst({
-      where: { organizationId, channel: Channel.WHATSAPP },
-      orderBy: { createdAt: 'asc' },
-      select: { id: true },
-    });
-    if (!host) {
-      throw new Error(
-        'This flow hands off to a WhatsApp group, but the organization has no WhatsApp number connected.',
-      );
-    }
-    return host.id;
-  }
 
   async run(
     flow: FlowRef,
@@ -618,12 +595,7 @@ export class FlowEngineService {
         prefix: (node.data.groupPrefix as string) || DEFAULT_GROUP_PREFIX,
         showLeadName,
         conversationId: ctx.conversationId,
-        // Mirror groups are WhatsApp groups. When the flow runs on a channel
-        // that has none, the org's first WhatsApp number hosts them.
-        groupSessionId: await this.groupHostFor(
-          flow.organizationId,
-          flow.channel,
-        ),
+        // Host resolution lives in createMirrorThread.
       },
     );
     // Optionally seed the group with the conversation so far, so the human

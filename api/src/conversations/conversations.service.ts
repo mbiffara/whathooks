@@ -320,9 +320,8 @@ export class ConversationsService {
         prefix: INBOX_GROUP_PREFIX,
         showLeadName: true,
         conversationId: c.id,
-        // Groups only exist on WhatsApp. When the lead is on another channel
-        // the org must nominate a WhatsApp number to host them.
-        groupSessionId: await this.groupHostFor(organizationId, c.channel),
+        // Host resolution lives in createMirrorThread so every entry point
+        // agrees; a lead on a channel without groups borrows a WhatsApp one.
       },
     );
     if (opts.copyHistory) {
@@ -625,32 +624,6 @@ export class ConversationsService {
       },
     });
     return this.toMessageDto(m);
-  }
-
-  /**
-   * Which WhatsApp session should host a mirror group for this lead.
-   *
-   * A WhatsApp lead uses their own session. A lead on a channel with no
-   * groups needs one nominated; with exactly one WhatsApp number the choice
-   * is unambiguous, and beyond that the org has to say which.
-   */
-  private async groupHostFor(
-    organizationId: string,
-    channel: Channel,
-  ): Promise<string | null> {
-    if (channel === Channel.WHATSAPP) return null; // the lead's own session
-    const hosts = await this.prisma.waSession.findMany({
-      where: { organizationId, channel: Channel.WHATSAPP },
-      orderBy: { createdAt: 'asc' },
-      select: { id: true },
-      take: 2,
-    });
-    if (hosts.length === 0) {
-      throw new BadRequestException(
-        'Connect a WhatsApp number first: mirror groups are WhatsApp groups.',
-      );
-    }
-    return hosts[0].id;
   }
 
   private async assertSendable(

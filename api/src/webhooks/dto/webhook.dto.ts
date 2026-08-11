@@ -30,6 +30,15 @@ export class CreateWebhookDto {
   @IsString()
   sessionId?: string;
 
+  /**
+   * Restrict to one channel. Omit for every channel. Webhooks created before
+   * Instagram existed were pinned to WHATSAPP by migration, since their
+   * consumers assume `from` is a phone jid.
+   */
+  @IsOptional()
+  @IsIn(['WHATSAPP', 'INSTAGRAM'])
+  channel?: 'WHATSAPP' | 'INSTAGRAM';
+
   // Per-event rule lists ({ event: rules }) or a legacy flat rule array
   // (read as message.received). Shape + rules validated in the service
   // (mappingsError), where friendly messages are easier. Omitted/empty =

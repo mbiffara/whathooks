@@ -779,11 +779,16 @@ export class ConnectionManagerService
       organizationId,
       sessionId,
       event: 'message.received',
+      channel: Channel.WHATSAPP,
       messageId: result.messageId,
       payload: {
         id: result.messageId,
         conversationId: result.conversationId,
         sessionId,
+        // Stated in the payload as well as used for filtering, so a consumer
+        // subscribed to every channel can branch without inferring it from
+        // the shape of `from`.
+        channel: Channel.WHATSAPP,
         from: remoteJid,
         isGroup,
         participant: isGroup ? (senderJid ?? null) : null,

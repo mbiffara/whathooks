@@ -133,9 +133,7 @@ describe('mappingsError', () => {
     expect(
       mappingsError(
         {
-          'contact.created': [
-            { target: 'phone', source: 'data.phoneNumber' },
-          ],
+          'contact.created': [{ target: 'phone', source: 'data.phoneNumber' }],
         },
         EVENTS,
       ),
@@ -150,7 +148,7 @@ describe('mappingsError', () => {
 
   it('prefixes rule errors with the event', () => {
     expect(
-      mappingsError({ 'contact.created': [{ target: '!!' } as never] }, EVENTS),
+      mappingsError({ 'contact.created': [{ target: '!!' }] }, EVENTS),
     ).toMatch(/^contact\.created:/);
   });
 });

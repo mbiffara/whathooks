@@ -532,6 +532,11 @@ model Webhook {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   sessionId      String? // optional: scope to one session, else org-wide
   session        WaSession?   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // Optional channel filter. null = every channel. Existing rows were
+  // backfilled to WHATSAPP: an org-wide webhook written against WhatsApp
+  // payloads would otherwise start receiving Instagram events, whose `from` is
+  // an opaque provider id rather than the phone jid every consumer assumes.
+  channel        Channel?
   url            String
   secret         String // HMAC signing secret
   events         String[] // e.g. ["message.received", "session.status"]

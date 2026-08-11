@@ -48,6 +48,9 @@ export class WebhooksService {
         url: dto.url,
         events: dto.events,
         sessionId: dto.sessionId ?? null,
+        // null = every channel. Only rows created before Instagram existed
+        // were pinned, by migration.
+        channel: dto.channel ?? null,
         secret: `whsec_${randomBytes(24).toString('hex')}`,
         payloadMapping: this.mappingInput(dto.payloadMapping),
       },
@@ -135,6 +138,7 @@ export class WebhooksService {
       url: h.url,
       events: h.events,
       sessionId: h.sessionId,
+      channel: h.channel,
       active: h.active,
       payloadMapping: h.payloadMapping ?? null,
       // mask the secret outside of creation

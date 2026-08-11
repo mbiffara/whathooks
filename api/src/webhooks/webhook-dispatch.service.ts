@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Webhook } from '@prisma/client';
+import { Channel, Webhook } from '@prisma/client';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { applyPayloadMapping, normalizeMappings } from './payload-mapping';
@@ -10,6 +10,12 @@ interface DispatchParams {
   event: string;
   payload: Record<string, unknown>;
   messageId?: string | null;
+  /**
+   * Channel the event came from. Subscribers pinned to a channel only receive
+   * their own; `null` on the webhook means every channel. Omitting this on a
+   * dispatch means "not channel-specific" and reaches everyone.
+   */
+  channel?: Channel | null;
 }
 
 @Injectable()
@@ -25,7 +31,23 @@ export class WebhookDispatchService {
       where: {
         organizationId: params.organizationId,
         active: true,
-        OR: [{ sessionId: null }, { sessionId: params.sessionId ?? undefined }],
+        // AND, not two OR keys: a second `OR` property would overwrite the
+        // first in the object literal and quietly drop the session scoping.
+        AND: [
+          {
+            OR: [
+              { sessionId: null },
+              { sessionId: params.sessionId ?? undefined },
+            ],
+          },
+          // A webhook pinned to a channel never sees another one's events.
+          // Rows predating the column were backfilled to WHATSAPP, so
+          // integrations written against phone jids do not silently start
+          // receiving Instagram's opaque ids.
+          ...(params.channel
+            ? [{ OR: [{ channel: null }, { channel: params.channel }] }]
+            : []),
+        ],
       },
     });
 

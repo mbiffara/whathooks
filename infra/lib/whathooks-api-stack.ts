@@ -247,6 +247,10 @@ export class WhathooksApiStack extends cdk.Stack {
         STRIPE_PRICE_BUSINESS_YEAR: 'price_1TzHO1HVX3hp29uYG2Kbk37F',
         // One-off 10M AI token pack ($9.99), live price.
         STRIPE_PRICE_TOKENS_10M: 'price_1U1y49HVX3hp29uYVKOX3IEl',
+        // Instagram add-on ($8.99/mo per connected account), live price.
+        // per_unit + licensed, so the subscription item quantity is the number
+        // of accounts the org may connect.
+        STRIPE_PRICE_INSTAGRAM_SEAT: 'price_1U3FdtHVX3hp29uYzxtCg6YL',
         // API-created portal configuration (not the Dashboard default).
         STRIPE_PORTAL_CONFIG: 'bpc_1TtBhkHVX3hp29uYjDbNpayS',
         // Sender for transactional email (Resend). notify.logicalminds.co is

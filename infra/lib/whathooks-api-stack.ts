@@ -151,6 +151,19 @@ export class WhathooksApiStack extends cdk.Stack {
       'IncludedAiOpenAiKey',
       'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/included-ai-openai-key-fdRDpW',
     );
+    // Zernio: the Instagram DM channel. Two secrets — the API key we call with,
+    // and the shared secret Zernio HMACs into X-Zernio-Signature (we choose
+    // that one when registering the endpoint at zernio.com/dashboard/webhooks).
+    const zernioApiKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'ZernioApiKey',
+      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/zernio-api-key-K8C69B',
+    );
+    const zernioWebhookSecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'ZernioWebhookSecret',
+      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/zernio-webhook-secret-2G1Cnp',
+    );
     // X (Twitter) Conversion API pixel token — server-side ad attribution.
     const xPixelTokenSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
@@ -258,6 +271,9 @@ export class WhathooksApiStack extends cdk.Stack {
         X_PIXEL_TOKEN: ecs.Secret.fromSecretsManager(xPixelTokenSecret),
         INCLUDED_AI_OPENAI_KEY:
           ecs.Secret.fromSecretsManager(includedAiKeySecret),
+        ZERNIO_API_KEY: ecs.Secret.fromSecretsManager(zernioApiKeySecret),
+        ZERNIO_WEBHOOK_SECRET:
+          ecs.Secret.fromSecretsManager(zernioWebhookSecret),
       },
     });
 

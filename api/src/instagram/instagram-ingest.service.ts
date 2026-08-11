@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { AgentReplyService } from '../channels/agent-reply.service';
 import { MessageStoreService } from '../channels/message-store.service';
+import type { StagedMedia } from '../channels/message-store.service';
 import { instagramAddress } from '../common/address';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
@@ -137,6 +138,13 @@ export class InstagramIngestService {
     const type = attachment
       ? (typeForAttachment(attachment.type) as MessageType)
       : MessageType.TEXT;
+    // Fetch the bytes now. Instagram CDN links expire, so a URL kept for later
+    // is a URL that stops working; and a message row carrying a type but no
+    // asset renders as "unsupported message", which is worse than not storing
+    // it at all because it looks like data loss to the operator.
+    const media = attachment
+      ? await this.stageAttachment(attachment)
+      : undefined;
 
     const remoteJid = instagramAddress(e.conversation.platformConversationId);
     const handle =
@@ -165,6 +173,7 @@ export class InstagramIngestService {
       status: outbound ? MessageStatus.SENT : MessageStatus.RECEIVED,
       timestamp: e.message.sentAt ? new Date(e.message.sentAt) : new Date(),
       raw: e.message,
+      media,
       incrementUnread: !outbound,
     });
 
@@ -186,10 +195,11 @@ export class InstagramIngestService {
         pushName: handle,
         type,
         text: e.message.text ?? null,
-        // Instagram CDN links expire, which is why the attachment carries a
-        // refreshUrl; passing the raw url on would hand subscribers a link
-        // that rots. Media staging into S3 comes with the driver work.
-        media: null,
+        // Our own copy, not Instagram's: their CDN links expire, so passing
+        // the original through would hand subscribers a link that rots.
+        media: result.mediaUrl
+          ? { url: result.mediaUrl, mimeType: media?.mimeType ?? null }
+          : null,
         waMessageId: platformMessageId,
         timestamp: e.message.sentAt ?? null,
       },
@@ -205,6 +215,46 @@ export class InstagramIngestService {
     if (!outbound) {
       await this.maybeAgentReply(session.id, result.conversationId, remoteJid);
     }
+  }
+
+  /**
+   * Download an attachment so it becomes ours.
+   *
+   * Never throws: a message that arrived is worth storing even if the media
+   * could not be fetched. `refreshUrl` is the documented remedy for an expired
+   * link, so it is tried before giving up.
+   */
+  private async stageAttachment(a: {
+    url: string;
+    refreshUrl?: string;
+    type?: string;
+  }): Promise<StagedMedia | undefined> {
+    for (const url of [a.url, a.refreshUrl].filter(Boolean) as string[]) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const len = Number(res.headers.get('content-length') ?? 0);
+        if (len > MAX_ATTACHMENT_BYTES) {
+          this.log.warn(`instagram attachment too large (${len} bytes)`);
+          return undefined;
+        }
+        const buffer = Buffer.from(await res.arrayBuffer());
+        if (buffer.length > MAX_ATTACHMENT_BYTES) return undefined;
+        return {
+          buffer,
+          // Instagram serves the real type; fall back to the attachment kind
+          // so the file at least gets a sane extension in S3.
+          mimeType:
+            res.headers.get('content-type')?.split(';')[0].trim() ||
+            FALLBACK_MIME[a.type ?? ''] ||
+            'application/octet-stream',
+          fileName: null,
+        };
+      } catch (err) {
+        this.log.warn(`instagram attachment fetch failed: ${String(err)}`);
+      }
+    }
+    return undefined;
   }
 
   /**
@@ -235,3 +285,14 @@ export class InstagramIngestService {
     });
   }
 }
+
+/** Meta's ceiling for DM attachments is 25 MB; refuse anything beyond it. */
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+
+/** Used only when the CDN response carries no usable content-type. */
+const FALLBACK_MIME: Record<string, string> = {
+  image: 'image/jpeg',
+  video: 'video/mp4',
+  audio: 'audio/mp4',
+  file: 'application/pdf',
+};

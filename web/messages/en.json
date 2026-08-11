@@ -89,7 +89,7 @@
   "dash": {
     "nav": {
       "overview": "Overview",
-      "sessions": "WhatsApp Sessions",
+      "sessions": "Connected accounts",
       "messages": "Messages",
       "quickReplies": "Quick replies",
       "tags": "Tags",
@@ -192,8 +192,8 @@
       "organization": "Organization"
     },
     "sessions": {
-      "title": "WhatsApp Sessions",
-      "subtitle": "Each session links one WhatsApp number to whathooks.",
+      "title": "Connected accounts",
+      "subtitle": "The WhatsApp numbers and Instagram accounts whathooks answers on.",
       "newSessionLabel": "New session label",
       "newSessionTitle": "Connect a number",
       "newSessionHint": "Name the connection, then scan the QR from the phone that owns the number.",

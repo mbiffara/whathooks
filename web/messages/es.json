@@ -89,7 +89,7 @@
   "dash": {
     "nav": {
       "overview": "Resumen",
-      "sessions": "Sesiones de WhatsApp",
+      "sessions": "Cuentas conectadas",
       "messages": "Mensajes",
       "quickReplies": "Respuestas rápidas",
       "tags": "Etiquetas",
@@ -192,8 +192,8 @@
       "organization": "Organización"
     },
     "sessions": {
-      "title": "Sesiones de WhatsApp",
-      "subtitle": "Cada sesión vincula un número de WhatsApp a whathooks.",
+      "title": "Cuentas conectadas",
+      "subtitle": "Los números de WhatsApp y las cuentas de Instagram que whathooks atiende.",
       "newSessionLabel": "Etiqueta de la nueva sesión",
       "newSessionTitle": "Conectar un número",
       "newSessionHint": "Poné un nombre a la conexión y después escaneá el QR desde el teléfono dueño del número.",

@@ -100,3 +100,28 @@ export function typeForAttachment(type: string | undefined): string {
       return 'UNKNOWN';
   }
 }
+
+/**
+ * Delivery receipts and reactions, typed loosely on purpose.
+ *
+ * Zernio documents none of these payloads. Every field is optional and read
+ * defensively so an unexpected shape degrades to "we could not find the
+ * target" — logged — instead of throwing inside a webhook handler.
+ */
+export interface ZernioSignalEvent extends ZernioEnvelope {
+  platformMessageId?: string;
+  emoji?: string;
+  message?: {
+    platformMessageId?: string;
+    reaction?: string;
+    sender?: { id?: string; name?: string | null };
+  };
+  reaction?: {
+    emoji?: string;
+    platformMessageId?: string;
+    senderId?: string;
+    senderName?: string | null;
+  };
+  conversation?: { participantUsername?: string | null };
+  account?: { id?: string; accountId?: string; username?: string };
+}

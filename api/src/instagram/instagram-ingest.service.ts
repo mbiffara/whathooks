@@ -28,6 +28,7 @@ import {
   typeForAttachment,
   type ZernioAccountEvent,
   type ZernioMessageEvent,
+  type ZernioSignalEvent,
 } from './zernio-events';
 
 /**
@@ -107,6 +108,7 @@ export class InstagramIngestService {
 
     if (!isMessageEvent(payload)) {
       if (!(await this.claim(envelope.id, envelope.event))) return;
+      if (await this.handleAckOrReaction(payload as ZernioSignalEvent)) return;
       await this.handleNonMessage(payload as ZernioAccountEvent);
       return;
     }
@@ -135,6 +137,105 @@ export class InstagramIngestService {
       return;
     }
     this.log.debug(`zernio ${e.event}: no handler yet`);
+  }
+
+  /**
+   * Delivery receipts and reactions.
+   *
+   * Zernio documents neither payload, so the field paths here are inferred
+   * from the shape `message.received` uses and every one of them is optional.
+   * The raw body is logged (truncated) the first times these arrive so the
+   * guesses can be corrected against reality rather than left to fail quietly
+   * — the failure mode for a wrong guess is "nothing happens", which is
+   * exactly what this whole integration keeps producing.
+   */
+  private async handleAckOrReaction(e: ZernioSignalEvent): Promise<boolean> {
+    const kind = e.event;
+    if (
+      kind !== 'message.read' &&
+      kind !== 'message.delivered' &&
+      kind !== 'reaction.received'
+    ) {
+      return false;
+    }
+    this.log.log(`zernio ${kind} payload: ${JSON.stringify(e).slice(0, 1500)}`);
+
+    const accountId = e.account?.accountId ?? e.account?.id;
+    if (!accountId) return true;
+    const session = await this.prisma.waSession.findFirst({
+      where: { externalAccountId: accountId, channel: Channel.INSTAGRAM },
+      select: { id: true },
+    });
+    if (!session) return true;
+
+    // The provider id of the message being acked or reacted to, wherever it
+    // turns out to live.
+    const targetId =
+      e.message?.platformMessageId ??
+      e.reaction?.platformMessageId ??
+      e.platformMessageId ??
+      null;
+    if (!targetId) {
+      this.log.warn(`zernio ${kind}: no target message id in payload`);
+      return true;
+    }
+
+    if (kind === 'reaction.received') {
+      const emoji = e.reaction?.emoji ?? e.emoji ?? e.message?.reaction ?? '';
+      await this.applyReaction(session.id, targetId, emoji, e);
+      return true;
+    }
+
+    // Read and delivered only ever describe messages we sent.
+    await this.prisma.message
+      .updateMany({
+        where: {
+          sessionId: session.id,
+          waMessageId: targetId,
+          direction: MessageDirection.OUTBOUND,
+        },
+        data: {
+          status:
+            kind === 'message.read'
+              ? MessageStatus.READ
+              : MessageStatus.DELIVERED,
+        },
+      })
+      .catch(() => undefined);
+    return true;
+  }
+
+  /**
+   * Same `[{ emoji, by, key }]` shape WhatsApp reactions use, so the inbox
+   * renders both without knowing which channel they came from. An empty emoji
+   * means the reaction was removed.
+   */
+  private async applyReaction(
+    sessionId: string,
+    targetPlatformMessageId: string,
+    emoji: string,
+    e: ZernioSignalEvent,
+  ): Promise<void> {
+    const target = await this.prisma.message.findFirst({
+      where: { sessionId, waMessageId: targetPlatformMessageId },
+      select: { id: true, reactions: true },
+    });
+    if (!target) return; // reacting to something outside our history
+    const key =
+      e.reaction?.senderId ?? e.message?.sender?.id ?? 'instagram-participant';
+    const by =
+      e.reaction?.senderName ??
+      e.conversation?.participantUsername ??
+      e.message?.sender?.name ??
+      'Instagram';
+    const existing = Array.isArray(target.reactions)
+      ? (target.reactions as { emoji: string; by: string; key?: string }[])
+      : [];
+    const others = existing.filter((x) => x.key !== key);
+    await this.prisma.message.update({
+      where: { id: target.id },
+      data: { reactions: emoji ? [...others, { emoji, by, key }] : others },
+    });
   }
 
   private async ingestMessage(e: ZernioMessageEvent): Promise<void> {

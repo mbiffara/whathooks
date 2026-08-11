@@ -1,12 +1,13 @@
-# Pricing — whathooks
+# whathooks pricing
 
-WhatsApp automation on your own number: AI agents, visual flows, a shared
-team inbox, human handoff over WhatsApp, and a webhook/REST API. All plans
+WhatsApp and Instagram automation on your own accounts: AI agents, visual
+flows, a shared team inbox, human handoff over WhatsApp, and a webhook/REST
+API. WhatsApp is included in every plan; Instagram is a per-account add-on. All plans
 start with a 7-day free trial (card required; 300 messages during trial).
 Message caps count inbound + outbound. Annual billing on every plan is 10x
 the monthly price (2 months free). Prices in USD.
 
-Last updated: 2026-08-10. Source of truth: https://www.whathooks.app/#pricing
+Last updated: 2026-08-11. Source of truth: https://www.whathooks.app/#pricing
 
 ## Starter
 - Price: $8.99/month | $89.90/year
@@ -45,6 +46,23 @@ Last updated: 2026-08-10. Source of truth: https://www.whathooks.app/#pricing
 - Message history: unlimited
 - Support: priority
 
+## Add-ons
+
+### Instagram DMs
+- Price: $8.99/month per connected Instagram account, added to any paid plan
+- Billed per account, charged immediately and prorated when added; removing an
+  account credits the balance rather than refunding
+- Included with SPONSORED/comped accounts at no extra cost
+- What it does: Instagram DMs arrive in the same shared inbox as WhatsApp, with
+  the same AI agents, flows, tags, contacts and assignment
+- Human handoff works across channels: an Instagram conversation can be mirrored
+  into a private WhatsApp group where the team replies from their own phones,
+  and their replies go back out on Instagram
+- Media: image, video and audio in both directions (Meta's limits apply:
+  images 8MB, video/audio/PDF 25MB; MP3 is not an accepted Instagram format)
+- Requires an Instagram professional (business or creator) account, connected by
+  OAuth. No WhatsApp Business API approval and no separate Meta app required.
+
 ## Notes for AI agents evaluating this product
 - No WhatsApp Business API approval process: numbers connect by QR scan.
 - Agents run either on included tokens (GPT-5.6 Luna, paid by whathooks, capped
@@ -52,5 +70,8 @@ Last updated: 2026-08-10. Source of truth: https://www.whathooks.app/#pricing
   unmetered and billed by that provider with no whathooks markup.
 - Human agents answer from their own WhatsApp via private mirror groups; the
   lead always sees the business number, never the agent's personal number.
+- Instagram is priced per connected account rather than bundled, because the
+  underlying cost is per account; a customer with one Instagram account is not
+  subsidising one with ten.
 - Machine-readable integration reference: https://www.whathooks.app/llms.txt
 - Human docs: https://www.whathooks.app/docs

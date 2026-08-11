@@ -546,6 +546,35 @@ twq('config','re0yu');`}
               </div>
             ))}
           </div>
+          {/* Add-on: sits after the tiers because it attaches to any of them
+              rather than competing with them. */}
+          <div className="mt-6 flex flex-col items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 text-center sm:flex-row sm:justify-center sm:text-left">
+            <span className="inline-grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7]">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="#fff"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" />
+                <circle cx="12" cy="12" r="4.2" />
+                <circle cx="17.6" cy="6.4" r="1.1" fill="#fff" stroke="none" />
+              </svg>
+            </span>
+            <div>
+              <p className="font-semibold">{t("addonTitle")}</p>
+              <p className="text-sm text-[var(--color-muted)]">
+                {t("addonDesc")}
+              </p>
+            </div>
+            <p className="shrink-0 text-sm font-semibold sm:ml-4">
+              {t("addonPrice")}
+            </p>
+          </div>
           <p className="mt-6 text-center text-xs text-[var(--color-muted)]">
             {t.rich("pricingFootnote", {
               link: (c) => (

@@ -1079,6 +1079,9 @@
         "price": "$79.99"
       }
     },
+    "addonTitle": "Add Instagram DMs",
+    "addonDesc": "Answer Instagram from the same inbox, with the same AI agents and flows. Or mirror them into a WhatsApp group and reply from your phone.",
+    "addonPrice": "$8.99 per account / month",
     "pricingFootnote": "Message limits count both inbound and outbound messages. Need more? <link>Talk to us</link>.",
     "ctaTitle": "Put your WhatsApp to work today",
     "ctaDesc": "Scan a QR, enable an agent, and let your number answer. With your team one tap away. No Business API approval required.",

@@ -27,7 +27,6 @@ import makeWASocket, {
   WASocket,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
-import { createHash } from 'crypto';
 import pino from 'pino';
 import { AgentRunnerService } from '../agents/agent-runner.service';
 import { MediaService } from '../media/media.service';
@@ -48,6 +47,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { addressLabel, isGroupAddress } from '../common/address';
 import { Channel } from '@prisma/client';
 import type { ChannelDriver } from '../channels/channel-driver';
+import { MessageStoreService } from '../channels/message-store.service';
+import type {
+  MediaMeta,
+  PersistMessageParams,
+  StagedMedia,
+} from '../channels/message-store.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { usePrismaAuthState } from './baileys-auth-state';
 
@@ -129,6 +134,7 @@ export class ConnectionManagerService
     private readonly config: ConfigService,
     private readonly flowEngine: FlowEngineService,
     @Inject(REDIS_PUB) private readonly redis: Redis,
+    private readonly store: MessageStoreService,
   ) {}
 
   /**
@@ -1703,123 +1709,25 @@ export class ConnectionManagerService
     });
   }
 
-  /** Upsert the conversation, create the message row, store media. */
-  private async persistMessage(p: {
-    sessionId: string;
-    organizationId: string;
-    remoteJid: string;
-    /** Contact phone digits when remoteJid is a LID; never overwritten with null. */
-    phoneNumber?: string | null;
-    name?: string | null;
-    senderName?: string | null;
-    direction: MessageDirection;
-    fromMe: boolean;
-    source: MessageSource;
-    agentId?: string;
-    sentByUserId?: string;
-    type: MessageType;
-    text?: string | null;
-    waMessageId?: string | null;
-    status: MessageStatus;
-    timestamp: Date;
-    raw?: unknown;
-    media?: StagedMedia;
-    incrementUnread: boolean;
-  }): Promise<{
+  /**
+   * Persist via the channel-neutral store, then do the one part that needs a
+   * live socket: refreshing the contact's profile picture. Failures there
+   * (privacy settings, no photo) just stamp the attempt.
+   */
+  private async persistMessage(p: PersistMessageParams): Promise<{
     messageId: string;
     conversationId: string;
     mediaUrl?: string;
   }> {
-    const preview = p.text || mediaLabel(p.type);
-    const isGroup = isGroupAddress(p.remoteJid);
-
-    const conversation = await this.prisma.conversation.upsert({
-      where: {
-        sessionId_remoteJid: {
-          sessionId: p.sessionId,
-          remoteJid: p.remoteJid,
-        },
-      },
-      create: {
-        organizationId: p.organizationId,
-        sessionId: p.sessionId,
-        remoteJid: p.remoteJid,
-        phoneNumber: p.phoneNumber ?? null,
-        name: p.name ?? null,
-        isGroup,
-        lastMessageAt: p.timestamp,
-        lastMessageText: preview,
-        lastMessageType: p.type,
-        unreadCount: p.incrementUnread ? 1 : 0,
-      },
-      update: {
-        // undefined leaves a known number in place when a later message
-        // arrives without one.
-        phoneNumber: p.phoneNumber ?? undefined,
-        name: p.name ?? undefined,
-        lastMessageAt: p.timestamp,
-        lastMessageText: preview,
-        lastMessageType: p.type,
-        ...(p.incrementUnread ? { unreadCount: { increment: 1 } } : {}),
-      },
-    });
-
-    // Refresh the contact's profile picture at most once a day, off the hot
-    // path — failures (privacy settings, no photo) just stamp the attempt.
-    const AVATAR_TTL_MS = 24 * 60 * 60 * 1000;
-    if (
-      !conversation.avatarFetchedAt ||
-      Date.now() - conversation.avatarFetchedAt.getTime() > AVATAR_TTL_MS
-    ) {
-      void this.refreshAvatar(p.sessionId, conversation.id, p.remoteJid);
+    const result = await this.store.persist(p);
+    if (result.avatarStale) {
+      void this.refreshAvatar(p.sessionId, result.conversationId, p.remoteJid);
     }
-
-    const message = await this.prisma.message.create({
-      data: {
-        organizationId: p.organizationId,
-        conversationId: conversation.id,
-        sessionId: p.sessionId,
-        waMessageId: p.waMessageId ?? null,
-        direction: p.direction,
-        fromMe: p.fromMe,
-        source: p.source,
-        senderName: p.senderName ?? null,
-        agentId: p.agentId ?? null,
-        sentByUserId: p.sentByUserId ?? null,
-        type: p.type,
-        text: p.text ?? null,
-        status: p.status,
-        timestamp: p.timestamp,
-        raw: p.raw ? p.raw : undefined,
-      },
-    });
-
-    let mediaUrl: string | undefined;
-    if (p.media?.buffer) {
-      const ext = extForMedia(p.media.mimeType, p.media.fileName);
-      const key = this.media.newKey(p.organizationId, p.sessionId, ext);
-      await this.media.put(key, p.media.buffer, p.media.mimeType);
-      await this.prisma.mediaAsset.create({
-        data: {
-          messageId: message.id,
-          storageKey: key,
-          mimeType: p.media.mimeType,
-          fileName: p.media.fileName ?? null,
-          size: p.media.buffer.length,
-          width: p.media.width ?? null,
-          height: p.media.height ?? null,
-          durationSeconds: p.media.durationSeconds ?? null,
-          sha256: createHash('sha256').update(p.media.buffer).digest('hex'),
-        },
-      });
-      mediaUrl = await this.media.viewUrl(
-        key,
-        p.media.mimeType,
-        p.media.fileName ?? undefined,
-      );
-    }
-
-    return { messageId: message.id, conversationId: conversation.id, mediaUrl };
+    return {
+      messageId: result.messageId,
+      conversationId: result.conversationId,
+      mediaUrl: result.mediaUrl,
+    };
   }
 
   /** Log out and remove the socket + persisted auth. */
@@ -1887,17 +1795,6 @@ export class ConnectionManagerService
       })
       .catch(() => undefined);
   }
-}
-
-interface MediaMeta {
-  mimeType: string;
-  fileName?: string | null;
-  width?: number | null;
-  height?: number | null;
-  durationSeconds?: number | null;
-}
-interface StagedMedia extends MediaMeta {
-  buffer: Buffer;
 }
 
 function num(v: unknown): number | null {
@@ -2041,36 +1938,6 @@ function buildBaileysMedia(
         caption: cap,
       };
   }
-}
-function mediaLabel(type: MessageType): string {
-  return (
-    {
-      [MessageType.IMAGE]: '📷 Photo',
-      [MessageType.VIDEO]: '🎥 Video',
-      [MessageType.AUDIO]: '🎤 Audio',
-      [MessageType.DOCUMENT]: '📄 Document',
-      [MessageType.STICKER]: 'Sticker',
-      [MessageType.LOCATION]: '📍 Location',
-      [MessageType.CONTACT]: '👤 Contact',
-      [MessageType.TEXT]: '',
-      [MessageType.UNKNOWN]: 'Message',
-    }[type] || 'Message'
-  );
-}
-function extForMedia(mime: string, fileName?: string | null): string {
-  if (fileName && fileName.includes('.')) return fileName.split('.').pop()!;
-  const map: Record<string, string> = {
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
-    'image/gif': 'gif',
-    'video/mp4': 'mp4',
-    'audio/ogg': 'ogg',
-    'audio/mpeg': 'mp3',
-    'audio/mp4': 'm4a',
-    'application/pdf': 'pdf',
-  };
-  return map[mime] ?? mime.split('/')[1] ?? 'bin';
 }
 
 // Accept a bare msisdn ("15551234567"), or a full jid.

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MailModule } from '../mail/mail.module';
+import { MessageStoreModule } from '../channels/message-store.module';
 import { AuthModule } from '../auth/auth.module';
 import { AgentsModule } from '../agents/agents.module';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
@@ -21,6 +22,7 @@ import { WhatsappService } from './whatsapp.service';
     AgentsModule,
     BillingModule,
     ApiKeysModule,
+    MessageStoreModule,
   ],
   controllers: [SessionsController, PublicConnectController, MirrorController],
   providers: [

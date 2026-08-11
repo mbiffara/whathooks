@@ -12,9 +12,11 @@ import { instagramAddress } from '../common/address';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { InstagramChannelDriver } from './instagram-channel.driver';
+import { InstagramHealthService } from './instagram-health.service';
 import {
   isMessageEvent,
   typeForAttachment,
+  type ZernioAccountEvent,
   type ZernioMessageEvent,
 } from './zernio-events';
 
@@ -46,6 +48,7 @@ export class InstagramIngestService {
     private readonly webhooks: WebhookDispatchService,
     private readonly agentReply: AgentReplyService,
     private readonly driver: InstagramChannelDriver,
+    private readonly health: InstagramHealthService,
   ) {}
 
   /**
@@ -69,11 +72,8 @@ export class InstagramIngestService {
     if (!envelope?.id || !envelope.event) return;
 
     if (!isMessageEvent(payload)) {
-      // account.connected/disconnected, delivery receipts, reactions,
-      // webhook.test — all subscribed but not yet acted on. Claiming them
-      // anyway keeps the ledger honest about what has been delivered.
-      await this.claim(envelope.id, envelope.event);
-      this.log.debug(`zernio ${envelope.event}: no handler yet`);
+      if (!(await this.claim(envelope.id, envelope.event))) return;
+      await this.handleNonMessage(payload as ZernioAccountEvent);
       return;
     }
 
@@ -82,6 +82,25 @@ export class InstagramIngestService {
       return;
     }
     await this.ingestMessage(payload);
+  }
+
+  /**
+   * Account lifecycle. The rest (delivery receipts, reactions, edits,
+   * webhook.test) is claimed and dropped for now, deliberately: acting on an
+   * event whose payload we have never seen would be guessing.
+   */
+  private async handleNonMessage(e: ZernioAccountEvent): Promise<void> {
+    const accountId = e.account?.accountId ?? e.account?.id;
+    if (!accountId) return;
+    if (e.event === 'account.disconnected') {
+      await this.health.onDisconnected(accountId);
+      return;
+    }
+    if (e.event === 'account.connected') {
+      await this.health.onConnected(accountId, e.account?.username);
+      return;
+    }
+    this.log.debug(`zernio ${e.event}: no handler yet`);
   }
 
   private async ingestMessage(e: ZernioMessageEvent): Promise<void> {

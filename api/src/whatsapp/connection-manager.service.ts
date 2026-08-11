@@ -49,6 +49,7 @@ import { Channel } from '@prisma/client';
 import type { ChannelDriver } from '../channels/channel-driver';
 import { MessageStoreService } from '../channels/message-store.service';
 import { AgentReplyService } from '../channels/agent-reply.service';
+import { SessionAlertService } from '../channels/session-alert.service';
 import type {
   MediaMeta,
   PersistMessageParams,
@@ -137,6 +138,7 @@ export class ConnectionManagerService
     @Inject(REDIS_PUB) private readonly redis: Redis,
     private readonly store: MessageStoreService,
     private readonly agentReply: AgentReplyService,
+    private readonly sessionAlerts: SessionAlertService,
   ) {}
 
   /**
@@ -473,16 +475,8 @@ export class ConnectionManagerService
       await this.dispatchStatus(sessionId, 'CONNECTED', { phoneNumber });
       // Close the outage loop: if we alerted about this session being down,
       // tell the same people it recovered.
-      const alerted = await this.prisma.waSession.findUnique({
-        where: { id: sessionId },
-        select: { alertedDisconnectAt: true },
-      });
-      if (alerted?.alertedDisconnectAt) {
-        await this.prisma.waSession.update({
-          where: { id: sessionId },
-          data: { alertedDisconnectAt: null },
-        });
-        void this.alertSession(sessionId, 'sessionRestored');
+      if (await this.sessionAlerts.clearOutage(sessionId)) {
+        void this.sessionAlerts.alert(sessionId, 'sessionRestored');
       }
     }
 
@@ -1436,63 +1430,8 @@ export class ConnectionManagerService
     sessionId: string,
     kind: 'sessionDown' | 'sessionLoggedOut',
   ): Promise<void> {
-    try {
-      const { count } = await this.prisma.waSession.updateMany({
-        where: { id: sessionId, alertedDisconnectAt: null },
-        data: { alertedDisconnectAt: new Date() },
-      });
-      if (count === 0) return; // already alerted for this outage
-      await this.alertSession(sessionId, kind);
-    } catch (e) {
-      this.log.warn(`Session alert failed for ${sessionId}: ${e}`);
-    }
-  }
-
-  /**
-   * Email the people who work this session (owner/admins + members with
-   * access) about a session outage or recovery.
-   */
-  private async alertSession(
-    sessionId: string,
-    kind: 'sessionDown' | 'sessionLoggedOut' | 'sessionRestored',
-  ): Promise<void> {
-    try {
-      const session = await this.prisma.waSession.findUnique({
-        where: { id: sessionId },
-        select: { label: true, phoneNumber: true, organizationId: true },
-      });
-      if (!session) return;
-      const memberships = await this.prisma.membership.findMany({
-        where: { organizationId: session.organizationId },
-        include: { user: { select: { email: true, locale: true } } },
-        take: 20,
-      });
-      const recipients = memberships.filter(
-        (m) =>
-          m.role === 'OWNER' ||
-          m.role === 'ADMIN' ||
-          (m.role === 'MEMBER' &&
-            (m.sessionIds.length === 0 || m.sessionIds.includes(sessionId))),
-      );
-      const base = this.config
-        .get<string>('WEB_ORIGIN', 'http://localhost:3000')
-        .split(',')[0]
-        .trim();
-      await Promise.all(
-        recipients.map((m) =>
-          this.mail.sendSessionAlert({
-            to: m.user.email,
-            locale: m.user.locale,
-            kind,
-            label: session.label,
-            phone: session.phoneNumber ?? '',
-            sessionUrl: `${base}/dashboard/sessions/${sessionId}`,
-          }),
-        ),
-      );
-      this.log.log(`Session ${sessionId} alert sent: ${kind}`);
-    } catch (e) {
-      this.log.warn(`Session alert failed for ${sessionId}: ${e}`);
+    if (await this.sessionAlerts.claimOutage(sessionId)) {
+      await this.sessionAlerts.alert(sessionId, kind);
     }
   }
 

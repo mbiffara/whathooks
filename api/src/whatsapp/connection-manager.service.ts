@@ -200,6 +200,11 @@ export class ConnectionManagerService
   private async restoreSessions() {
     const sessions = await this.prisma.waSession.findMany({
       where: {
+        // WhatsApp only. Without this the manager opens a Baileys socket for
+        // every connected account regardless of channel, which burns pairing
+        // attempts on accounts that have no WhatsApp behind them and rewrites
+        // their status to QR — an Instagram account showing "scan a QR code".
+        channel: 'WHATSAPP',
         status: { in: ['CONNECTED', 'CONNECTING', 'QR', 'DISCONNECTED'] },
       },
       select: { id: true },
@@ -266,6 +271,14 @@ export class ConnectionManagerService
       where: { id: sessionId },
     });
     if (!session) throw new Error(`Session ${sessionId} not found`);
+    // Belt and braces alongside the channel filter on the restore query: a
+    // Baileys socket for a non-WhatsApp account cannot pair, and the attempt
+    // rewrites that account's status to QR.
+    if (session.channel !== 'WHATSAPP') {
+      throw new BadRequestException(
+        'This account is not a WhatsApp session and cannot be paired.',
+      );
+    }
 
     // Tear down any previous socket for this session.
     if (existing) {

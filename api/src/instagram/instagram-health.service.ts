@@ -128,17 +128,21 @@ export class InstagramHealthService implements OnModuleInit, OnModuleDestroy {
           continue;
         }
 
-        // Healthy again after an outage we reported. The recovery email is
-        // gated on the stored status, NOT on the alert flag: the expiry
-        // warning below sets the same flag, so clearing it on every healthy
-        // sweep would email "restored" and then "expiring" in a loop, twice a
-        // sweep, for as long as the token was near expiry.
-        if (session.status === 'DISCONNECTED') {
+        // Normalise any non-connected status, not just DISCONNECTED: an
+        // Instagram row can end up at QR if something WhatsApp-shaped touches
+        // it, and only healing one value would leave it stuck showing "scan a
+        // QR code" forever.
+        if (session.status !== 'CONNECTED') {
+          const wasDown = session.status === 'DISCONNECTED';
           await this.prisma.waSession.update({
             where: { id: session.id },
             data: { status: 'CONNECTED' },
           });
-          if (await this.alerts.clearOutage(session.id)) {
+          // The recovery email is gated on having actually been down, NOT on
+          // the alert flag: the expiry warning below sets the same flag, so
+          // clearing it on every healthy sweep would email "restored" then
+          // "expiring" in a loop, twice a sweep, while a token sat near expiry.
+          if (wasDown && (await this.alerts.clearOutage(session.id))) {
             await this.alerts.alert(session.id, 'sessionRestored');
           }
         }

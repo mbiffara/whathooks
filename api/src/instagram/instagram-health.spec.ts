@@ -134,6 +134,19 @@ describe('InstagramHealthService.sweep', () => {
     expect(sent).toEqual([{ id: 's1', kind: 'sessionRestored' }]);
   });
 
+  it('repairs a status that was never valid for this channel', async () => {
+    // A WhatsApp code path opening a socket for an Instagram row leaves it at
+    // QR. Healing only DISCONNECTED would strand it there showing "scan a QR
+    // code" on an account that has no QR to scan, and no email is warranted
+    // because it was never actually down.
+    const { svc, sent } = build({
+      sessions: [{ id: 's1', externalAccountId: 'a1', status: 'QR' }],
+      accounts: [{ _id: 'a1', isActive: true, tokenExpiresAt: later() }],
+    });
+    await svc.sweep();
+    expect(sent).toEqual([]);
+  });
+
   it('does not claim recovery for a session that was never down', async () => {
     const { svc, sent } = build({
       sessions: [{ id: 's1', externalAccountId: 'a1', status: 'CONNECTED' }],

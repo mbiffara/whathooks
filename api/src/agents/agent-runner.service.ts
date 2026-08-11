@@ -205,7 +205,7 @@ export class AgentRunnerService {
 
     const keys = intents.map((i) => i.key);
     const system = [
-      'You are an intent classifier for a WhatsApp conversation.',
+      'You are an intent classifier for a customer conversation.',
       'Read the conversation and decide which ONE intent best matches the',
       "customer's CURRENT need. The intents:",
       ...intents.map(
@@ -300,7 +300,7 @@ export class AgentRunnerService {
     if (!turns.length) return null;
 
     const system = [
-      'You answer a single yes/no question about a WhatsApp conversation.',
+      'You answer a single yes/no question about a customer conversation.',
       `The question: ${question}`,
       '',
       'Respond with ONLY the word "yes" or the word "no". No other text.',
@@ -666,7 +666,7 @@ function buildSystemPrompt(
   stepInstructions?: string | null,
 ): string {
   return [
-    `You are ${agent.name}, an assistant replying to messages on WhatsApp.`,
+    `You are ${agent.name}, an assistant replying to customer messages.`,
     `Today's date is ${todayIn(agent.scheduleTimezone)}.`,
     '',
     '# Your character',
@@ -714,7 +714,7 @@ function buildSystemPrompt(
           '',
         ]
       : []),
-    'Reply with ONLY the message to send back over WhatsApp — no preamble, no',
+    'Reply with ONLY the message to send back — no preamble, no',
     'quotation marks, no meta-commentary, and no explanation of your reasoning.',
     'Keep replies concise and conversational, suitable for a chat message.',
   ].join('\n');

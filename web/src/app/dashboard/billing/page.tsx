@@ -1,6 +1,7 @@
 "use client";
 
 import { AiTokensCard } from "@/components/ai-tokens-card";
+import { InstagramSeatsCard } from "@/components/instagram-seats-card";
 import { apiClient } from "@/lib/client-api";
 import type { AiTokenPurchase } from "@/lib/types";
 import {
@@ -179,6 +180,14 @@ function BillingContent() {
 
           <section className="mt-6">
             <AiTokensCard isOwner={isOwner} />
+          </section>
+
+          <section className="mt-6">
+            <InstagramSeatsCard
+              sub={sub}
+              isOwner={isOwner}
+              onChanged={load}
+            />
           </section>
 
           {purchases.length > 0 && (

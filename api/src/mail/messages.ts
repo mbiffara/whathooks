@@ -104,6 +104,18 @@ export const MAIL_MESSAGES = {
       footnote:
         'The agent sends these when its instructions tell it to use the notify_owner tool.',
     },
+    paymentFailed: {
+      subject: 'Your whathooks payment did not go through',
+      preheader: (n: string) =>
+        `We could not charge your card for invoice ${n}. Update it to keep your account active.`,
+      heading: 'Your payment did not go through',
+      body1: (amount: string) =>
+        `We tried to charge ${amount} and your card was declined. Nothing has been switched off: your numbers, Instagram accounts and agents keep working while we retry over the next few days.`,
+      body2:
+        'If the retries also fail the subscription is cancelled and connected accounts stop receiving messages. Updating your card now avoids that.',
+      cta: 'Update payment method',
+      footnote: 'Already fixed it? Then you can ignore this.',
+    },
     lowAiTokens: {
       subject: 'Your whathooks AI tokens are running low',
       preheader: (pct: string) =>
@@ -240,6 +252,18 @@ export const MAIL_MESSAGES = {
       cta: 'Abrir la conversación',
       footnote:
         'Puedes desactivar estas notificaciones en la configuración del agente.',
+    },
+    paymentFailed: {
+      subject: 'No pudimos procesar tu pago en whathooks',
+      preheader: (n: string) =>
+        `No pudimos cobrar la factura ${n}. Actualizá tu tarjeta para mantener la cuenta activa.`,
+      heading: 'No pudimos procesar tu pago',
+      body1: (amount: string) =>
+        `Intentamos cobrar ${amount} y la tarjeta fue rechazada. No dimos de baja nada: tus números, cuentas de Instagram y agentes siguen funcionando mientras reintentamos durante los próximos días.`,
+      body2:
+        'Si los reintentos también fallan, la suscripción se cancela y las cuentas conectadas dejan de recibir mensajes. Actualizar la tarjeta ahora lo evita.',
+      cta: 'Actualizar medio de pago',
+      footnote: '¿Ya lo resolviste? Entonces podés ignorar este mensaje.',
     },
     lowAiTokens: {
       subject: 'Te quedan pocos tokens de IA en whathooks',

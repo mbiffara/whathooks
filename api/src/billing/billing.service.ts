@@ -315,6 +315,10 @@ export class BillingService {
         await this.syncSubscription(event.data.object);
         break;
       }
+      case 'invoice.payment_failed': {
+        await this.onPaymentFailed(event.data.object);
+        break;
+      }
       case 'checkout.session.completed': {
         const session = event.data.object;
         // A token pack is a one-off payment, not a subscription.
@@ -422,6 +426,55 @@ export class BillingService {
     this.log.log(
       `Org ${org.id} -> plan=${plan} status=${sub.status} igSeats=${instagramSeats}`,
     );
+  }
+
+  /**
+   * A charge was declined.
+   *
+   * Deliberately does NOT cut access: `past_due` stays inside
+   * ACTIVE_SUBSCRIPTION_STATUSES so Stripe's dunning can retry over several
+   * days, which is the behaviour we want. The gap this closes is that nobody
+   * was told — service continued, our own per-account costs continued, and
+   * the first anyone knew was the cancellation.
+   */
+  private async onPaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+    const customerId =
+      typeof invoice.customer === 'string'
+        ? invoice.customer
+        : invoice.customer?.id;
+    if (!customerId) return;
+    const org = await this.prisma.organization.findFirst({
+      where: { stripeCustomerId: customerId },
+      select: {
+        id: true,
+        memberships: {
+          where: { role: 'OWNER' },
+          include: { user: { select: { email: true, locale: true } } },
+        },
+      },
+    });
+    if (!org) {
+      this.log.warn(`payment_failed for unknown customer ${customerId}`);
+      return;
+    }
+    const owner = org.memberships[0]?.user;
+    this.log.warn(
+      `Payment failed for org ${org.id} (invoice ${invoice.number ?? invoice.id})`,
+    );
+    if (!owner) return;
+    const amount = ((invoice.amount_due ?? 0) / 100).toLocaleString('en-US', {
+      style: 'currency',
+      currency: (invoice.currency ?? 'usd').toUpperCase(),
+    });
+    await this.mail
+      .sendPaymentFailed({
+        to: owner.email,
+        locale: owner.locale,
+        invoiceNumber: invoice.number ?? invoice.id ?? '',
+        amount,
+        billingUrl: `${this.webBase()}/dashboard/billing`,
+      })
+      .catch((e) => this.log.warn(`payment_failed email failed: ${e}`));
   }
 
   /** Email the org owner ahead of the first charge ("we'll remind you"). */

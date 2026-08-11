@@ -288,7 +288,15 @@
       "checkoutSuccess": "Payment received. Your subscription is active.",
       "checkoutCancel": "Checkout canceled. No changes were made.",
       "currentPlan": "Current plan",
-      "noActivePlan": "No active plan",
+      "instagram": {
+      "title": "Instagram accounts",
+      "none": "No Instagram accounts on your subscription yet.",
+      "summary": "{seats} paid, {connected} connected. ${total}/month.",
+      "proration": "${price} per account per month. Adding one charges the rest of this billing period now; removing one credits your account rather than refunding.",
+      "unused": "{n} paid but not connected. Connect them in Cuentas conectadas, or reduce the count to stop paying for them.",
+      "disconnectFirst": "Disconnect an account first"
+    },
+    "noActivePlan": "No active plan",
       "perMonth": "/mo",
       "statusLine": "Status: {status}",
       "renews": "renews {date}",

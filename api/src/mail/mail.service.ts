@@ -189,6 +189,27 @@ export class MailService {
     });
   }
 
+  /** Tell an owner a charge was declined, before dunning cancels them. */
+  async sendPaymentFailed(email: {
+    to: string;
+    locale?: string | null;
+    invoiceNumber: string;
+    amount: string;
+    billingUrl: string;
+  }): Promise<boolean> {
+    const locale = localeOf(email.locale);
+    const M = MAIL_MESSAGES[locale].paymentFailed;
+    return this.send(email.to, {
+      locale,
+      subject: M.subject,
+      preheader: M.preheader(email.invoiceNumber),
+      heading: M.heading,
+      paragraphs: [M.body1(email.amount), M.body2],
+      cta: { label: M.cta, url: email.billingUrl },
+      footnote: M.footnote,
+    });
+  }
+
   /** Warn an owner that this month's included AI tokens are nearly gone. */
   async sendLowAiTokens(email: {
     to: string;

@@ -98,7 +98,7 @@ export function InstagramSection({
           </p>
         </div>
         <button
-          className="btn-secondary"
+          className="btn-primary"
           disabled={busy || !sub?.subscribed}
           onClick={() => (hasFreeSeat ? add() : setConfirming(true))}
         >

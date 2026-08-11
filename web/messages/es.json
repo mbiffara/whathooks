@@ -288,7 +288,15 @@
       "checkoutSuccess": "Pago recibido. Tu suscripción está activa.",
       "checkoutCancel": "Pago cancelado. No se hicieron cambios.",
       "currentPlan": "Plan actual",
-      "noActivePlan": "Sin plan activo",
+      "instagram": {
+      "title": "Cuentas de Instagram",
+      "none": "Todavía no hay cuentas de Instagram en tu suscripción.",
+      "summary": "{seats} pagas, {connected} conectadas. US${total} por mes.",
+      "proration": "US${price} por cuenta por mes. Agregar una cobra ahora la parte proporcional de este período; quitarla acredita a tu cuenta en lugar de reembolsar.",
+      "unused": "{n} pagas sin conectar. Conectalas en Cuentas conectadas, o bajá el número para dejar de pagarlas.",
+      "disconnectFirst": "Primero desconectá una cuenta"
+    },
+    "noActivePlan": "Sin plan activo",
       "perMonth": "/mes",
       "statusLine": "Estado: {status}",
       "renews": "se renueva el {date}",

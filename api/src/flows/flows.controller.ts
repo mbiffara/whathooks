@@ -152,12 +152,7 @@ export class FlowsController {
     @Param('id') id: string,
     @Body() body: SimulateDto,
   ) {
-    return this.flows.simulate(
-      this.orgOf(user),
-      id,
-      body.messages,
-      body.graph,
-    );
+    return this.flows.simulate(this.orgOf(user), id, body.messages, body.graph);
   }
 
   @Get(':id/runs')

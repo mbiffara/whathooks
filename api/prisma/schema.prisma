@@ -372,6 +372,10 @@ model MirrorLink {
   agentNumber  String      @map("repNumber") // digits with country code, no +
   humanAgentId String?     @map("repId")
   humanAgent   HumanAgent? @relation(fields: [humanAgentId], references: [id], onDelete: SetNull)
+  // Which WhatsApp session creates the groups. Null = this link's own session,
+  // which is the only possibility when the link is itself on WhatsApp. A link
+  // on a channel that cannot host a group (Instagram) must set this.
+  groupSessionId String?
   // Mirror groups are named "<groupPrefix> #<seq>".
   groupPrefix String   @default("🔒 Lead")
   // Prefix relayed messages with the lead's WhatsApp display name (bold).
@@ -387,8 +391,16 @@ model MirrorLink {
 // the relay engine only reads threads, never the link.
 model MirrorThread {
   id           String      @id @default(cuid())
+  // The session hosting the GROUP, which is always WhatsApp. For a lead who
+  // is also on WhatsApp this is their session too; for a lead on another
+  // channel it is not, which is why the lead side is `conversation` below.
   sessionId    String
   session      WaSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // The mirrored conversation: the lead side, on whatever channel they used.
+  // Backfilled for existing rows from (sessionId, leadJid). Unique because a
+  // conversation can only be mirrored into one group at a time.
+  conversationId String?     @unique
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   linkId       String? // set when created by a static MirrorLink
   link         MirrorLink? @relation(fields: [linkId], references: [id], onDelete: Cascade)
   humanAgentId String?
@@ -398,7 +410,10 @@ model MirrorThread {
   // brand. Empty = single-agent thread, agentNumber alone applies.
   agentNumbers String[] @default([])
   showLeadName Boolean     @default(true)
-  leadJid      String // original DM sender
+  // The lead's address. Kept alongside `conversation` because the relay's
+  // display and the legacy unique both read it; it is an `ig:` address when
+  // the lead is on Instagram.
+  leadJid      String
   groupJid     String // the mirror group
   seq          Int // "<prefix> #<seq>" in the group subject
   createdAt    DateTime    @default(now())
@@ -698,6 +713,9 @@ model Conversation {
   updatedAt       DateTime     @updatedAt
 
   messages Message[]
+  /** Set while this conversation is mirrored into a WhatsApp group. */
+  mirrorThread   MirrorThread?
+
 
   @@unique([sessionId, remoteJid])
   @@index([organizationId])

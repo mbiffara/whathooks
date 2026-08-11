@@ -6,7 +6,10 @@ import {
   MessageStatus,
   MessageType,
 } from '@prisma/client';
+import { ModuleRef } from '@nestjs/core';
 import { AgentReplyService } from '../channels/agent-reply.service';
+import type { ChannelRouterService } from '../channels/channel-router.service';
+import { CHANNEL_ROUTER } from '../channels/channel-router.token';
 import { MessageStoreService } from '../channels/message-store.service';
 import type { StagedMedia } from '../channels/message-store.service';
 import { instagramAddress } from '../common/address';
@@ -50,7 +53,18 @@ export class InstagramIngestService {
     private readonly agentReply: AgentReplyService,
     private readonly driver: InstagramChannelDriver,
     private readonly health: InstagramHealthService,
+    private readonly moduleRef: ModuleRef,
   ) {}
+
+  /**
+   * Resolved lazily: ChannelsModule imports this module to register the
+   * Instagram driver, so injecting the router here would be a cycle.
+   */
+  private get channels(): ChannelRouterService {
+    return this.moduleRef.get<ChannelRouterService>(CHANNEL_ROUTER, {
+      strict: false,
+    });
+  }
 
   /**
    * Claim an event id. Returns false if it has been seen: the insert itself is
@@ -212,8 +226,59 @@ export class InstagramIngestService {
     // Automation runs on inbound only: an outbound message is either ours
     // already or something the owner typed in the Instagram app, and replying
     // to either would be a loop.
-    if (!outbound) {
-      await this.maybeAgentReply(session.id, result.conversationId, remoteJid);
+    if (outbound) return;
+
+    // A mirrored conversation belongs to its human agent: forward into their
+    // WhatsApp group and let the AI stay out of the way, exactly as the
+    // WhatsApp path does.
+    const thread = await this.prisma.mirrorThread.findUnique({
+      where: { conversationId: result.conversationId },
+      select: {
+        sessionId: true,
+        groupJid: true,
+        showLeadName: true,
+      },
+    });
+    if (thread) {
+      await this.forwardToGroup(thread, handle, e, result.mediaUrl);
+      return;
+    }
+
+    await this.maybeAgentReply(session.id, result.conversationId, remoteJid);
+  }
+
+  /**
+   * Instagram lead → WhatsApp mirror group.
+   *
+   * Media is referenced by link rather than re-uploaded: we have already
+   * stored our own copy, and a signed URL keeps one object instead of pushing
+   * the same bytes through a second channel.
+   */
+  private async forwardToGroup(
+    thread: { sessionId: string; groupJid: string; showLeadName: boolean },
+    handle: string | null,
+    e: ZernioMessageEvent,
+    mediaUrl?: string,
+  ): Promise<void> {
+    // *…* renders bold on WhatsApp, matching the WhatsApp lead relay.
+    const speaker =
+      thread.showLeadName && handle ? `*${handle}:* ` : '*Lead (IG):* ';
+    const body =
+      e.message.text ??
+      (mediaUrl ? `[${e.message.attachments?.[0]?.type ?? 'media'}]` : '');
+    const text = mediaUrl
+      ? `${speaker}${body}
+${mediaUrl}`
+      : `${speaker}${body}`;
+    try {
+      await this.channels
+        .driverFor(Channel.WHATSAPP)
+        .sendText(thread.sessionId, thread.groupJid, text, {
+          source: MessageSource.MIRROR,
+          senderName: handle,
+        });
+    } catch (err) {
+      this.log.warn(`instagram mirror forward failed: ${String(err)}`);
     }
   }
 

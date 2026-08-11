@@ -43,7 +43,10 @@ import { REDIS_PUB } from '../common/redis/redis.module';
 import { MailService } from '../mail/mail.service';
 import { agentActiveNow } from './agent-schedule';
 import { FlowEngineService } from './flow-engine.service';
+import { ModuleRef } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
+import type { ChannelRouterService } from '../channels/channel-router.service';
+import { CHANNEL_ROUTER } from '../channels/channel-router.token';
 import { isGroupAddress } from '../common/address';
 import { Channel } from '@prisma/client';
 import type { ChannelDriver } from '../channels/channel-driver';
@@ -117,6 +120,7 @@ export class ConnectionManagerService
         groupPrefix: string;
         showLeadName: boolean;
         humanAgentId: string | null;
+        groupSessionId: string | null;
       } | null;
       expires: number;
     }
@@ -139,7 +143,22 @@ export class ConnectionManagerService
     private readonly store: MessageStoreService,
     private readonly agentReply: AgentReplyService,
     private readonly sessionAlerts: SessionAlertService,
+    private readonly moduleRef: ModuleRef,
   ) {}
+
+  /**
+   * The channel router, resolved lazily.
+   *
+   * Constructor injection would be a cycle: the router injects this class to
+   * serve WHATSAPP, and this class needs the router to relay a mirror reply
+   * back on a lead's channel. ModuleRef with `strict: false` breaks it without
+   * forwardRef leaking into both the provider and the module graph.
+   */
+  private get channels(): ChannelRouterService {
+    return this.moduleRef.get<ChannelRouterService>(CHANNEL_ROUTER, {
+      strict: false,
+    });
+  }
 
   /**
    * Session leadership: exactly one task may run the Baileys sockets. During
@@ -874,11 +893,14 @@ export class ConnectionManagerService
       void this.autoSaveContact(sessionId, ctx);
 
       // A mirrored conversation is owned by its human agent — relay and stop.
+      // Keyed on the conversation, not (session, leadJid): the thread's
+      // sessionId is where the GROUP lives, which for a cross-channel mirror
+      // is a different session entirely.
       const thread = await this.prisma.mirrorThread.findUnique({
-        where: { sessionId_leadJid: { sessionId, leadJid: ctx.remoteJid } },
+        where: { conversationId: ctx.conversationId },
       });
       if (thread) {
-        await this.forwardLeadToGroup(sessionId, thread, ctx);
+        await this.forwardLeadToGroup(thread.sessionId, thread, ctx);
         return;
       }
 
@@ -900,9 +922,11 @@ export class ConnectionManagerService
             prefix: link.groupPrefix,
             showLeadName: link.showLeadName,
             linkId: link.id,
+            conversationId: ctx.conversationId,
+            groupSessionId: link.groupSessionId,
           },
         );
-        await this.forwardLeadToGroup(sessionId, created, ctx);
+        await this.forwardLeadToGroup(created.sessionId, created, ctx);
         return;
       }
 
@@ -965,13 +989,47 @@ export class ConnectionManagerService
           select: { name: true },
         })
       : null;
-    await this.relayMirrorMessage(
-      sessionId,
-      thread.leadJid,
-      ctx,
-      '',
-      human?.name ?? null,
-    );
+
+    // The reply goes back on the LEAD's session and channel, which is not
+    // necessarily the group's: an Instagram lead is mirrored into a WhatsApp
+    // group, so relaying on `sessionId` would send the agent's reply to a
+    // WhatsApp number that does not exist.
+    const lead = thread.conversationId
+      ? await this.prisma.conversation.findUnique({
+          where: { id: thread.conversationId },
+          select: {
+            sessionId: true,
+            remoteJid: true,
+            session: { select: { channel: true } },
+          },
+        })
+      : null;
+    const leadSessionId = lead?.sessionId ?? sessionId;
+    const leadAddress = lead?.remoteJid ?? thread.leadJid;
+    const channel = lead?.session?.channel ?? Channel.WHATSAPP;
+
+    try {
+      await this.relayMirrorMessage(
+        leadSessionId,
+        leadAddress,
+        ctx,
+        '',
+        human?.name ?? null,
+        channel,
+      );
+    } catch (e) {
+      // Tell the agent in the group rather than dropping their message. The
+      // common cause is a format the lead's channel refuses (Instagram will
+      // not take a WhatsApp voice note), and silence there reads as "sent".
+      const reason = e instanceof Error ? e.message : String(e);
+      this.log.warn(`Mirror relay to ${leadAddress} failed: ${reason}`);
+      await this.sendText(
+        sessionId,
+        ctx.remoteJid,
+        `⚠️ No se pudo entregar: ${reason}`,
+        { source: MessageSource.MIRROR },
+      ).catch(() => undefined);
+    }
   }
 
   /** Lead → group: forward a lead's DM into their mirror group. */
@@ -998,19 +1056,47 @@ export class ConnectionManagerService
     sessionId: string,
     leadJid: string,
     agents: Array<{ id?: string | null; number: string }>,
-    opts: { prefix: string; showLeadName: boolean; linkId?: string | null },
+    opts: {
+      prefix: string;
+      showLeadName: boolean;
+      linkId?: string | null;
+      /** The mirrored conversation, so replies can find the lead's channel. */
+      conversationId?: string | null;
+      /**
+       * WhatsApp session that hosts the group. Defaults to `sessionId`, which
+       * is right whenever the lead is on WhatsApp too; a lead on a channel
+       * with no groups must pass one.
+       */
+      groupSessionId?: string | null;
+    },
   ) {
     if (agents.length === 0) throw new Error('Mirror thread needs an agent');
+    const groupSessionId = opts.groupSessionId ?? sessionId;
+    // Groups only exist on WhatsApp, so refuse early with something an
+    // operator can act on rather than failing inside the Baileys call.
+    const host = await this.prisma.waSession.findUnique({
+      where: { id: groupSessionId },
+      select: { channel: true },
+    });
+    if (host?.channel !== Channel.WHATSAPP) {
+      throw new BadRequestException(
+        'Mirror groups can only be hosted on a WhatsApp number. Pick one in the mirror settings.',
+      );
+    }
     const seq =
-      (await this.prisma.mirrorThread.count({ where: { sessionId } })) + 1;
+      (await this.prisma.mirrorThread.count({
+        where: { sessionId: groupSessionId },
+      })) + 1;
     const group = await this.createGroup(
-      sessionId,
+      groupSessionId,
       `${opts.prefix} #${seq}`,
       agents.map((a) => a.number),
     );
     const thread = await this.prisma.mirrorThread.create({
       data: {
-        sessionId,
+        // sessionId on the thread means "where the group lives".
+        sessionId: groupSessionId,
+        conversationId: opts.conversationId ?? null,
         linkId: opts.linkId ?? null,
         humanAgentId: agents[0].id ?? null,
         agentNumber: agents[0].number,
@@ -1023,7 +1109,7 @@ export class ConnectionManagerService
     });
     this.log.log(
       `Mirror thread ${thread.id}: created group ${group.id} ` +
-        `("${opts.prefix} #${seq}") on ${sessionId}`,
+        `("${opts.prefix} #${seq}") on ${groupSessionId}`,
     );
     return thread;
   }
@@ -1043,10 +1129,16 @@ export class ConnectionManagerService
     },
     prefix: string,
     senderName?: string | null,
+    /** The destination's channel; defaults to this driver's own. */
+    channel: Channel = Channel.WHATSAPP,
   ): Promise<void> {
     const opts = { source: MessageSource.MIRROR, senderName };
+    // Sending on the lead's channel, which may not be this one: an agent
+    // replying in a WhatsApp group to an Instagram lead is relayed by the
+    // Instagram driver, not this socket.
+    const driver = this.channels.driverFor(channel);
     if (m.media) {
-      await this.sendMedia(
+      await driver.sendMedia(
         sessionId,
         to,
         {
@@ -1060,11 +1152,11 @@ export class ConnectionManagerService
       return;
     }
     if (m.text) {
-      await this.sendText(sessionId, to, `${prefix}${m.text}`, opts);
+      await driver.sendText(sessionId, to, `${prefix}${m.text}`, opts);
       return;
     }
     // Location/contact/unknown without a downloadable payload.
-    await this.sendText(
+    await driver.sendText(
       sessionId,
       to,
       `${prefix}[${m.type.toLowerCase()}]`,
@@ -1075,6 +1167,7 @@ export class ConnectionManagerService
   /** Enabled mirror link for a session, cached briefly (checked per message). */
   private async mirrorLinkFor(sessionId: string): Promise<{
     id: string;
+    groupSessionId: string | null;
     agentNumber: string;
     groupPrefix: string;
     showLeadName: boolean;
@@ -1090,6 +1183,7 @@ export class ConnectionManagerService
         groupPrefix: true,
         showLeadName: true,
         humanAgentId: true,
+        groupSessionId: true,
         enabled: true,
       },
     });
@@ -1100,6 +1194,7 @@ export class ConnectionManagerService
           groupPrefix: link.groupPrefix,
           showLeadName: link.showLeadName,
           humanAgentId: link.humanAgentId,
+          groupSessionId: link.groupSessionId,
         }
       : null;
     this.mirrorLinkCache.set(sessionId, {

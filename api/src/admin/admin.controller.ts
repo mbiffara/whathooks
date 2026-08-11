@@ -46,7 +46,6 @@ export class WelcomeEmailDto {
   locale?: string;
 }
 
-
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('admin')

@@ -7,8 +7,7 @@ import { ConversationsController } from './conversations.controller';
 import { ConversationsService } from './conversations.service';
 
 @Module({
-  imports: [AuthModule, WhatsappModule,
-    ChannelsModule, BillingModule],
+  imports: [AuthModule, WhatsappModule, ChannelsModule, BillingModule],
   controllers: [ConversationsController],
   providers: [ConversationsService],
 })

@@ -584,6 +584,7 @@ export class FlowEngineService {
       {
         prefix: (node.data.groupPrefix as string) || DEFAULT_GROUP_PREFIX,
         showLeadName,
+        conversationId: ctx.conversationId,
       },
     );
     // Optionally seed the group with the conversation so far, so the human
@@ -595,7 +596,7 @@ export class FlowEngineService {
       );
       if (transcript) {
         await manager
-          .sendText(sessionId, thread.groupJid, transcript, {
+          .sendText(thread.sessionId, thread.groupJid, transcript, {
             source: MessageSource.MIRROR,
           })
           .catch((e) =>
@@ -603,7 +604,7 @@ export class FlowEngineService {
           );
       }
     }
-    await manager.forwardLeadToGroup(sessionId, thread, ctx);
+    await manager.forwardLeadToGroup(thread.sessionId, thread, ctx);
     const farewell = (node.data.farewellText as string) ?? '';
     if (farewell.trim()) {
       await manager.sendText(sessionId, ctx.remoteJid, farewell.trim(), {

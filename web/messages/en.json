@@ -211,6 +211,7 @@
         "title": "Instagram",
         "subtitle": "Answer Instagram DMs alongside WhatsApp.",
         "seatsUsed": "{used} of {total} accounts connected",
+        "seatsUnlimited": "{used} connected. Your plan includes unlimited accounts.",
         "connect": "Connect account",
         "addPaid": "Add account",
         "needsPlan": "Choose a plan before adding Instagram accounts.",

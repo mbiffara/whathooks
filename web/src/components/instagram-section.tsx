@@ -36,9 +36,13 @@ export function InstagramSection({
   const [error, setError] = useState<string | null>(null);
 
   const accounts = sessions.filter((s) => s.channel === "INSTAGRAM");
-  const seats = sub?.instagram.seats ?? 0;
+  // null = unlimited (comped orgs). Distinguish it from 0, which means "buy
+  // one first" — conflating them would offer a sponsored org a purchase that
+  // has no subscription to attach to.
+  const seats = sub ? sub.instagram.seats : 0;
+  const unlimited = sub != null && seats === null;
   const price = sub?.instagram.monthlyUsd ?? 8.99;
-  const hasFreeSeat = accounts.length < seats;
+  const hasFreeSeat = unlimited || accounts.length < (seats ?? 0);
 
   /** Buy a seat if needed, then hand off to Instagram's OAuth. */
   const add = async () => {
@@ -46,10 +50,12 @@ export function InstagramSection({
     setBusy(true);
     setError(null);
     try {
+      // Unlimited orgs never reach here (hasFreeSeat is always true), so a
+      // null seat count cannot turn into a purchase.
       if (!hasFreeSeat) {
         await apiClient("/billing/instagram-seats", token, {
           method: "POST",
-          body: JSON.stringify({ quantity: seats + 1 }),
+          body: JSON.stringify({ quantity: (seats ?? 0) + 1 }),
         });
       }
       const { authUrl } = await apiClient<{ authUrl: string }>(
@@ -84,9 +90,11 @@ export function InstagramSection({
         <div>
           <h2 className="font-semibold">{t("title")}</h2>
           <p className="text-sm text-[var(--color-muted)]">
-            {seats > 0
-              ? t("seatsUsed", { used: accounts.length, total: seats })
-              : t("subtitle")}
+            {unlimited
+              ? t("seatsUnlimited", { used: accounts.length })
+              : seats && seats > 0
+                ? t("seatsUsed", { used: accounts.length, total: seats })
+                : t("subtitle")}
           </p>
         </div>
         <button

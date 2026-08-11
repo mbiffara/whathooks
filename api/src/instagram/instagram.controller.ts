@@ -6,12 +6,21 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, Matches } from 'class-validator';
 import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { ApiOrg } from '../common/decorators/org.decorator';
 import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { InstagramService } from './instagram.service';
+
+class AdoptProfileDto {
+  /** Zernio profile id (24-char ObjectId). */
+  @IsString()
+  @Matches(/^[a-f0-9]{24}$/i)
+  profileId!: string;
+}
 
 class ConnectInstagramDto {
   @IsOptional()
@@ -44,6 +53,18 @@ export class InstagramController {
   @Post('reconcile')
   reconcile(@ApiOrg() organizationId: string) {
     return this.instagram.reconcile(organizationId);
+  }
+
+  /**
+   * Adopt an existing Zernio profile and the accounts already inside it.
+   * Platform-admin only: claiming an arbitrary profile id would otherwise let
+   * one org take over another customer's accounts.
+   */
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
+  @Post('adopt-profile')
+  adopt(@ApiOrg() organizationId: string, @Body() dto: AdoptProfileDto) {
+    return this.instagram.adoptProfile(organizationId, dto.profileId);
   }
 
   @Delete(':id')

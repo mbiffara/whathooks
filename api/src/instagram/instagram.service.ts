@@ -167,6 +167,55 @@ export class InstagramService {
     return { connected };
   }
 
+  /**
+   * Point an org at an existing Zernio profile and adopt whatever is in it.
+   *
+   * Migration path for accounts connected before this integration existed (or
+   * directly in Zernio's dashboard). Platform-admin only, because adopting an
+   * arbitrary profile id would otherwise let one organization claim another
+   * customer's connected accounts.
+   */
+  async adoptProfile(
+    organizationId: string,
+    profileId: string,
+  ): Promise<{ connected: number }> {
+    const taken = await this.prisma.organization.findFirst({
+      where: { zernioProfileId: profileId, NOT: { id: organizationId } },
+      select: { id: true },
+    });
+    if (taken) {
+      throw new BadRequestException(
+        `Profile ${profileId} already belongs to organization ${taken.id}`,
+      );
+    }
+    await this.prisma.organization.update({
+      where: { id: organizationId },
+      data: { zernioProfileId: profileId },
+    });
+    // Adopted accounts need a session row each; reconcile only fills sessions
+    // that already exist, so create the missing ones first.
+    const accounts = (await this.zernio.listAccounts()).filter((a) => {
+      const pid =
+        typeof a.profileId === 'string' ? a.profileId : a.profileId?._id;
+      return a.platform === 'instagram' && pid === profileId;
+    });
+    const existing = await this.prisma.waSession.count({
+      where: { organizationId, channel: 'INSTAGRAM' },
+    });
+    for (let i = existing; i < accounts.length; i++) {
+      await this.prisma.waSession.create({
+        data: {
+          organizationId,
+          channel: 'INSTAGRAM',
+          label: 'Instagram',
+          status: 'CONNECTING',
+          externalProfileId: profileId,
+        },
+      });
+    }
+    return this.reconcile(organizationId);
+  }
+
   /** Drop a connection. The seat stays paid until billing is changed. */
   async disconnect(organizationId: string, sessionId: string): Promise<void> {
     const session = await this.prisma.waSession.findFirst({

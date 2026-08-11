@@ -101,7 +101,11 @@ export class BillingService {
       usage,
       aiTokens,
       instagram: {
-        seats: org.instagramSeats,
+        // null = unlimited, the same convention PlanLimits uses. Comped orgs
+        // have no subscription to hang an add-on item on, and
+        // assertCanAddInstagramAccount already waves them through, so the UI
+        // must not offer to sell them a seat it would fail to charge for.
+        seats: planRequiresSubscription(org.plan) ? org.instagramSeats : null,
         connected: await this.prisma.waSession.count({
           where: { organizationId, channel: 'INSTAGRAM' },
         }),

@@ -211,6 +211,7 @@
         "title": "Instagram",
         "subtitle": "Respondé los DM de Instagram junto con WhatsApp.",
         "seatsUsed": "{used} de {total} cuentas conectadas",
+        "seatsUnlimited": "{used} conectadas. Tu plan incluye cuentas ilimitadas.",
         "connect": "Conectar cuenta",
         "addPaid": "Agregar cuenta",
         "needsPlan": "Elegí un plan antes de agregar cuentas de Instagram.",

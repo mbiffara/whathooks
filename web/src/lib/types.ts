@@ -324,8 +324,8 @@ export interface Subscription {
   usage: { used: number; limit: number | null };
   /** Included-AI tokens burnt this month against the plan's allowance. */
   aiTokens: { used: number; limit: number | null };
-  /** Instagram add-on: seats paid for vs accounts actually connected. */
-  instagram: { seats: number; connected: number; monthlyUsd: number };
+  /** Instagram add-on: seats paid for vs accounts connected. null = unlimited. */
+  instagram: { seats: number | null; connected: number; monthlyUsd: number };
 }
 
 export const PLAN_PRICING: Record<

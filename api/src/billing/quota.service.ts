@@ -68,7 +68,10 @@ export class QuotaService {
               ? plan.waNumbers
               : min(plan.waNumbers, TRIAL_LIMITS.waNumbers),
         }
-      : plan;
+      : // Copy, never the shared PLANS entry: the override below writes into
+        // this object, and mutating the singleton would leak one org's limit
+        // onto every other org on the same tier for the life of the process.
+        { ...plan };
     // A manual admin override beats both the plan and the trial cap.
     if (org.messageLimitOverride != null) {
       limits.messagesPerMonth = org.messageLimitOverride;

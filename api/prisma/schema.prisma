@@ -161,8 +161,17 @@ model Invitation {
 }
 
 // ---------------------------------------------------------------------------
-// WhatsApp sessions (Baileys connections)
+// Connected accounts. Still called WaSession because every sessionId FK in the
+// schema already means "the account this row belongs to"; renaming the model
+// would churn ~50 call sites without changing a single relationship. The
+// `channel` column is what actually distinguishes a Baileys socket from a
+// webhook-delivered channel like Instagram.
 // ---------------------------------------------------------------------------
+
+enum Channel {
+  WHATSAPP // Baileys socket, QR-paired
+  INSTAGRAM // Zernio API, OAuth-connected, webhook-delivered
+}
 
 enum WaSessionStatus {
   PENDING // created, worker not started yet
@@ -178,7 +187,8 @@ model WaSession {
   organizationId String
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   label          String // human label, e.g. "Support line"
-  phoneNumber    String? // msisdn once connected
+  channel        Channel         @default(WHATSAPP)
+  phoneNumber    String? // msisdn once connected (WHATSAPP only)
   status         WaSessionStatus @default(PENDING)
   // Auto-save every inbound DM sender into the org's contact book.
   saveContacts   Boolean         @default(false)
@@ -193,6 +203,16 @@ model WaSession {
   // replaces the token, clearing revokes it.
   shareToken          String?   @unique
   shareTokenCreatedAt DateTime?
+
+  // Non-WhatsApp channels. The provider owns the account identity, so these
+  // stand in for phoneNumber/creds/signalKeys, which stay null for them.
+  // externalAccountId is unique because inbound webhooks arrive on one shared
+  // endpoint for the whole platform and it is the only thing that routes an
+  // event to an organization.
+  externalAccountId String? @unique // Zernio accountId
+  externalProfileId String? // Zernio profile (one per organization)
+  externalHandle    String? // the @handle, shown where a phone number would be
+
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 

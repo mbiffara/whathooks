@@ -6,7 +6,7 @@ import {
 import { QuotaService } from '../billing/quota.service';
 import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
+import { ChannelRouterService } from '../channels/channel-router.service';
 import { SendMessageDto } from './dto/send-message.dto';
 
 const MAX_MEDIA_BYTES = 64 * 1024 * 1024; // 64 MB
@@ -15,7 +15,7 @@ const MAX_MEDIA_BYTES = 64 * 1024 * 1024; // 64 MB
 export class MessagesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly manager: ConnectionManagerService,
+    private readonly channels: ChannelRouterService,
     private readonly quota: QuotaService,
     private readonly media: MediaService,
   ) {}
@@ -26,7 +26,8 @@ export class MessagesService {
       where: { id: dto.sessionId, organizationId },
     });
     if (!session) throw new NotFoundException('Session not found');
-    if (session.status !== 'CONNECTED' || !this.manager.isLive(session.id)) {
+    const driver = this.channels.driverFor(session.channel);
+    if (session.status !== 'CONNECTED' || !driver.isLive(session.id)) {
       throw new BadRequestException('Session is not connected');
     }
     if (!dto.text && !dto.mediaUrl) {
@@ -35,7 +36,7 @@ export class MessagesService {
 
     if (dto.mediaUrl) {
       const file = await fetchRemoteMedia(dto.mediaUrl, dto.fileName);
-      const result = await this.manager.sendMedia(
+      const result = await driver.sendMedia(
         session.id,
         dto.to,
         file,
@@ -53,7 +54,7 @@ export class MessagesService {
       };
     }
 
-    const result = await this.manager.sendText(session.id, dto.to, dto.text!, {
+    const result = await driver.sendText(session.id, dto.to, dto.text!, {
       source: 'API',
     });
     return {

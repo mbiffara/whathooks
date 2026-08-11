@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { QuotaService } from '../billing/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { addressIdentity } from '../common/address';
 import { ConnectionManagerService } from './connection-manager.service';
 
 /**
@@ -297,7 +298,7 @@ export class MirrorService {
         seq: t.seq,
         groupJid: t.groupJid,
         leadJid: t.leadJid,
-        leadNumber: t.leadJid.split('@')[0],
+        leadNumber: addressIdentity(t.leadJid),
         // Team groups (assignGroup) let every listed number reply. The
         // primary agent prefers its own relation: agentNumber is
         // denormalized, so a later phone edit would miss the directory.

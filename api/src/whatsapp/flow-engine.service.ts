@@ -9,6 +9,7 @@ import {
   intentsOf,
 } from '../flows/flow-graph';
 import { PrismaService } from '../prisma/prisma.service';
+import { whatsappIdentity } from '../common/address';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { agentActiveNow } from './agent-schedule';
 import type {
@@ -673,10 +674,12 @@ export class FlowEngineService {
     const organizationId = session.organizationId;
     // DMs arrive from a phone jid or (phone hidden) a LID jid. When it is a
     // LID we may also know the number behind it, so both identities are kept
-    // and either one matches an existing contact.
-    const [num, host] = ctx.remoteJid.split('@');
-    const lid = host === 'lid' ? num : null;
-    const phoneNumber = host === 'lid' ? (ctx.phoneNumber ?? null) : num;
+    // and either one matches an existing contact. Channels whose addresses are
+    // opaque provider ids carry their contact identity elsewhere and are not
+    // saved this way.
+    const wa = whatsappIdentity(ctx.remoteJid, ctx.phoneNumber);
+    if (!wa) return 'error';
+    const { lid, phoneNumber } = wa;
     const identities = [
       ...(lid ? [{ lid }] : []),
       ...(phoneNumber ? [{ phoneNumber }] : []),

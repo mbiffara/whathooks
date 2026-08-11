@@ -45,6 +45,9 @@ import { MailService } from '../mail/mail.service';
 import { agentActiveNow } from './agent-schedule';
 import { FlowEngineService } from './flow-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { addressLabel, isGroupAddress } from '../common/address';
+import { Channel } from '@prisma/client';
+import type { ChannelDriver } from '../channels/channel-driver';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { usePrismaAuthState } from './baileys-auth-state';
 
@@ -80,7 +83,12 @@ export interface InboundAutomationCtx {
 const OWN_SEND_TTL_MS = 60_000;
 
 @Injectable()
-export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
+export class ConnectionManagerService
+  implements OnModuleInit, OnModuleDestroy, ChannelDriver
+{
+  /** ChannelDriver: this class *is* the WhatsApp transport. */
+  readonly channel = Channel.WHATSAPP;
+
   private readonly log = new Logger(ConnectionManagerService.name);
   private readonly sessions = new Map<string, LiveSession>();
   private readonly groupNames = new Map<string, string>(); // jid -> subject
@@ -604,7 +612,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
 
     const organizationId = await this.orgIdOf(sessionId);
     const remoteJid = msg.key.remoteJid ?? 'unknown';
-    const isGroup = remoteJid.endsWith('@g.us');
+    const isGroup = isGroupAddress(remoteJid);
     const described = describeMessage(msg);
     await this.persistMessage({
       sessionId,
@@ -709,7 +717,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
   private async handleInbound(sessionId: string, msg: WAMessage) {
     const organizationId = await this.orgIdOf(sessionId);
     const remoteJid = msg.key.remoteJid ?? 'unknown';
-    const isGroup = remoteJid.endsWith('@g.us');
+    const isGroup = isGroupAddress(remoteJid);
 
     // Reactions attach to the message they target — no new row, no unread
     // bump, no preview change. An empty emoji means the reaction was removed.
@@ -1128,7 +1136,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
    * canonical JID (WhatsApp may normalize the number, e.g. AR mobile 549…).
    * Group JIDs pass through untouched — they can't be probed.
    */
-  async resolveJid(sessionId: string, to: string): Promise<string> {
+  async resolveAddress(sessionId: string, to: string): Promise<string> {
     const live = this.sessions.get(sessionId);
     if (!live) {
       throw new ServiceUnavailableException('Session is not connected');
@@ -1142,7 +1150,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     if (!hit?.exists) {
       throw new BadRequestException('This number is not on WhatsApp');
     }
-    this.log.log(`resolveJid on ${sessionId}: ${to} -> ${hit.jid}`);
+    this.log.log(`resolveAddress on ${sessionId}: ${to} -> ${hit.jid}`);
     // USync may answer with the contact's LID instead of the phone JID.
     // Keep the phone-number form: sends to @lid silently vanish on Baileys
     // rc13, and inbound threads are keyed by phone JID anyway.
@@ -1565,8 +1573,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
         }),
       ]);
       if (!owner) return;
-      const contact =
-        convo?.name ?? `+${(convo?.remoteJid ?? '').split('@')[0]}`;
+      const contact = addressLabel(convo?.remoteJid ?? '', convo?.name);
       const base = this.config
         .get<string>('WEB_ORIGIN', 'http://localhost:3000')
         .split(',')[0]
@@ -1610,8 +1617,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
           take: 20,
         }),
       ]);
-      const contact =
-        convo?.name ?? `+${(convo?.remoteJid ?? '').split('@')[0]}`;
+      const contact = addressLabel(convo?.remoteJid ?? '', convo?.name);
       const base = this.config
         .get<string>('WEB_ORIGIN', 'http://localhost:3000')
         .split(',')[0]
@@ -1720,7 +1726,7 @@ export class ConnectionManagerService implements OnModuleInit, OnModuleDestroy {
     mediaUrl?: string;
   }> {
     const preview = p.text || mediaLabel(p.type);
-    const isGroup = p.remoteJid.endsWith('@g.us');
+    const isGroup = isGroupAddress(p.remoteJid);
 
     const conversation = await this.prisma.conversation.upsert({
       where: {

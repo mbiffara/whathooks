@@ -49,6 +49,8 @@ const INBOX_GROUP_PREFIX = '🔒 Lead';
 import { QuotaService } from '../billing/quota.service';
 import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { addressIdentity, isGroupAddress } from '../common/address';
+import { ChannelRouterService } from '../channels/channel-router.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
 import { FlowEngineService } from '../whatsapp/flow-engine.service';
 
@@ -58,6 +60,7 @@ export class ConversationsService {
     private readonly prisma: PrismaService,
     private readonly media: MediaService,
     private readonly manager: ConnectionManagerService,
+    private readonly channels: ChannelRouterService,
     private readonly quota: QuotaService,
     private readonly flowEngine: FlowEngineService,
   ) {}
@@ -161,7 +164,7 @@ export class ConversationsService {
     });
     if (!session) throw new NotFoundException('Session not found');
 
-    const jid = await this.manager.resolveJid(dto.sessionId, dto.to);
+    const jid = await this.manager.resolveAddress(dto.sessionId, dto.to);
     const conversation = await this.prisma.conversation.upsert({
       where: {
         sessionId_remoteJid: { sessionId: dto.sessionId, remoteJid: jid },
@@ -170,7 +173,7 @@ export class ConversationsService {
         organizationId,
         sessionId: dto.sessionId,
         remoteJid: jid,
-        isGroup: jid.endsWith('@g.us'),
+        isGroup: isGroupAddress(jid),
         // Operators can only see assigned conversations — claim it for them.
         ...(assignedTo ? { assignedToUserId: assignedTo } : {}),
         // The inbox lists only conversations with lastMessageAt set; stamp it
@@ -543,9 +546,9 @@ export class ConversationsService {
       allowed,
       assignedTo,
     );
-    const r = await this.manager.sendText(c.sessionId, c.remoteJid, text, {
-      sentByUserId,
-    });
+    const r = await this.channels
+      .driverFor(c.channel)
+      .sendText(c.sessionId, c.remoteJid, text, { sentByUserId });
     return { id: r.messageId, waMessageId: r.waMessageId };
   }
 
@@ -565,13 +568,9 @@ export class ConversationsService {
       allowed,
       assignedTo,
     );
-    const r = await this.manager.sendMedia(
-      c.sessionId,
-      c.remoteJid,
-      file,
-      caption,
-      { sentByUserId },
-    );
+    const r = await this.channels
+      .driverFor(c.channel)
+      .sendMedia(c.sessionId, c.remoteJid, file, caption, { sentByUserId });
     return {
       id: r.messageId,
       waMessageId: r.waMessageId,
@@ -637,11 +636,13 @@ export class ConversationsService {
     if (
       !session ||
       session.status !== 'CONNECTED' ||
-      !this.manager.isLive(c.sessionId)
+      !this.channels.driverFor(session.channel).isLive(c.sessionId)
     ) {
       throw new BadRequestException('Session is not connected');
     }
-    return c;
+    // The channel rides along so the send paths below dispatch without
+    // re-reading the session row we already have here.
+    return { ...c, channel: session.channel };
   }
 
   private async requireConversation(
@@ -686,7 +687,7 @@ export class ConversationsService {
       remoteJid: redactNumbers ? null : c.remoteJid,
       // The raw addressing identity: a phone number, or a LID when WhatsApp
       // hides it. `phoneNumber` carries the real number in the LID case.
-      contact: redactNumbers ? null : c.remoteJid.split('@')[0],
+      contact: redactNumbers ? null : addressIdentity(c.remoteJid),
       phoneNumber: redactNumbers ? null : c.phoneNumber,
       name: c.name,
       isGroup: c.isGroup,

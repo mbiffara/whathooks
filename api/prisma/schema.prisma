@@ -760,6 +760,18 @@ model MediaAsset {
   createdAt       DateTime @default(now())
 }
 
+/// Provider event ids we have already processed. Zernio documents at-least-once
+/// delivery, and retries also arrive whenever an API deploy interrupts a
+/// response, so the same event id can land several times.
+model ExternalEvent {
+  id         String   @id // the provider's event id (Zernio sends a UUID)
+  provider   String // "zernio"
+  event      String // e.g. "message.received"
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
+}
+
 model WebhookDelivery {
   id             String      @id @default(cuid())
   webhookId      String

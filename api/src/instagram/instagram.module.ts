@@ -2,16 +2,25 @@ import { Module } from '@nestjs/common';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
+import { MessageStoreModule } from '../channels/message-store.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 import { InstagramController } from './instagram.controller';
+import { InstagramIngestService } from './instagram-ingest.service';
 import { InstagramService } from './instagram.service';
 import { InstagramWebhookController } from './instagram-webhook.controller';
 import { ZernioService } from './zernio.service';
 
 /** Instagram DMs via the Zernio API. */
 @Module({
-  imports: [AuthModule, ApiKeysModule, BillingModule],
+  imports: [
+    AuthModule,
+    ApiKeysModule,
+    BillingModule,
+    MessageStoreModule,
+    WebhooksModule,
+  ],
   controllers: [InstagramController, InstagramWebhookController],
-  providers: [InstagramService, ZernioService],
+  providers: [InstagramService, ZernioService, InstagramIngestService],
   exports: [ZernioService],
 })
 export class InstagramModule {}

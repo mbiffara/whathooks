@@ -70,6 +70,30 @@ describe('checkInstagramAttachment', () => {
     expect(checkInstagramAttachment('image/png').ok).toBe(true);
   });
 
+  it('returns kinds that are valid Meta attachment types', () => {
+    // `kind` is sent verbatim as `attachmentType`, which Zernio forwards to
+    // Meta's message[attachment][type]. Renaming any of these would make
+    // attachments silently arrive as downloadable files instead of rendering.
+    const META_TYPES = ['image', 'video', 'audio', 'file'];
+    for (const mime of [
+      'image/png',
+      'video/mp4',
+      'audio/wav',
+      'application/pdf',
+    ]) {
+      const v = checkInstagramAttachment(mime);
+      expect(v.ok).toBe(true);
+      if (!v.ok) return;
+      expect(META_TYPES).toContain(v.kind);
+    }
+  });
+
+  it('still rejects mp3 even though audio is a valid type', () => {
+    // Verified against the live API: MP3 fails with an explicit
+    // attachmentType=audio too, so this is a format rule, not a typing bug.
+    expect(checkInstagramAttachment('audio/mpeg').ok).toBe(false);
+  });
+
   it('rejects an unrelated type without a transcode hint', () => {
     const v = checkInstagramAttachment('application/zip');
     expect(v.ok).toBe(false);

@@ -18,8 +18,20 @@
  *
  * Failing here with a clear reason beats letting Meta reject it: the caller can
  * tell a human agent why their voice note did not arrive.
+ *
+ * **Always send the kind as `attachmentType`.** Zernio passes it straight
+ * through to Meta's `message[attachment][type]` (proven: an invalid value comes
+ * back as "Param message[attachment][type] is not supported"). Omit it and
+ * Zernio defaults to `file`, so a photo arrives in the customer's DMs as a
+ * downloadable document rather than an inline image, and a voice note as an
+ * unplayable attachment. It sends successfully either way, which is exactly why
+ * this is easy to ship without noticing.
  */
 
+/**
+ * Also the exact value Meta expects for `message[attachment][type]`, which is
+ * why these four names are not ours to rename.
+ */
 export type InstagramAttachmentKind = 'image' | 'video' | 'audio' | 'file';
 
 const MB = 1024 * 1024;

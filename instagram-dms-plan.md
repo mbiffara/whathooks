@@ -100,11 +100,14 @@ secret is in Secrets Manager at
 event type that is not in the subscribe list — the handler must ignore unknown `event` values rather
 than treating them as messages.
 
-**Signature:** the secret is *ours* — we supply it at registration and Zernio HMACs with it, so
-there is nothing to reverse-engineer. Delivery carries **two** 64-hex-character headers,
-`x-zernio-signature` and `x-late-signature`. 64 hex = 32 bytes = HMAC-SHA256, raw hex with no
-`sha256=` prefix and no timestamp-prefixed scheme. Confirm which header is authoritative (and what
-`x-late-signature` covers) by computing both against the raw body before enforcing.
+**Signature — resolved and enforced.** The secret is *ours*, supplied at registration. Delivery
+carries two 64-hex headers, `x-zernio-signature` and `x-late-signature`; both are **HMAC-SHA256 over
+the raw request body**, hex, no prefix, and in every observed delivery they were identical
+(`x-late-signature` reads as a duplicate/legacy alias, so it is accepted as a fallback, not trusted
+alone). Confirmed by running a report-only candidate matcher over a real `message.received` and
+`message.sent` — both reported `body→x-zernio-signature, body→x-late-signature` — and again by
+signing a body locally and having production accept it. Live behaviour now: unsigned → 403, correctly
+signed → 200. A missing `ZERNIO_WEBHOOK_SECRET` fails closed.
 
 ### The real `message.received`, and the id trap it hides
 

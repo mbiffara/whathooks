@@ -142,6 +142,23 @@ export class FlowsService {
         data: { sessionId: null, enabled: false },
       });
     }
+    // Moving a LIVE flow to another channel can invalidate it: the new
+    // session may not be able to run nodes the old one could. Enabling
+    // already checks this, so without the same check here a flow could be
+    // enabled on WhatsApp and then quietly moved somewhere it cannot work.
+    if (flow.enabled) {
+      const errors = validateGraph(
+        flow.graph,
+        await this.refsFor(organizationId, sessionId),
+      );
+      if (errors.length > 0) {
+        throw invalidGraph(
+          errors,
+          'This flow is live and cannot run on that account: ',
+        );
+      }
+    }
+
     const updated = await this.prisma.flow.update({
       where: { id },
       data: { sessionId },
@@ -177,7 +194,7 @@ export class FlowsService {
    */
   async saveGraph(organizationId: string, id: string, graph: unknown) {
     const flow = await this.get(organizationId, id);
-    const refs = await this.refsFor(organizationId);
+    const refs = await this.refsFor(organizationId, flow.sessionId);
     const errors = validateGraph(graph, refs);
     if (errors.length > 0 && flow.enabled) {
       throw invalidGraph(errors, 'This flow is live, so it must stay valid: ');
@@ -203,7 +220,7 @@ export class FlowsService {
       // Refuse to enable a graph that no longer validates (refs deleted).
       const errors = validateGraph(
         flow.graph,
-        await this.refsFor(organizationId),
+        await this.refsFor(organizationId, flow.sessionId),
       );
       if (errors.length > 0) {
         throw invalidGraph(errors, 'Fix the flow before enabling: ');
@@ -342,14 +359,35 @@ export class FlowsService {
     };
   }
 
-  private async refsFor(organizationId: string): Promise<FlowGraphRefs> {
+  /**
+   * @param sessionId the flow's session, when it has one. Supplying it turns
+   * on the channel-capability checks; a detached draft is validated without
+   * them, because it is not yet answering anything.
+   */
+  private async refsFor(
+    organizationId: string,
+    sessionId?: string | null,
+  ): Promise<FlowGraphRefs> {
     const r = await this.references(organizationId);
+    const [session, whatsappCount] = await Promise.all([
+      sessionId
+        ? this.prisma.waSession.findUnique({
+            where: { id: sessionId },
+            select: { channel: true },
+          })
+        : Promise.resolve(null),
+      this.prisma.waSession.count({
+        where: { organizationId, channel: 'WHATSAPP' },
+      }),
+    ]);
     return {
       agentIds: new Set(r.agents.map((a) => a.id)),
       humanAgentIds: new Set(r.humanAgents.map((h) => h.id)),
       webhookIds: new Set(r.webhooks.map((w) => w.id)),
       tagIds: new Set(r.tags.map((t) => t.id)),
       memberIds: new Set(r.members.map((m) => m.id)),
+      channel: session?.channel,
+      hasWhatsappNumber: whatsappCount > 0,
     };
   }
 }

@@ -936,7 +936,8 @@
         "edgeUnknownTarget": "Conexión hacia un nodo desconocido \"{id}\"",
         "edgeDupeHandle": "Dos conexiones salen de la misma salida \"{handle}\"",
         "edgeFromTerminal": "Este nodo termina el flow y no puede tener salidas",
-        "edgeBadHandle": "La salida \"{handle}\" no es una de: {allowed}"
+        "nodeNeedsWhatsapp": "Necesita un número de WhatsApp: los grupos de derivación son grupos de WhatsApp",
+      "edgeBadHandle": "La salida \"{handle}\" no es una de: {allowed}"
       }
     }
   },

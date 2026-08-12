@@ -936,7 +936,8 @@
         "edgeUnknownTarget": "Connection to unknown node \"{id}\"",
         "edgeDupeHandle": "Two connections leave the same output \"{handle}\"",
         "edgeFromTerminal": "This node ends the flow and cannot have outputs",
-        "edgeBadHandle": "Output \"{handle}\" is not one of: {allowed}"
+        "nodeNeedsWhatsapp": "Needs a WhatsApp number: handoff groups are WhatsApp groups",
+      "edgeBadHandle": "Output \"{handle}\" is not one of: {allowed}"
       }
     }
   },

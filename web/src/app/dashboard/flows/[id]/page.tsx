@@ -85,6 +85,7 @@ const VALIDATION_CODES = new Set([
   "edgeDupeHandle",
   "edgeFromTerminal",
   "edgeBadHandle",
+  "nodeNeedsWhatsapp",
 ]);
 
 /** The structured findings of a 400 graph-validation response, if any. */

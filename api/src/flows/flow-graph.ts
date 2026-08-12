@@ -4,6 +4,12 @@
  * editor produces it: { nodes: [{id,type,position,data}], edges: [...] }.
  */
 
+import type { Channel } from '@prisma/client';
+import {
+  GROUP_HANDOFF_NODES,
+  capabilitiesOf,
+} from '../common/channel-capabilities';
+
 export const FLOW_NODE_TYPES = [
   'trigger',
   'keyword',
@@ -67,6 +73,18 @@ export interface FlowGraphRefs {
   webhookIds: Set<string>;
   tagIds: Set<string>;
   memberIds: Set<string>;
+  /**
+   * The channel this flow's session runs on. Omitted by the simulator and by
+   * callers validating a detached draft, where there is no session yet.
+   */
+  channel?: Channel;
+  /**
+   * Whether the organization has any WhatsApp number. Group handoff on a
+   * channel that cannot host groups borrows one, so without it those nodes
+   * cannot run — and finding that out mid-conversation is the failure this
+   * check exists to prevent.
+   */
+  hasWhatsappNumber?: boolean;
 }
 
 const MAX_NODES = 50;
@@ -464,6 +482,24 @@ export function validateGraph(
         e.source,
         { handle, allowed: allowed.join(', ') },
       );
+    }
+  }
+
+  // Channel capability. Only checked when the caller knows the channel: a
+  // detached draft and the simulator have no session, and refusing them would
+  // block editing a flow before it is attached to anything.
+  if (refs.channel) {
+    const caps = capabilitiesOf(refs.channel);
+    if (!caps.hostsGroups && refs.hasWhatsappNumber === false) {
+      for (const n of g.nodes ?? []) {
+        if (!GROUP_HANDOFF_NODES.includes(n.type)) continue;
+        push(
+          'nodeNeedsWhatsapp',
+          `Node "${n.id}": handing off to a group needs a WhatsApp number, because mirror groups are WhatsApp groups. Connect one, or use a different step.`,
+          n.id,
+          { channel: refs.channel },
+        );
+      }
     }
   }
 

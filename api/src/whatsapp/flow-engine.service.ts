@@ -600,7 +600,10 @@ export class FlowEngineService {
     );
     // Optionally seed the group with the conversation so far, so the human
     // has context before the triggering message arrives. Best-effort.
-    if ((node.data.copyHistory as boolean) ?? false) {
+    // Defaults ON: a human taking over a conversation almost always wants to
+    // see it, and the inbox's own mirror dialog has defaulted to copying since
+    // it shipped. Only an explicit false (the box was unticked) skips it.
+    if ((node.data.copyHistory as boolean) ?? true) {
       const transcript = await this.historyTranscript(
         ctx.conversationId,
         showLeadName ? ctx.pushName : null,

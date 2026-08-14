@@ -81,6 +81,12 @@ export class ApiKeysController {
     return { scopes: API_KEY_SCOPES };
   }
 
+  /** Permanently remove a revoked key. Live keys must be revoked first. */
+  @Delete(':id/permanent')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.apiKeys.remove(this.orgOf(user), id);
+  }
+
   @Delete(':id')
   revoke(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.apiKeys.revoke(this.orgOf(user), id);

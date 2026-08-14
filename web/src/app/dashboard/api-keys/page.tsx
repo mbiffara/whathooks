@@ -68,6 +68,20 @@ export default function ApiKeysPage() {
     load();
   }
 
+  /** Permanent, and only offered once a key is revoked. */
+  async function remove(id: string) {
+    if (!token || !confirm(t("deleteConfirm"))) return;
+    setError(null);
+    try {
+      await apiClient(`/api-keys/${id}/permanent`, token, {
+        method: "DELETE",
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
+    }
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -143,7 +157,11 @@ export default function ApiKeysPage() {
                     : t("neverUsed")}
                 </div>
               </div>
-              {!k.revokedAt && (
+              {k.revokedAt ? (
+                <button onClick={() => remove(k.id)} className="btn-danger">
+                  {t("delete")}
+                </button>
+              ) : (
                 <button onClick={() => revoke(k.id)} className="btn-danger">
                   {t("revoke")}
                 </button>

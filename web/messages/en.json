@@ -183,6 +183,8 @@
       "generateKey": "Generate key",
       "newKeyNotice": "Your new API key. Copy it now, it won’t be shown again:",
       "revoked": "revoked",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this revoked key for good? It disappears from the list; anything still sending it will keep failing to authenticate either way.",
       "lastUsed": "Last used {date}",
       "neverUsed": "Never used",
       "noKeys": "No API keys yet.",

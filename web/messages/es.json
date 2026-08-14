@@ -183,6 +183,8 @@
       "generateKey": "Generar clave",
       "newKeyNotice": "Tu nueva clave API. Cópiala ahora, no se volverá a mostrar:",
       "revoked": "revocada",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Eliminar definitivamente esta clave revocada? Desaparece de la lista; lo que la siga enviando va a seguir fallando igual.",
       "lastUsed": "Último uso: {date}",
       "neverUsed": "Nunca usada",
       "noKeys": "Aún no hay claves API.",

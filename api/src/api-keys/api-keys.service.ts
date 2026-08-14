@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiKey } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
@@ -66,6 +70,27 @@ export class ApiKeysService {
       where: { id },
       data: { revokedAt: new Date() },
     });
+    return { ok: true };
+  }
+
+  /**
+   * Permanently remove a key.
+   *
+   * Only a revoked one. Hard-deleting a live key would silently break
+   * whatever is using it with nothing left to explain why — revoking first
+   * makes that a deliberate two-step, and leaves the row visible in the
+   * meantime so someone can notice the integration go quiet and put it back.
+   */
+  async remove(organizationId: string, id: string) {
+    const key = await this.prisma.apiKey.findFirst({
+      where: { id, organizationId },
+      select: { id: true, revokedAt: true },
+    });
+    if (!key) throw new NotFoundException('API key not found');
+    if (!key.revokedAt) {
+      throw new BadRequestException('Revoke the key before deleting it');
+    }
+    await this.prisma.apiKey.delete({ where: { id } });
     return { ok: true };
   }
 

@@ -1337,7 +1337,7 @@
     "sendingTo": "The <pill>to</pill> field accepts a bare phone number (digits only, with country code, no <pill>+</pill>) or a full WhatsApp JID. The target session must be <pill>CONNECTED</pill> or the request returns <pill>400</pill>.",
     "sendingSuccess": "A successful request responds with the queued message:",
     "apiRefTitle": "API reference",
-    "apiRefIntro": "Base URL in production: <pill>https://api.whathooks.com/v1</pill>. Dashboard requests use a <hl>JWT</hl> (from <pill>/v1/auth/login</pill>), while programmatic requests use an <hl>API key</hl>.",
+    "apiRefIntro": "Base URL in production: <pill>https://api.whathooks.app/v1</pill>. Dashboard requests use a <hl>JWT</hl> (from <pill>/v1/auth/login</pill>), while programmatic requests use an <hl>API key</hl>.",
     "methodCol": "Method",
     "pathCol": "Path",
     "authCol": "Auth",

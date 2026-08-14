@@ -17,7 +17,7 @@ X-Whathooks-Signature: sha256=2f7a…
   "timestamp": "2026-08-07T12:00:00.000Z"
 }`;
 
-const sendSnippet = `curl -X POST https://api.whathooks.com/v1/messages \\
+const sendSnippet = `curl -X POST https://api.whathooks.app/v1/messages \\
   -H "X-API-Key: wh_live_xxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{ "sessionId": "sess_8f2a…",

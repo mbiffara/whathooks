@@ -1337,7 +1337,7 @@
     "sendingTo": "El campo <pill>to</pill> acepta un número de teléfono simple (solo dígitos, con código de país, sin <pill>+</pill>) o un JID completo de WhatsApp. La sesión de destino debe estar <pill>CONNECTED</pill> o la petición devuelve <pill>400</pill>.",
     "sendingSuccess": "Una petición exitosa responde con el mensaje en cola:",
     "apiRefTitle": "Referencia de la API",
-    "apiRefIntro": "URL base en producción: <pill>https://api.whathooks.com/v1</pill>. Las peticiones del dashboard usan un <hl>JWT</hl> (de <pill>/v1/auth/login</pill>), mientras que las peticiones programáticas usan una <hl>clave API</hl>.",
+    "apiRefIntro": "URL base en producción: <pill>https://api.whathooks.app/v1</pill>. Las peticiones del dashboard usan un <hl>JWT</hl> (de <pill>/v1/auth/login</pill>), mientras que las peticiones programáticas usan una <hl>clave API</hl>.",
     "methodCol": "Método",
     "pathCol": "Ruta",
     "authCol": "Autenticación",

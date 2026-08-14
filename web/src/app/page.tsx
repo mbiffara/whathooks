@@ -23,7 +23,7 @@ const inboundPayload = `{
   "timestamp": 1751212800
 }`;
 
-const replySnippet = `curl -X POST https://api.whathooks.com/v1/messages \\
+const replySnippet = `curl -X POST https://api.whathooks.app/v1/messages \\
   -H "X-API-Key: wh_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{

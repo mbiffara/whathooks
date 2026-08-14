@@ -70,14 +70,14 @@ function verifySignature(rawBody, header, secret) {
 }`;
 
 const embedQrExample = `# 1. Create a session (starts pairing, a QR is generated)
-curl -X POST https://api.whathooks.com/v1/sessions \\
+curl -X POST https://api.whathooks.app/v1/sessions \\
   -H "X-API-Key: wh_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{ "label": "customer-42" }'
 # → { "id": "sess_8f2k19a7", "status": "PENDING", ... }
 
 # 2. Poll until status is "QR", then embed the code in your UI
-curl https://api.whathooks.com/v1/sessions/sess_8f2k19a7 \\
+curl https://api.whathooks.app/v1/sessions/sess_8f2k19a7 \\
   -H "X-API-Key: wh_live_..."
 # → { "status": "QR", "qrDataUrl": "data:image/png;base64,...", ... }
 
@@ -135,7 +135,7 @@ const mediaExample = `"type": "IMAGE",
   "fileName": "photo.jpg"
 }`;
 
-const sendCurl = `curl -X POST https://api.whathooks.com/v1/messages \\
+const sendCurl = `curl -X POST https://api.whathooks.app/v1/messages \\
   -H "X-API-Key: wh_live_xxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{

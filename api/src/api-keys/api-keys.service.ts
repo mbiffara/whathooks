@@ -23,7 +23,24 @@ export class ApiKeysService {
     return keys.map((k) => this.toPublic(k));
   }
 
-  async create(organizationId: string, name: string) {
+  async create(
+    organizationId: string,
+    name: string,
+    grant: { scopes: string[]; sessionIds: string[] } = {
+      scopes: [],
+      sessionIds: [],
+    },
+  ) {
+    // Session ids must belong to this org, or a key could be pinned to
+    // another tenant's session and leak its existence through the allow-list.
+    if (grant.sessionIds.length > 0) {
+      const owned = await this.prisma.waSession.count({
+        where: { organizationId, id: { in: grant.sessionIds } },
+      });
+      if (owned !== grant.sessionIds.length) {
+        throw new NotFoundException('Session not found');
+      }
+    }
     const prefix = this.config.get<string>('API_KEY_PREFIX', 'wh_live');
     const token = `${prefix}_${randomBytes(24).toString('hex')}`;
     const key = await this.prisma.apiKey.create({
@@ -32,6 +49,8 @@ export class ApiKeysService {
         name,
         hashedKey: hashToken(token),
         prefix: `${token.slice(0, 16)}…`,
+        scopes: grant.scopes,
+        sessionIds: grant.sessionIds,
       },
     });
     // Full token shown only once.
@@ -51,9 +70,13 @@ export class ApiKeysService {
   }
 
   /** Resolve a raw token to its (active) organization, or null. */
-  async resolve(
-    token: string,
-  ): Promise<{ organizationId: string; apiKeyId: string } | null> {
+  async resolve(token: string): Promise<{
+    organizationId: string;
+    apiKeyId: string;
+    scopes: string[];
+    /** Empty = every session in the org. */
+    sessionIds: string[];
+  } | null> {
     const key = await this.prisma.apiKey.findUnique({
       where: { hashedKey: hashToken(token) },
     });
@@ -62,7 +85,12 @@ export class ApiKeysService {
     void this.prisma.apiKey
       .update({ where: { id: key.id }, data: { lastUsedAt: new Date() } })
       .catch(() => undefined);
-    return { organizationId: key.organizationId, apiKeyId: key.id };
+    return {
+      organizationId: key.organizationId,
+      apiKeyId: key.id,
+      scopes: key.scopes,
+      sessionIds: key.sessionIds,
+    };
   }
 
   private toPublic(k: ApiKey) {
@@ -70,6 +98,8 @@ export class ApiKeysService {
       id: k.id,
       name: k.name,
       prefix: k.prefix,
+      scopes: k.scopes,
+      sessionIds: k.sessionIds,
       lastUsedAt: k.lastUsedAt,
       revokedAt: k.revokedAt,
       createdAt: k.createdAt,

@@ -17,6 +17,8 @@ import { SessionAccessService } from '../auth/session-access.service';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MessagesService } from './messages.service';
+import { RequireScopes } from '../api-keys/scopes';
+import { ApiKeySessions } from '../api-keys/api-key-sessions.decorator';
 
 @Controller('messages')
 export class MessagesController {
@@ -27,14 +29,29 @@ export class MessagesController {
 
   /** Programmatic send — authenticated with an API key. */
   @UseGuards(ApiKeyGuard)
+  @RequireScopes('messages:write')
   @Post()
-  send(@ApiOrg() organizationId: string, @Body() dto: SendMessageDto) {
+  async send(
+    @ApiOrg() organizationId: string,
+    @Body() dto: SendMessageDto,
+    @ApiKeySessions() keySessions?: string[],
+  ) {
+    // A key pinned to particular sessions must not be able to send from the
+    // others. This is the only route where that restriction has teeth, so
+    // without it the allow-list would be decorative.
+    await this.access.assertSessionAllowed(
+      undefined,
+      organizationId,
+      dto.sessionId,
+      keySessions,
+    );
     return this.messages.send(organizationId, dto);
   }
 
   /** Dashboard message log — authenticated with the user session (JWT). */
   @UseGuards(JwtAuthGuard, OrgRolesGuard)
   @OrgRoles('MEMBER') // management surface — hidden from OPERATOR
+  @RequireScopes('messages:read')
   @Get()
   list(
     @CurrentUser() user: AuthUser,

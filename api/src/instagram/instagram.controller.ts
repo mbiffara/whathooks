@@ -14,6 +14,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { ApiOrg } from '../common/decorators/org.decorator';
 import { OrgRoles } from '../common/decorators/org-roles.decorator';
 import { InstagramService } from './instagram.service';
+import { RequireScopes } from '../api-keys/scopes';
 
 class AdoptProfileDto {
   /** Zernio profile id (24-char ObjectId). */
@@ -40,6 +41,7 @@ export class InstagramController {
   constructor(private readonly instagram: InstagramService) {}
 
   /** Start the OAuth flow. Requires a paid, unused seat. */
+  @RequireScopes('instagram:write')
   @Post('connect')
   connect(@ApiOrg() organizationId: string, @Body() dto: ConnectInstagramDto) {
     return this.instagram.beginConnect(organizationId, dto.label);
@@ -50,6 +52,7 @@ export class InstagramController {
    * customer returns from Zernio's redirect — the OAuth callback lands on
    * Zernio, so nothing of ours observes the completion directly.
    */
+  @RequireScopes('instagram:write')
   @Post('reconcile')
   reconcile(@ApiOrg() organizationId: string) {
     return this.instagram.reconcile(organizationId);
@@ -62,11 +65,13 @@ export class InstagramController {
    */
   @Roles('ADMIN')
   @UseGuards(RolesGuard)
+  @RequireScopes('instagram:write')
   @Post('adopt-profile')
   adopt(@ApiOrg() organizationId: string, @Body() dto: AdoptProfileDto) {
     return this.instagram.adoptProfile(organizationId, dto.profileId);
   }
 
+  @RequireScopes('instagram:write')
   @Delete(':id')
   async disconnect(
     @ApiOrg() organizationId: string,

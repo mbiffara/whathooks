@@ -576,6 +576,14 @@ model ApiKey {
   name           String
   hashedKey      String       @unique // sha-256 of the secret token
   prefix         String // first chars shown in UI, e.g. "wh_live_Abc…"
+  // What this key may do, as "<resource>:<action>" (see API_KEY_SCOPES).
+  // Keys created before scoping was added were backfilled with every scope,
+  // because narrowing an existing credential would break live integrations
+  // with no warning.
+  scopes         String[]     @default([])
+  // Sessions this key may act on; empty = every session in the org. Same
+  // shape and meaning as Membership.sessionIds.
+  sessionIds     String[]     @default([])
   lastUsedAt     DateTime?
   revokedAt      DateTime?
   createdAt      DateTime     @default(now())

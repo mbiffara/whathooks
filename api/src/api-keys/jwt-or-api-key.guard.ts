@@ -4,8 +4,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Reflector } from '@nestjs/core';
+import { ForbiddenException } from '@nestjs/common';
 import type { Request } from 'express';
 import { ApiKeysService } from './api-keys.service';
+import { SCOPES_KEY, type ApiKeyScope } from './scopes';
 
 /**
  * Accepts either a dashboard JWT or a programmatic API key on the same route.
@@ -18,7 +21,10 @@ import { ApiKeysService } from './api-keys.service';
  */
 @Injectable()
 export class JwtOrApiKeyGuard extends AuthGuard('jwt') {
-  constructor(private readonly apiKeys: ApiKeysService) {
+  constructor(
+    private readonly apiKeys: ApiKeysService,
+    private readonly reflector: Reflector,
+  ) {
     super();
   }
 
@@ -27,6 +33,7 @@ export class JwtOrApiKeyGuard extends AuthGuard('jwt') {
       Request & {
         organizationId?: string;
         apiKeyId?: string;
+        apiKeySessionIds?: string[];
         user?: { organizationId?: string | null };
       }
     >();
@@ -43,8 +50,28 @@ export class JwtOrApiKeyGuard extends AuthGuard('jwt') {
     if (apiKey) {
       const resolved = await this.apiKeys.resolve(apiKey);
       if (!resolved) throw new UnauthorizedException('Invalid API key');
+
+      // Scopes gate the credential, not the person. A route with no
+      // @RequireScopes stays open to any valid key, so annotating is additive
+      // and an un-annotated route cannot start failing.
+      const required =
+        this.reflector.getAllAndOverride<ApiKeyScope[] | undefined>(
+          SCOPES_KEY,
+          [context.getHandler(), context.getClass()],
+        ) ?? [];
+      const missing = required.filter((s) => !resolved.scopes.includes(s));
+      if (missing.length > 0) {
+        throw new ForbiddenException(
+          `This API key is missing the ${missing.join(', ')} scope(s).`,
+        );
+      }
+
       req.organizationId = resolved.organizationId;
       req.apiKeyId = resolved.apiKeyId;
+      // Empty means unrestricted, matching Membership.sessionIds.
+      req.apiKeySessionIds = resolved.sessionIds.length
+        ? resolved.sessionIds
+        : undefined;
       return true;
     }
 

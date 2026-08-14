@@ -3,9 +3,13 @@ import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * Per-member session access. A MEMBER whose membership carries a non-empty
- * `sessionIds` list only sees those sessions; owners, org admins, platform
- * ADMINs, and API-key requests (no user) are never restricted.
+ * Per-member and per-key session access.
+ *
+ * A MEMBER whose membership carries a non-empty `sessionIds` list only sees
+ * those sessions; owners, org admins and platform ADMINs are never
+ * restricted. An API key may carry its own allow-list, which is why the
+ * caller passes one in: the service cannot see the request, and inventing a
+ * second restriction path would mean every consumer had to remember both.
  */
 @Injectable()
 export class SessionAccessService {
@@ -15,8 +19,12 @@ export class SessionAccessService {
   async restrictedSessionIds(
     user: AuthUser | undefined,
     organizationId: string,
+    /** The API key's allow-list, when the request came from one. */
+    keySessionIds?: string[],
   ): Promise<string[] | null> {
-    if (!user) return null; // API-key request — org-level credential
+    // An API-key request has no user. Unscoped keys stay unrestricted, which
+    // is what every key was before scoping existed.
+    if (!user) return keySessionIds?.length ? keySessionIds : null;
     if (user.role === 'ADMIN') return null; // platform admin / support mode
     const membership = await this.prisma.membership.findUnique({
       where: {
@@ -38,8 +46,13 @@ export class SessionAccessService {
     user: AuthUser | undefined,
     organizationId: string,
     sessionId: string,
+    keySessionIds?: string[],
   ): Promise<void> {
-    const allowed = await this.restrictedSessionIds(user, organizationId);
+    const allowed = await this.restrictedSessionIds(
+      user,
+      organizationId,
+      keySessionIds,
+    );
     if (allowed && !allowed.includes(sessionId)) {
       throw new NotFoundException('Session not found');
     }

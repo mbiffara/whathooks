@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
+import { RequireScopes } from '../api-keys/scopes';
+import { ApiKeySessions } from '../api-keys/api-key-sessions.decorator';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { SessionAccessService } from '../auth/session-access.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -51,38 +53,50 @@ export class SessionsController {
     return organizationId;
   }
 
+  @RequireScopes('sessions:read')
   @Get()
   async list(
     @ApiOrg() org: string | undefined,
     @CurrentUser() user?: AuthUser,
+    @ApiKeySessions() keySessions?: string[],
   ) {
     const organizationId = this.orgOf(org);
     const allowed = await this.access.restrictedSessionIds(
       user,
       organizationId,
+      keySessions,
     );
     return this.whatsapp.list(organizationId, allowed);
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('sessions:write')
   @Post()
   create(@ApiOrg() org: string | undefined, @Body() dto: CreateSessionDto) {
     return this.whatsapp.create(this.orgOf(org), dto.label);
   }
 
   @OrgRoles('MEMBER') // detail is management; operators only need the list
+  @RequireScopes('sessions:read')
   @Get(':id')
   async get(
     @ApiOrg() org: string | undefined,
     @Param('id') id: string,
     @CurrentUser() user?: AuthUser,
+    @ApiKeySessions() keySessions?: string[],
   ) {
     const organizationId = this.orgOf(org);
-    await this.access.assertSessionAllowed(user, organizationId, id);
+    await this.access.assertSessionAllowed(
+      user,
+      organizationId,
+      id,
+      keySessions,
+    );
     return this.whatsapp.get(organizationId, id);
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('sessions:write')
   @Patch(':id')
   update(
     @ApiOrg() org: string | undefined,
@@ -93,43 +107,55 @@ export class SessionsController {
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('sessions:write')
   @Post(':id/share')
   share(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.whatsapp.createShareLink(this.orgOf(org), id);
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('sessions:write')
   @Delete(':id/share')
   unshare(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.whatsapp.revokeShareLink(this.orgOf(org), id);
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('sessions:write')
   @Post(':id/connect')
   connect(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.whatsapp.connect(this.orgOf(org), id);
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('sessions:write')
   @Post(':id/logout')
   logout(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.whatsapp.logout(this.orgOf(org), id);
   }
 
   @OrgRoles('MEMBER')
+  @RequireScopes('sessions:write')
   @Post(':id/test-message')
   async testMessage(
     @ApiOrg() org: string | undefined,
     @Param('id') id: string,
     @Body() dto: TestMessageDto,
     @CurrentUser() user?: AuthUser,
+    @ApiKeySessions() keySessions?: string[],
   ) {
     const organizationId = this.orgOf(org);
-    await this.access.assertSessionAllowed(user, organizationId, id);
+    await this.access.assertSessionAllowed(
+      user,
+      organizationId,
+      id,
+      keySessions,
+    );
     return this.whatsapp.sendTest(organizationId, id, dto.to, dto.text);
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('sessions:write')
   @Delete(':id')
   remove(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.whatsapp.remove(this.orgOf(org), id);

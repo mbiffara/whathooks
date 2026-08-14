@@ -18,6 +18,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
+import { RequireScopes } from '../api-keys/scopes';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { ApiOrg } from '../common/decorators/org.decorator';
 import { OrgRoles } from '../common/decorators/org-roles.decorator';
@@ -99,18 +100,21 @@ export class MirrorController {
 
   // ---- human agents ----
 
+  @RequireScopes('mirror:read')
   @Get('human-agents')
   listAgents(@ApiOrg() org: string | undefined) {
     return this.mirror.listAgents(this.orgOf(org));
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('mirror:write')
   @Post('human-agents')
   createAgent(@ApiOrg() org: string | undefined, @Body() dto: CreateAgentDto) {
     return this.mirror.createAgent(this.orgOf(org), dto);
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('mirror:write')
   @Patch('human-agents/:id')
   updateAgent(
     @ApiOrg() org: string | undefined,
@@ -121,6 +125,7 @@ export class MirrorController {
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('mirror:write')
   @Delete('human-agents/:id')
   deleteAgent(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.mirror.deleteAgent(this.orgOf(org), id);
@@ -128,18 +133,21 @@ export class MirrorController {
 
   // ---- mirror links ----
 
+  @RequireScopes('mirror:read')
   @Get('mirror-links')
   listLinks(@ApiOrg() org: string | undefined) {
     return this.mirror.listLinks(this.orgOf(org));
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('mirror:write')
   @Post('mirror-links')
   createLink(@ApiOrg() org: string | undefined, @Body() dto: CreateLinkDto) {
     return this.mirror.createLink(this.orgOf(org), dto);
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('mirror:write')
   @Patch('mirror-links/:id')
   updateLink(
     @ApiOrg() org: string | undefined,
@@ -150,11 +158,13 @@ export class MirrorController {
   }
 
   @OrgRoles('ADMIN')
+  @RequireScopes('mirror:write')
   @Delete('mirror-links/:id')
   deleteLink(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.mirror.deleteLink(this.orgOf(org), id);
   }
 
+  @RequireScopes('mirror:read')
   @Get('mirror-links/:id/threads')
   listThreads(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.mirror.listThreads(this.orgOf(org), id);
@@ -163,12 +173,14 @@ export class MirrorController {
   // ---- mirrored conversations ----
 
   /** Every live mirror in the org, whatever opened it. */
+  @RequireScopes('mirror:read')
   @Get('mirror-threads')
   listAllThreads(@ApiOrg() org: string | undefined) {
     return this.mirror.listAllThreads(this.orgOf(org));
   }
 
   /** Operational, not config — same bar as removing a mirror from the inbox. */
+  @RequireScopes('mirror:write')
   @Delete('mirror-threads/:id')
   removeThread(@ApiOrg() org: string | undefined, @Param('id') id: string) {
     return this.mirror.removeThread(this.orgOf(org), id);

@@ -139,11 +139,18 @@ export interface WebhookDelivery {
   createdAt: string;
 }
 
+/** "<resource>:<action>", e.g. "messages:write". */
+export type ApiKeyScope = string;
+
 export interface ApiKey {
   id: string;
   name: string;
   prefix: string;
   token?: string;
+  /** What this key may do. Keys predating scopes carry all of them. */
+  scopes: ApiKeyScope[];
+  /** Sessions it may act on; empty = all of them. */
+  sessionIds: string[];
   lastUsedAt: string | null;
   revokedAt: string | null;
   createdAt: string;

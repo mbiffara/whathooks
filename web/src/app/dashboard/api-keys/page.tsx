@@ -1,7 +1,8 @@
 "use client";
 
+import { ApiKeyForm } from "@/components/api-key-form";
 import { apiClient } from "@/lib/client-api";
-import type { ApiKey } from "@/lib/types";
+import type { ApiKey, WaSession } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
@@ -12,7 +13,8 @@ export default function ApiKeysPage() {
   const { data: auth } = useSession();
   const token = auth?.accessToken;
   const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [name, setName] = useState("");
+  const [sessions, setSessions] = useState<WaSession[]>([]);
+  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newToken, setNewToken] = useState<string | null>(null);
@@ -21,6 +23,11 @@ export default function ApiKeysPage() {
     if (!token) return;
     try {
       setKeys(await apiClient<ApiKey[]>("/api-keys", token));
+      // Best-effort: without them the session picker is simply absent, which
+      // means "all sessions" and is the pre-scoping behaviour anyway.
+      setSessions(
+        await apiClient<WaSession[]>("/sessions", token).catch(() => []),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : tc("failedToLoad"));
     } finally {
@@ -32,21 +39,26 @@ export default function ApiKeysPage() {
     load();
   }, [load]);
 
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
-    if (!token || !name.trim()) return;
+  async function create(v: {
+    name: string;
+    scopes: string[];
+    sessionIds: string[];
+  }) {
+    if (!token) return;
     setError(null);
     setNewToken(null);
+    setBusy(true);
     try {
       const created = await apiClient<ApiKey>("/api-keys", token, {
         method: "POST",
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify(v),
       });
       setNewToken(created.token ?? null);
-      setName("");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : tc("failedToCreate"));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -68,23 +80,7 @@ export default function ApiKeysPage() {
         </p>
       </div>
 
-      <form
-        onSubmit={create}
-        className="card flex flex-col gap-3 sm:flex-row sm:items-end"
-      >
-        <div className="flex-1">
-          <label className="label">{t("keyName")}</label>
-          <input
-            className="input"
-            placeholder={t("keyNamePlaceholder")}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-        <button type="submit" className="btn-primary" disabled={!name.trim()}>
-          {t("generateKey")}
-        </button>
-      </form>
+      <ApiKeyForm sessions={sessions} busy={busy} onCreate={create} />
 
       {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
       {newToken && (
@@ -120,6 +116,24 @@ export default function ApiKeysPage() {
                 </div>
                 <div className="mt-1 font-mono text-sm text-[var(--color-muted)]">
                   {k.prefix}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {k.scopes?.length ? (
+                    k.scopes.map((sc) => (
+                      <span key={sc} className="pill text-xs">
+                        {sc}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="pill text-xs text-[var(--color-danger)]">
+                      {t("noScopes")}
+                    </span>
+                  )}
+                  {k.sessionIds?.length > 0 && (
+                    <span className="pill text-xs">
+                      {t("limitedToSessions", { n: k.sessionIds.length })}
+                    </span>
+                  )}
                 </div>
                 <div className="mt-1 text-xs text-[var(--color-muted)]">
                   {k.lastUsedAt

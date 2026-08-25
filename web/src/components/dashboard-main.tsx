@@ -1,5 +1,6 @@
 "use client";
 
+import { PaymentDueAlert } from "@/components/payment-due-alert";
 import { usePathname } from "next/navigation";
 
 /**
@@ -19,7 +20,10 @@ export function DashboardMain({ children }: { children: React.ReactNode }) {
       {fullBleed ? (
         children
       ) : (
-        <div className="mx-auto max-w-5xl px-8 py-10">{children}</div>
+        <div className="mx-auto max-w-5xl px-8 py-10">
+          <PaymentDueAlert />
+          {children}
+        </div>
       )}
     </main>
   );

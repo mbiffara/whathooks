@@ -19,6 +19,7 @@ import {
   isAddonPriceId,
   planForPriceId,
   planRequiresSubscription,
+  pastDueAccess,
 } from './plans';
 import { QuotaService } from './quota.service';
 
@@ -80,9 +81,12 @@ export class BillingService {
         currentPeriodEnd: true,
         stripeCustomerId: true,
         instagramSeats: true,
+        firstPaidAt: true,
+        pastDueSince: true,
       },
     });
     if (!org) throw new NotFoundException('Organization not found');
+    const pastDue = pastDueAccess(org, new Date());
     const usage = await this.quota.messageUsage(organizationId);
     const aiTokens = await this.quota.aiTokenUsage(organizationId);
     // `plan` alone is not "has a plan": new orgs default to STARTER with no
@@ -97,6 +101,13 @@ export class BillingService {
       status: org.subscriptionStatus,
       subscribed,
       currentPeriodEnd: org.currentPeriodEnd,
+      // Only while past due: when the grace period ends and whether it has.
+      // `subscribed` stays true throughout so the UI offers "fix the card",
+      // never "pick a plan" (which would open a second subscription).
+      pastDue:
+        org.subscriptionStatus === 'past_due'
+          ? { graceEndsAt: pastDue.graceEndsAt, blocked: pastDue.blocked }
+          : null,
       hasCustomer: Boolean(org.stripeCustomerId),
       usage,
       aiTokens,
@@ -421,6 +432,14 @@ export class BillingService {
         subscriptionStatus: sub.status,
         currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
         instagramSeats,
+        // The first `active` is the first settled invoice (a trial shows as
+        // `trialing`). Write-once: a later lapse must not erase it.
+        firstPaidAt:
+          org.firstPaidAt ?? (sub.status === 'active' ? new Date() : null),
+        // Grace clock: starts on the transition into past_due, keeps its
+        // value across redelivered events, clears on any other status.
+        pastDueSince:
+          sub.status === 'past_due' ? (org.pastDueSince ?? new Date()) : null,
       },
     });
     this.log.log(

@@ -17,6 +17,8 @@ import {
   LOW_TOKENS_THRESHOLD,
   startOfUtcDay,
   planRequiresSubscription,
+  pastDueAccess,
+  type PastDueAccess,
 } from './plans';
 
 /**
@@ -51,10 +53,15 @@ export class QuotaService {
         subscriptionStatus: true,
         messageLimitOverride: true,
         instagramSeats: true,
+        firstPaidAt: true,
+        pastDueSince: true,
       },
     });
     if (!org) throw new NotFoundException('Organization not found');
-    const trialing = org.subscriptionStatus === 'trialing';
+    const pastDue = pastDueAccess(org, new Date());
+    // A trial whose first charge bounced is still a trial as far as caps go:
+    // the status says `past_due`, but nobody has paid for the plan yet.
+    const trialing = org.subscriptionStatus === 'trialing' || pastDue.trialCaps;
     const plan = PLANS[org.plan];
     // Trialing orgs get trial caps regardless of tier; history follows the
     // plan so nothing disappears when the trial converts.
@@ -91,15 +98,28 @@ export class QuotaService {
     if (org.messageLimitOverride != null) {
       limits.messagesPerMonth = org.messageLimitOverride;
     }
-    return { ...org, trialing, limits };
+    return { ...org, trialing, limits, pastDue };
   }
 
-  /** Throw unless the org is comped or has a live subscription. */
+  /**
+   * Throw unless the org is comped or has a live subscription. A past-due
+   * subscription counts as live only inside its grace period; after that the
+   * customer has had the email, the banner and Stripe's retries, and keeping
+   * the door open just means the product is free.
+   */
   private assertSubscribed(org: {
     plan: Plan;
     subscriptionStatus: string | null;
+    pastDue: PastDueAccess;
   }): void {
     if (!planRequiresSubscription(org.plan)) return;
+    if (org.pastDue.blocked) {
+      // Deliberately does not say "subscription": the web maps that word to
+      // the pick-a-plan modal, and this org already has a plan to fix.
+      throw new ForbiddenException(
+        'Your last payment failed. Update your card in Billing to continue.',
+      );
+    }
     if (
       org.subscriptionStatus &&
       ACTIVE_SUBSCRIPTION_STATUSES.includes(org.subscriptionStatus)
@@ -366,9 +386,11 @@ export class QuotaService {
     const { used, limit } = await this.messageUsage(organizationId);
     if (limit != null && used >= limit) {
       throw new ForbiddenException(
-        org.trialing
-          ? `Trial message limit reached (${limit}). Full plan limits unlock when your trial converts.`
-          : `Monthly message limit reached (${limit}). Upgrade your plan to send more.`,
+        org.pastDue.trialCaps
+          ? `Trial message limit reached (${limit}). Your first payment failed; update your card in Billing to unlock your plan.`
+          : org.trialing
+            ? `Trial message limit reached (${limit}). Full plan limits unlock when your trial converts.`
+            : `Monthly message limit reached (${limit}). Upgrade your plan to send more.`,
       );
     }
   }

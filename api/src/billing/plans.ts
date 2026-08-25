@@ -94,8 +94,63 @@ export const PLANS: Record<Plan, PlanLimits> = {
 };
 
 /** Subscription statuses that count as "paying" for quota purposes. `past_due`
- * is included so Stripe's dunning/retry cycle can run before access is cut. */
+ * is included so Stripe's dunning/retry cycle can run before access is cut,
+ * but only for a while: see `pastDueAccess`. */
 export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'];
+
+/**
+ * Days a `past_due` org keeps its write access after a charge is declined.
+ * Long enough for the card-failed email, the dashboard banner and Stripe's
+ * first retries to do their job; short enough that "past due" is not a way
+ * to use the product for free. Reads are never gated, so a blocked org still
+ * sees its dashboard and can fix the card.
+ */
+export const PAST_DUE_GRACE_DAYS = 7;
+
+export interface PastDueAccess {
+  /**
+   * Trial caps stay on: the org has never paid, so this is a trial whose
+   * first charge bounced. Without this the failed charge would *unlock* the
+   * full plan, since the status is no longer `trialing`.
+   */
+  trialCaps: boolean;
+  /** The grace period is over: write actions are refused until the card is fixed. */
+  blocked: boolean;
+  /** When the grace period ends. Null unless past due. */
+  graceEndsAt: Date | null;
+}
+
+/**
+ * What a past-due org may still do. Pure so it can be tested without a
+ * database; the quota service and the billing status endpoint both use it so
+ * the UI and the gate never disagree.
+ *
+ * A null `pastDueSince` while past due means the transition was never
+ * recorded (the migration backfills existing rows, so this is a safety net);
+ * nothing is blocked on a guess.
+ */
+export function pastDueAccess(
+  org: {
+    subscriptionStatus: string | null;
+    firstPaidAt: Date | null;
+    pastDueSince: Date | null;
+  },
+  now: Date,
+): PastDueAccess {
+  if (org.subscriptionStatus !== 'past_due') {
+    return { trialCaps: false, blocked: false, graceEndsAt: null };
+  }
+  const graceEndsAt = org.pastDueSince
+    ? new Date(
+        org.pastDueSince.getTime() + PAST_DUE_GRACE_DAYS * 24 * 60 * 60 * 1000,
+      )
+    : null;
+  return {
+    trialCaps: org.firstPaidAt == null,
+    blocked: graceEndsAt != null && now.getTime() >= graceEndsAt.getTime(),
+    graceEndsAt,
+  };
+}
 
 /**
  * One-off AI token pack. Bought as a Stripe payment (not a subscription), so

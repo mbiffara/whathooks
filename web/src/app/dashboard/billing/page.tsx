@@ -125,15 +125,17 @@ function BillingContent() {
                 {sub.subscribed && sub.status && (
                   <div className="mt-1 text-xs text-[var(--color-muted)]">
                     {t("statusLine", { status: sub.status })}
-                    {sub.currentPeriodEnd &&
-                      ` · ${t(
-                        sub.status === "trialing" ? "trialEnds" : "renews",
-                        {
-                          date: new Date(
-                            sub.currentPeriodEnd,
-                          ).toLocaleDateString(),
-                        },
-                      )}`}
+                    {sub.status === "past_due"
+                      ? ` · ${t("paymentFailed")}`
+                      : sub.currentPeriodEnd &&
+                        ` · ${t(
+                          sub.status === "trialing" ? "trialEnds" : "renews",
+                          {
+                            date: new Date(
+                              sub.currentPeriodEnd,
+                            ).toLocaleDateString(),
+                          },
+                        )}`}
                   </div>
                 )}
                 {!sub.subscribed && (

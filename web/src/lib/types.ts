@@ -327,6 +327,8 @@ export interface Subscription {
   /** False for orgs with no live subscription (plan is only the default tier). */
   subscribed: boolean;
   currentPeriodEnd: string | null;
+  /** Only while past due: when write access ends, and whether it already has. */
+  pastDue: { graceEndsAt: string | null; blocked: boolean } | null;
   hasCustomer: boolean;
   usage: { used: number; limit: number | null };
   /** Included-AI tokens burnt this month against the plan's allowance. */

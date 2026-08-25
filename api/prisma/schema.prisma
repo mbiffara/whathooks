@@ -68,6 +68,14 @@ model Organization {
   stripePriceId        String?
   subscriptionStatus   String?
   currentPeriodEnd     DateTime?
+  // When the first invoice settled (first `active`). Null = never paid, which
+  // is how a trial whose first charge bounced is told apart from a paying
+  // customer whose renewal did: the former keeps trial caps while past due.
+  firstPaidAt          DateTime?
+  // When the subscription last entered `past_due`; cleared on any other
+  // status. Starts the grace period after which write actions are refused
+  // (PAST_DUE_GRACE_DAYS in plans.ts).
+  pastDueSince         DateTime?
 
   users         User[]
   memberships   Membership[]

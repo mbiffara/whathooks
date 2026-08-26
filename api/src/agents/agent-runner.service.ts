@@ -9,8 +9,9 @@ import { EncryptionService } from './encryption.service';
 import { AgentMcpServer, isAgentMcpServers } from './mcp-servers';
 
 const HISTORY_LIMIT = 20;
-// MCP tool rounds run server-side at Anthropic; when a turn pauses at the
-// server-side iteration limit we resume it, but never indefinitely.
+// MCP tool rounds run server-side at the provider (Anthropic's MCP connector,
+// OpenAI's hosted `mcp` tool). Anthropic can pause a turn at its iteration
+// limit; we resume it, but never indefinitely. OpenAI runs the loop to the end.
 const MAX_PAUSE_CONTINUATIONS = 4;
 const MCP_BETA = 'mcp-client-2025-11-20';
 
@@ -523,6 +524,19 @@ export class AgentRunnerService {
     metered = false,
   ): Promise<AgentReply> {
     const client = new OpenAI({ apiKey });
+    const mcpServers = isAgentMcpServers(agent.mcpServers)
+      ? agent.mcpServers
+      : [];
+    if (mcpServers.length > 0) {
+      return this.replyOpenAIMcp(
+        agent,
+        client,
+        system,
+        turns,
+        metered,
+        mcpServers,
+      );
+    }
     const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       ...(agent.allowAutoStop
         ? [
@@ -595,6 +609,123 @@ export class AgentRunnerService {
     }
     return { text: message?.content?.trim() || null, handoff, reason, notify };
   }
+
+  /**
+   * OpenAI reply via the Responses API's hosted `mcp` tool: OpenAI connects
+   * to the agent's MCP servers from its own infrastructure and runs the whole
+   * tool loop server-side, so one request comes back with the final text.
+   * Chat Completions has no equivalent, which is why this is a separate path
+   * rather than a flag on replyOpenAI.
+   *
+   * Included-token agents land here too. Tool definitions and tool results
+   * are ordinary tokens to OpenAI, so they are metered against the org's
+   * allowance exactly like a plain reply, just larger.
+   */
+  private async replyOpenAIMcp(
+    agent: Agent,
+    client: OpenAI,
+    system: string,
+    turns: Turn[],
+    metered: boolean,
+    mcpServers: AgentMcpServer[],
+  ): Promise<AgentReply> {
+    const tools: OpenAI.Responses.Tool[] = [
+      ...mcpServers.map((s) => ({
+        type: 'mcp' as const,
+        server_label: s.name,
+        server_url: s.url,
+        // A WhatsApp reply cannot wait for a human to approve a tool call.
+        require_approval: 'never' as const,
+        ...(s.authTokenCiphertext
+          ? { authorization: this.encryption.decrypt(s.authTokenCiphertext) }
+          : {}),
+      })),
+      ...(agent.allowAutoStop
+        ? [
+            {
+              type: 'function' as const,
+              name: HANDOFF_TOOL,
+              description: HANDOFF_DESCRIPTION,
+              parameters: HANDOFF_SCHEMA,
+              strict: false,
+            },
+          ]
+        : []),
+      {
+        type: 'function' as const,
+        name: NOTIFY_TOOL,
+        description: NOTIFY_DESCRIPTION,
+        parameters: NOTIFY_SCHEMA,
+        strict: false,
+      },
+    ];
+    const response = await client.responses.create({
+      model: agent.model,
+      instructions: system,
+      input: turns.map((t) => ({ role: t.role, content: t.text })),
+      tools,
+      tool_choice: 'auto',
+      max_output_tokens: agent.maxTokens,
+      // Nothing to resume later, and no reason to keep customer chats on
+      // OpenAI's side.
+      store: false,
+      // Same setting as the Chat Completions path for this family: replies
+      // stay fast and maxTokens keeps meaning "reply length", not reasoning.
+      ...(agent.model.startsWith('gpt-5.6')
+        ? { reasoning: { effort: 'none' as const } }
+        : {}),
+    });
+    if (metered) {
+      await this.quota.recordAiTokens(
+        agent.organizationId,
+        response.usage?.total_tokens ?? 0,
+        agent.id,
+      );
+    }
+    for (const item of response.output) {
+      if (item.type === 'mcp_call' && item.error) {
+        this.log.warn(
+          `Agent "${agent.name}": MCP tool ${item.server_label}.${item.name} failed: ${item.error}`,
+        );
+      }
+    }
+    return extractOpenAIResponsesReply(response.output);
+  }
+}
+
+/**
+ * Pull the reply text + tool signals out of Responses API output items.
+ * `mcp_list_tools` / `mcp_call` items are the server-side rounds; their
+ * results are already folded into the message text, so they are skipped.
+ */
+export function extractOpenAIResponsesReply(
+  output: OpenAI.Responses.ResponseOutputItem[],
+): AgentReply {
+  let text = '';
+  let handoff = false;
+  let reason: string | undefined;
+  let notify: string | null = null;
+  for (const item of output) {
+    if (item.type === 'message') {
+      for (const part of item.content) {
+        if (part.type === 'output_text') text += part.text;
+      }
+    } else if (item.type === 'function_call') {
+      let args: { reason?: string; message?: string } = {};
+      try {
+        args = JSON.parse(item.arguments || '{}') as typeof args;
+      } catch {
+        /* ignore malformed args */
+      }
+      if (item.name === HANDOFF_TOOL) {
+        handoff = true;
+        reason = args.reason;
+      } else if (item.name === NOTIFY_TOOL) {
+        notify = args.message?.trim() || null;
+      }
+    }
+  }
+  return { text: text.trim() || null, handoff, reason, notify };
 }
 
 /** Pull the reply text + handoff signal out of Anthropic content blocks. */

@@ -103,7 +103,6 @@ export class AgentsService {
     }
     const mcpServers = await this.mcpServersInput(
       organizationId,
-      provider,
       dto.mcpServers,
       [],
     );
@@ -160,15 +159,8 @@ export class AgentsService {
     if (dto.mcpServers !== undefined) {
       mcpServers = await this.mcpServersInput(
         organizationId,
-        provider,
         dto.mcpServers,
         existingServers,
-      );
-    } else if (provider === 'OPENAI' && existingServers.length > 0) {
-      // Switching an MCP-configured agent to OpenAI silently drops the servers
-      // (MCP is Anthropic-only) — require the caller to clear them explicitly.
-      throw new BadRequestException(
-        'This agent has MCP servers, which are only supported on Anthropic. Remove them before switching provider.',
       );
     }
 
@@ -359,17 +351,13 @@ export class AgentsService {
    */
   private async mcpServersInput(
     organizationId: string,
-    provider: AgentProviderName,
     servers: McpServerDto[] | undefined,
     existing: AgentMcpServer[],
   ): Promise<Prisma.InputJsonValue | typeof Prisma.JsonNull> {
     if (!servers || servers.length === 0) return Prisma.JsonNull;
 
-    if (provider !== 'ANTHROPIC') {
-      throw new BadRequestException(
-        'MCP servers are only supported on Anthropic agents.',
-      );
-    }
+    // Both providers run MCP server-side now (Anthropic's connector, OpenAI's
+    // hosted tool), so the only gate left is the plan.
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       select: { plan: true },

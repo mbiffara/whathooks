@@ -1,9 +1,9 @@
 /**
  * MCP server config for agents. Stored on Agent.mcpServers (Json) with the
- * auth token encrypted; delivered to the Anthropic API via the MCP connector
- * (beta `mcp-client-2025-11-20`), which connects to the server FROM
- * Anthropic's infrastructure — our servers never call these URLs.
- * Anthropic-provider agents only, Pro+ plans.
+ * auth token encrypted; delivered to the provider (Anthropic's MCP connector,
+ * OpenAI's hosted `mcp` tool on the Responses API), which connects to the
+ * server FROM its own infrastructure — our servers never call these URLs.
+ * Any provider, including included-token agents; Pro+ plans.
  */
 
 /** Stored shape (Json column). */

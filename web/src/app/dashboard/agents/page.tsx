@@ -149,10 +149,7 @@ export default function AgentsPage() {
       }
       // MCP servers: send the list only when the editor was usable, so a
       // Starter org editing an agent never silently clears stored servers.
-      // Switching to OpenAI clears them explicitly (MCP is Anthropic-only).
-      if (draft.provider === "OPENAI") {
-        payload.mcpServers = [];
-      } else if (mcpAllowed) {
+      if (mcpAllowed) {
         payload.mcpServers = draft.mcpServers
           .filter((s) => s.name.trim() && s.url.trim())
           .map((s) => ({
@@ -648,18 +645,8 @@ export default function AgentsPage() {
             </label>
           )}
           <div>
-            <label className="label">
-              {t("mcpTools")}{" "}
-              <span className="text-[var(--color-muted)]">
-                {t("mcpSuffix")}
-              </span>
-            </label>
-            {draft.provider === "OPENAI" ? (
-              <p className="text-xs text-[var(--color-muted)]">
-                {t("mcpOpenaiNote")}
-                {draft.mcpServers.length > 0 && t("mcpOpenaiClearWarning")}
-              </p>
-            ) : !mcpAllowed ? (
+            <label className="label">{t("mcpTools")}</label>
+            {!mcpAllowed ? (
               <p className="text-xs text-[var(--color-muted)]">
                 {t.rich("mcpUpgrade", {
                   link: (c) => (

@@ -15,7 +15,7 @@ import {
 } from 'class-validator';
 
 /**
- * One MCP server the agent may use (Anthropic provider only, Pro+ plans).
+ * One MCP server the agent may use (any provider, Pro+ plans).
  * Cross-field constraints (name syntax/uniqueness, https URL, count cap) are
  * checked by mcpServersError() in the service.
  */

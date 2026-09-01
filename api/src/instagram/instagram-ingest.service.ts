@@ -117,6 +117,21 @@ export class InstagramIngestService {
       this.log.debug(`zernio ${payload.event} ${payload.id}: duplicate`);
       return;
     }
+    // Zernio re-delivers the same message under a FRESH envelope id (seen
+    // with ad replies: two message.received 2s apart, different ids, even
+    // different byte sizes), so the envelope claim above is not enough — the
+    // agent answered the same DM twice. The platform message id is the one
+    // identity Instagram keeps stable across deliveries, so claim that too.
+    // Scoped by event so message.sent echoes of the same id stay unaffected.
+    const messageKey = `${payload.event}:${payload.message.platformMessageId}`;
+    if (!(await this.claim(messageKey, payload.event))) {
+      this.log.warn(
+        `zernio ${payload.event} ${payload.id}: message ` +
+          `${payload.message.platformMessageId} already ingested under ` +
+          `another delivery — duplicate dropped`,
+      );
+      return;
+    }
     await this.ingestMessage(payload);
   }
 

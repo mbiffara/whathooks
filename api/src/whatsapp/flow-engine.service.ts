@@ -594,6 +594,7 @@ export class FlowEngineService {
       {
         prefix: (node.data.groupPrefix as string) || DEFAULT_GROUP_PREFIX,
         showLeadName,
+        shareLeadNumber: (node.data.shareLeadNumber as boolean) ?? false,
         conversationId: ctx.conversationId,
         // Host resolution lives in createMirrorThread.
       },

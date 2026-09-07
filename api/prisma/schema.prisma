@@ -388,6 +388,10 @@ model MirrorLink {
   groupPrefix String   @default("🔒 Lead")
   // Prefix relayed messages with the lead's WhatsApp display name (bold).
   showLeadName Boolean @default(true)
+  // Drop the lead's contact card into the group when it opens. Off by
+  // default: the whole point of a mirror is that the agent never sees the
+  // lead's number unless the business chooses to share it.
+  shareLeadNumber Boolean @default(false)
   enabled     Boolean  @default(true)
   createdAt   DateTime @default(now())
 

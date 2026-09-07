@@ -644,6 +644,8 @@
       "mirrorPromptBody": "{name} is also a WhatsApp human agent. Create a private mirror group so they can reply to this conversation from their own phone. The contact always sees your business number.",
       "mirrorCopyHistory": "Copy the conversation so far",
       "mirrorCopyHistoryHint": "Sends the latest messages into the group as context.",
+      "mirrorShareNumber": "Share the contact's phone number",
+      "mirrorShareNumberHint": "Posts their contact card in the group so the agent can call or save them.",
       "mirrorPromptSkip": "Not now",
       "mirrorPromptConfirm": "Create mirror group",
       "mirrorAdd": "Mirror",
@@ -703,7 +705,10 @@
       "colStatus": "Status",
       "showLeadName": "Show the lead's name in the group (otherwise messages are prefixed \"Lead:\")",
       "nameShown": "lead name: shown",
-      "nameHidden": "lead name: hidden"
+      "nameHidden": "lead name: hidden",
+      "shareLeadNumber": "Share the lead's phone number in the group (contact card)",
+      "numberShared": "lead number: shared",
+      "numberHidden": "lead number: hidden"
     },
     "contacts": {
       "title": "Contacts",
@@ -815,6 +820,7 @@
       "rotationLabel": "Human agents (in rotation)",
       "groupPrefix": "Group name prefix",
       "showLeadName": "Show the lead's name in the group",
+      "shareLeadNumber": "Share the lead's phone number in the group",
       "farewell": "Farewell message to the lead (optional)",
       "farewellPlaceholder": "Connecting you with an advisor…",
       "webhookLabel": "Webhook",

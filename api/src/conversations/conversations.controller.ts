@@ -73,6 +73,11 @@ class CreateMirrorDto {
   @IsOptional()
   @IsBoolean()
   copyHistory?: boolean;
+
+  // Open the group with the lead's contact card.
+  @IsOptional()
+  @IsBoolean()
+  shareLeadNumber?: boolean;
 }
 
 class NoteDto {

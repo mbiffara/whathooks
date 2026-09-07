@@ -167,6 +167,7 @@ export class MirrorService {
       humanAgentName: l.humanAgent?.name ?? null,
       groupPrefix: l.groupPrefix,
       showLeadName: l.showLeadName,
+      shareLeadNumber: l.shareLeadNumber,
       threads: l._count.threads,
       session: l.session,
       createdAt: l.createdAt,
@@ -180,6 +181,7 @@ export class MirrorService {
       humanAgentId: string;
       groupPrefix?: string;
       showLeadName?: boolean;
+      shareLeadNumber?: boolean;
     },
   ) {
     const session = await this.prisma.waSession.findFirst({
@@ -226,6 +228,9 @@ export class MirrorService {
         ...(dto.showLeadName !== undefined
           ? { showLeadName: dto.showLeadName }
           : {}),
+        ...(dto.shareLeadNumber !== undefined
+          ? { shareLeadNumber: dto.shareLeadNumber }
+          : {}),
       },
     });
   }
@@ -233,7 +238,11 @@ export class MirrorService {
   async updateLink(
     organizationId: string,
     id: string,
-    patch: { enabled?: boolean; showLeadName?: boolean },
+    patch: {
+      enabled?: boolean;
+      showLeadName?: boolean;
+      shareLeadNumber?: boolean;
+    },
   ) {
     await this.requireLink(organizationId, id);
     return this.prisma.mirrorLink.update({
@@ -242,6 +251,9 @@ export class MirrorService {
         ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
         ...(patch.showLeadName !== undefined
           ? { showLeadName: patch.showLeadName }
+          : {}),
+        ...(patch.shareLeadNumber !== undefined
+          ? { shareLeadNumber: patch.shareLeadNumber }
           : {}),
       },
     });

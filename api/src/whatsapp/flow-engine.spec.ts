@@ -143,6 +143,11 @@ function makeEngine(overrides: {
   counterValues?: number[];
 }) {
   const sent: Array<{ to: string; text: string }> = [];
+  const sentMedia: Array<{
+    to: string;
+    mimeType: string;
+    caption?: string | null;
+  }> = [];
   const created: AnyRecord[] = [];
   const forwarded: AnyRecord[] = [];
   const dispatched: AnyRecord[] = [];
@@ -261,6 +266,17 @@ function makeEngine(overrides: {
       sent.push({ to, text });
       return Promise.resolve({ messageId: 'm', waMessageId: 'w' });
     }),
+    sendMedia: jest.fn(
+      (
+        sessionId: string,
+        to: string,
+        file: { mimeType: string; fileName?: string | null },
+        caption?: string | null,
+      ) => {
+        sentMedia.push({ to, mimeType: file.mimeType, caption });
+        return Promise.resolve({ messageId: 'm', waMessageId: 'w' });
+      },
+    ),
     // Channel-routed send: the engine uses this wherever the destination may
     // not be WhatsApp (farewells go to the lead, whatever channel they used).
     sendOnSession: jest.fn((sessionId: string, to: string, text: string) => {
@@ -269,10 +285,12 @@ function makeEngine(overrides: {
     }),
   };
 
+  const media = { getBuffer: jest.fn().mockResolvedValue(Buffer.from('jpg')) };
   const engine = new FlowEngineService(
     prisma as never,
     agentRunner as never,
     webhooks as never,
+    media as never,
   );
   return {
     engine,
@@ -283,6 +301,8 @@ function makeEngine(overrides: {
     sent,
     created,
     forwarded,
+    sentMedia,
+    media,
     dispatched,
     updates,
     stateUpserts,
@@ -423,6 +443,50 @@ describe('FlowEngineService.run', () => {
     // …without the triggering message, which is forwarded separately.
     expect(transcript?.text.includes(CTX.text)).toBe(false);
     expect(t.forwarded).toHaveLength(1);
+  });
+
+  it('re-sends the files from the history after the transcript', async () => {
+    const t = makeEngine({});
+    t.prisma.message.findMany.mockResolvedValue([
+      { direction: 'INBOUND', source: 'CONTACT', type: 'TEXT', text: CTX.text },
+      {
+        direction: 'INBOUND',
+        source: 'CONTACT',
+        type: 'IMAGE',
+        text: 'mi comprobante',
+        media: {
+          storageKey: 'org1/s1/x.jpg',
+          mimeType: 'image/jpeg',
+          fileName: null,
+          size: 1234,
+        },
+      },
+      { direction: 'INBOUND', source: 'CONTACT', type: 'TEXT', text: 'Hola' },
+    ]);
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('a', 'assignHuman', { humanAgentId: 'ha1', copyHistory: true }),
+      ],
+      edges: [edge('t', 'a')],
+    };
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.media.getBuffer).toHaveBeenCalledWith('org1/s1/x.jpg');
+    expect(t.sentMedia).toEqual([
+      {
+        to: 'g@g.us',
+        mimeType: 'image/jpeg',
+        caption: '*Juan:* mi comprobante',
+      },
+    ]);
+    // The transcript still names the file where it happened.
+    const transcript = t.sent.find((s) => s.to === 'g@g.us');
+    expect(transcript?.text).toContain('*Juan:* mi comprobante');
   });
 
   it('saveContact creates the lead once and dispatches contact.created', async () => {

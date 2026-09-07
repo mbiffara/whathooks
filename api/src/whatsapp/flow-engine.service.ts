@@ -10,6 +10,7 @@ import {
 } from '../flows/flow-graph';
 import { Channel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { MediaService } from '../media/media.service';
 import { contactIdentityWhere } from '../common/contact-identity';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { agentActiveNow } from './agent-schedule';
@@ -40,6 +41,10 @@ export interface FlowRef {
 const MAX_STEPS = 20;
 // Messages copied into a fresh mirror group when the assign node asks for it.
 const HISTORY_COPY_LIMIT = 25;
+// Files re-sent with the transcript: the most recent ones, and none too big
+// for WhatsApp to take without complaint.
+const HISTORY_MEDIA_LIMIT = 10;
+const HISTORY_MEDIA_MAX_BYTES = 16 * 1024 * 1024;
 
 interface RunRecorder {
   steps: Array<{ nodeId: string; type: string; note?: string }>;
@@ -89,6 +94,7 @@ export class FlowEngineService {
     private readonly prisma: PrismaService,
     private readonly agentRunner: AgentRunnerService,
     private readonly webhooks: WebhookDispatchService,
+    private readonly media: MediaService,
   ) {}
 
   /** The session's enabled flow, cached ~30s (checked on every DM). */
@@ -702,19 +708,15 @@ export class FlowEngineService {
     // see it, and the inbox's own mirror dialog has defaulted to copying since
     // it shipped. Only an explicit false (the box was unticked) skips it.
     if (opts.copyHistory ?? true) {
-      const transcript = await this.historyTranscript(
+      await this.copyHistory(
+        manager,
+        thread.sessionId,
+        thread.groupJid,
         ctx.conversationId,
         showLeadName ? ctx.pushName : null,
+        true,
+        opts.origin,
       );
-      if (transcript) {
-        await manager
-          .sendText(thread.sessionId, thread.groupJid, transcript, {
-            source: MessageSource.MIRROR,
-          })
-          .catch((e) =>
-            this.log.warn(`${opts.origin}: history copy failed: ${e}`),
-          );
-      }
     }
     await manager.forwardLeadToGroup(thread.sessionId, thread, ctx);
     const farewell = (opts.farewell ?? '').trim();
@@ -907,39 +909,96 @@ export class FlowEngineService {
   }
 
   /**
-   * Compact one-message transcript of the conversation so far. During a flow
-   * handoff the newest inbound row (the message that triggered the run) is
-   * left out — it is forwarded to the group separately, right after this.
-   * Mirrors opened from the inbox have no triggering message, so they keep
-   * it (`dropTriggering: false`). Null when there is no history worth copying.
+   * Copy the conversation so far into a mirror group: one transcript
+   * message, then the files that were exchanged. During a flow handoff the
+   * newest inbound row (the message that triggered the run) is left out — it
+   * is forwarded to the group separately, right after this. Mirrors opened
+   * from the inbox have no triggering message, so they keep it
+   * (`dropTriggering: false`). Best-effort throughout: the group works
+   * without the history, and one broken file must not lose the rest.
    */
+  async copyHistory(
+    manager: ConnectionManagerService,
+    groupSessionId: string,
+    groupJid: string,
+    conversationId: string,
+    leadName: string | null,
+    dropTriggering: boolean,
+    origin: string,
+  ): Promise<void> {
+    const rows = await this.historyRows(conversationId, dropTriggering);
+    const transcript = transcriptOf(rows, leadName);
+    if (!transcript) return;
+    try {
+      await manager.sendText(groupSessionId, groupJid, transcript, {
+        source: MessageSource.MIRROR,
+      });
+    } catch (e) {
+      this.log.warn(`${origin}: history copy failed: ${e}`);
+      return;
+    }
+    // The files travel too. A transcript that says "[image]" where the
+    // customer sent their receipt is no use to the person taking over.
+    const withMedia = rows.filter((m) => m.media).slice(-HISTORY_MEDIA_LIMIT);
+    for (const m of withMedia) {
+      const asset = m.media!;
+      if (asset.size && asset.size > HISTORY_MEDIA_MAX_BYTES) continue;
+      try {
+        const buffer = await this.media.getBuffer(asset.storageKey);
+        if (!buffer) continue;
+        await manager.sendMedia(
+          groupSessionId,
+          groupJid,
+          { buffer, mimeType: asset.mimeType, fileName: asset.fileName },
+          `*${speakerOf(m, leadName)}:* ${(m.text ?? '').slice(0, 300)}`.trim(),
+          { source: MessageSource.MIRROR },
+        );
+      } catch (e) {
+        this.log.warn(`${origin}: history file copy failed: ${e}`);
+      }
+    }
+  }
+
+  /** Text-only transcript, for callers that cannot send files. */
   async historyTranscript(
     conversationId: string,
     leadName: string | null,
     dropTriggering = true,
   ): Promise<string | null> {
+    return transcriptOf(
+      await this.historyRows(conversationId, dropTriggering),
+      leadName,
+    );
+  }
+
+  private async historyRows(
+    conversationId: string,
+    dropTriggering: boolean,
+  ): Promise<HistoryRow[]> {
     const rows = await this.prisma.message.findMany({
       where: { conversationId, source: { not: MessageSource.NOTE } },
       orderBy: { timestamp: 'desc' },
       take: HISTORY_COPY_LIMIT + 1,
-      select: { direction: true, source: true, type: true, text: true },
+      select: {
+        direction: true,
+        source: true,
+        type: true,
+        text: true,
+        media: {
+          select: {
+            storageKey: true,
+            mimeType: true,
+            fileName: true,
+            size: true,
+          },
+        },
+      },
     });
     rows.reverse();
     if (dropTriggering && rows.length && rows.at(-1)!.direction === 'INBOUND') {
       rows.pop();
     }
-    const lines = rows.slice(-HISTORY_COPY_LIMIT).map((m) => {
-      const text = (m.text ?? `[${m.type.toLowerCase()}]`).slice(0, 300);
-      const who =
-        m.direction === 'INBOUND'
-          ? (leadName ?? 'Lead')
-          : m.source === MessageSource.AGENT
-            ? 'Bot'
-            : 'Equipo';
-      return `*${who}:* ${text}`;
-    });
-    if (lines.length === 0) return null;
-    return `📋 *Historial:*\n\n${lines.join('\n')}`;
+    return rows.slice(-HISTORY_COPY_LIMIT);
   }
 
   private follow(
@@ -951,6 +1010,38 @@ export class FlowEngineService {
     if (!edge) return undefined;
     return graph.nodes.find((n) => n.id === edge.target);
   }
+}
+
+interface HistoryRow {
+  direction: string;
+  source: MessageSource;
+  type: string;
+  text: string | null;
+  media: {
+    storageKey: string;
+    mimeType: string;
+    fileName: string | null;
+    size: number | null;
+  } | null;
+}
+
+/** Who a history row is attributed to in the group. */
+function speakerOf(m: HistoryRow, leadName: string | null): string {
+  if (m.direction === 'INBOUND') return leadName ?? 'Lead';
+  return m.source === MessageSource.AGENT ? 'Bot' : 'Equipo';
+}
+
+/** Compact one-message transcript; null when there is nothing to copy. */
+function transcriptOf(
+  rows: HistoryRow[],
+  leadName: string | null,
+): string | null {
+  const lines = rows.map((m) => {
+    const text = (m.text ?? `[${m.type.toLowerCase()}]`).slice(0, 300);
+    return `*${speakerOf(m, leadName)}:* ${text}`;
+  });
+  if (lines.length === 0) return null;
+  return `📋 *Historial:*\n\n${lines.join('\n')}`;
 }
 
 /** Lowercase + strip diacritics so "camión" matches "camion". */

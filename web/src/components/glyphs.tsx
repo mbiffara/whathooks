@@ -20,9 +20,17 @@ export type GlyphName =
   | "play"
   | "pencil"
   | "moreVertical"
-  | "docs";
+  | "docs"
+  | "upload";
 
 const PATHS: Record<GlyphName, ReactNode> = {
+  upload: (
+    <>
+      <path d="M12 16V4" />
+      <path d="M7 9l5-5 5 5" />
+      <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
+    </>
+  ),
   chevronRight: <path d="M9 6l6 6-6 6" />,
   chevronLeft: <path d="M15 6l-6 6 6 6" />,
   panelCollapse: <path d="M11 7l-5 5 5 5M18 7l-5 5 5 5" />,

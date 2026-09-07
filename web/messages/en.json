@@ -891,6 +891,8 @@
       "simulatorTitle": "Test this flow",
       "simulatorHint": "Have a pretend conversation with your flow. Nothing is delivered, no groups are created and nothing is saved. The AI nodes do run on the transcript, so their answers are real.",
       "simulatorPlaceholder": "e.g. Hola, cuánto sale el plan?",
+      "simulatorPhone": "Simulate as this WhatsApp number (optional). Lets \"Assign the contact's agent\" find the contact.",
+      "simulatorPhonePlaceholder": "Contact number, e.g. 5215512345678 (optional)",
       "simulatorSendAsContact": "Send as contact",
       "simulatorSendAsBusiness": "As you",
       "simulatorAsBusinessHint": "Add a reply from your side, so AI nodes see a realistic back-and-forth. The flow does not run on these.",

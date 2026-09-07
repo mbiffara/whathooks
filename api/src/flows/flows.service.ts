@@ -257,6 +257,8 @@ export class FlowsService {
      * the usual reason to hit Test — was invisible.
      */
     draft?: unknown,
+    /** Simulate as this WhatsApp number, so contact-based routing resolves. */
+    phoneNumber?: string,
   ) {
     const flow = await this.get(organizationId, id);
     const graph = isGraphShape(draft)
@@ -277,7 +279,7 @@ export class FlowsService {
       { id: flow.id, graph, organizationId },
       {
         conversationId: `sim_${flow.id}`,
-        remoteJid: 'simulation@s.whatsapp.net',
+        remoteJid: `${phoneNumber ?? 'simulation'}@s.whatsapp.net`,
         isGroup: false,
         mentionedMe: false,
         pushName: 'Simulation',

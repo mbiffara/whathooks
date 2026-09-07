@@ -171,8 +171,9 @@ export function ContactsImportDialog({
   const prepared = useMemo(() => {
     if (!sheet || phoneCol < 0) return null;
     const seen = new Set<string>();
-    let invalid = 0;
-    let duplicates = 0;
+    // Rejected here, before anything is posted; they join the final summary
+    // so the operator gets the row numbers to fix, not just a count.
+    const rejected: Array<{ row: number; reason: string }> = [];
     const rows: Array<{
       sheetRow: number;
       phoneNumber: string;
@@ -182,26 +183,29 @@ export function ContactsImportDialog({
     sheet.rows.forEach((r, i) => {
       const phone = r[phoneCol] ?? "";
       const digits = digitsOf(phone);
+      const sheetRow = sheet.headerRow + 2 + i;
       if (digits.length < 5 || digits.length > 20) {
-        invalid += 1;
+        rejected.push({ row: sheetRow, reason: "invalid_phone" });
         return;
       }
       if (seen.has(digits)) {
-        duplicates += 1;
+        rejected.push({ row: sheetRow, reason: "duplicate_in_batch" });
         return;
       }
       seen.add(digits);
       const label = labelCol >= 0 ? (r[labelCol] ?? "") : "";
       const agentId = label ? agentByLabel[label] : "";
       rows.push({
-        sheetRow: sheet.headerRow + 2 + i,
+        sheetRow,
         phoneNumber: phone,
         ...(nameCol >= 0 && r[nameCol] ? { name: r[nameCol] } : {}),
         ...(agentId ? { humanAgentId: agentId } : {}),
       });
     });
     const unmatched = labels.filter((l) => !agentByLabel[l]).length;
-    return { rows, invalid, duplicates, unmatched };
+    const invalid = rejected.filter((x) => x.reason === "invalid_phone").length;
+    const duplicates = rejected.length - invalid;
+    return { rows, rejected, invalid, duplicates, unmatched };
   }, [sheet, phoneCol, nameCol, labelCol, agentByLabel, labels]);
 
   async function start() {
@@ -214,7 +218,7 @@ export function ContactsImportDialog({
       created: 0,
       updated: 0,
       unchanged: 0,
-      skipped: [],
+      skipped: [...prepared.rejected],
     };
     for (let i = 0; i < total; i++) {
       const slice = prepared.rows.slice(i * CHUNK, (i + 1) * CHUNK);
@@ -245,6 +249,7 @@ export function ContactsImportDialog({
       }
       setProgress({ done: i + 1, total });
     }
+    totals.skipped.sort((a, b) => a.row - b.row);
     setResult(totals);
     setStep("done");
     onDone();

@@ -186,6 +186,8 @@ export default function FlowEditorPage() {
   const [simOpen, setSimOpen] = useState(false);
   const [savedAsDraft, setSavedAsDraft] = useState(false);
   const [simText, setSimText] = useState("");
+  // Who the pretend contact is: lets "assign the contact's agent" resolve.
+  const [simPhone, setSimPhone] = useState("");
   const [simBusy, setSimBusy] = useState(false);
   /**
    * The pretend conversation. Each contact turn carries what the flow did
@@ -513,7 +515,11 @@ export default function FlowEditorPage() {
         method: "POST",
         // Send the on-screen graph: testing the stored one would silently
         // run a stale version of whatever you just changed.
-        body: JSON.stringify({ messages, graph: currentGraph() }),
+        body: JSON.stringify({
+          messages,
+          graph: currentGraph(),
+          ...(simPhone ? { phoneNumber: simPhone } : {}),
+        }),
       });
       setSimTurns((prev) => [
         ...prev,
@@ -1054,8 +1060,21 @@ export default function FlowEditorPage() {
                   </p>
                 )}
 
+                <input
+                  className="input mt-3 text-xs"
+                  inputMode="numeric"
+                  maxLength={20}
+                  disabled={simTurns.length > 0}
+                  placeholder={t("simulatorPhonePlaceholder")}
+                  aria-label={t("simulatorPhone")}
+                  title={t("simulatorPhone")}
+                  value={simPhone}
+                  onChange={(e) =>
+                    setSimPhone(e.target.value.replace(/\D/g, ""))
+                  }
+                />
                 <textarea
-                  className="input mt-3 min-h-16 text-sm"
+                  className="input mt-2 min-h-16 text-sm"
                   maxLength={2000}
                   disabled={simHandedOff}
                   placeholder={t("simulatorPlaceholder")}

@@ -18,6 +18,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  Matches,
   Length,
   ValidateIf,
   ValidateNested,
@@ -96,6 +97,12 @@ class SimulateDto {
   @IsOptional()
   @IsDefined()
   graph?: unknown;
+
+  // Who the pretend contact is. Nodes that route on the sender (the
+  // contact's agent) need a real number to look up; the default is nobody.
+  @IsOptional()
+  @Matches(/^\d{5,20}$/, { message: 'phoneNumber must be digits only' })
+  phoneNumber?: string;
 }
 
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
@@ -152,7 +159,13 @@ export class FlowsController {
     @Param('id') id: string,
     @Body() body: SimulateDto,
   ) {
-    return this.flows.simulate(this.orgOf(user), id, body.messages, body.graph);
+    return this.flows.simulate(
+      this.orgOf(user),
+      id,
+      body.messages,
+      body.graph,
+      body.phoneNumber,
+    );
   }
 
   @Get(':id/runs')

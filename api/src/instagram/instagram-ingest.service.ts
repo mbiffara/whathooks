@@ -415,6 +415,7 @@ export class InstagramIngestService {
         humanAgentId: true,
         groupPrefix: true,
         showLeadName: true,
+        shareLeadNumber: true,
         groupSessionId: true,
       },
     });
@@ -427,6 +428,7 @@ export class InstagramIngestService {
           {
             prefix: link.groupPrefix,
             showLeadName: link.showLeadName,
+            shareLeadNumber: link.shareLeadNumber,
             linkId: link.id,
             conversationId: result.conversationId,
             groupSessionId: link.groupSessionId,

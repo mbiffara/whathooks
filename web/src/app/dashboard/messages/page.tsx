@@ -435,6 +435,9 @@ function MessagesInbox() {
     humanAgent: { id: string; name: string },
   ) {
     setMirrorCopyHistory(true);
+    // Privacy-sensitive, so it is a per-handoff choice: never carry the
+    // previous lead's answer over to the next prompt.
+    setMirrorShareNumber(false);
     setMirrorError(null);
     setMirrorPrompt({
       conversationId,

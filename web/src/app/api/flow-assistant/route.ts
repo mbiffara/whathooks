@@ -47,6 +47,7 @@ const nodeDataSchema = z.object({
   groupPrefix: z.string().nullable(),
   farewellText: z.string().nullable(),
   showLeadName: z.boolean().nullable(),
+  shareLeadNumber: z.boolean().nullable(),
   copyHistory: z.boolean().nullable(),
   note: z.string().nullable(),
 });
@@ -116,7 +117,7 @@ NODE TYPES (type → data fields → output handles):
 - aiDecision → { agentId?, question } → "yes", "no". An AI agent answers ONE yes/no question about the conversation. Use it for judgements no keyword list can make ("is the customer angry?", "did they already pay?"). An unclear answer takes "no", so wire the safer outcome there.
 - intent → { agentId?, intents: [{ key, label, description? }] } → one handle per intent key, plus "fallback". Keys are short lowercase slugs; "fallback" is reserved.
 - agentReply → { agentId, prompt? } → optional "onHandoff". prompt is extra instructions for THIS step, appended to the agent's own (use it when one agent should answer differently on different branches). The AI agent answers; the walk ends after replying. Connect "onHandoff" to route the conversation when the agent decides a human is needed.
-- assignHuman → { humanAgentId, groupPrefix?, farewellText?, copyHistory? } → terminal. Creates a WhatsApp mirror group with that human.
+- assignHuman → { humanAgentId, groupPrefix?, farewellText?, copyHistory?, shareLeadNumber? } → terminal. Creates a WhatsApp mirror group with that human; shareLeadNumber posts the lead's contact card in it.
 - roundRobin → { humanAgentIds: string[], same options } → terminal. Rotates leads across humans, one group per lead.
 - assignGroup → { humanAgentIds: string[], same options } → terminal. One shared group with every listed human.
 - webhook → { webhookId, note? } → "out". Notifies an external system, then continues.

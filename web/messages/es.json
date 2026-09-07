@@ -644,6 +644,8 @@
       "mirrorPromptBody": "{name} también es agente humano de WhatsApp. Podés crear un mirror link privado para que responda esta conversación desde su propio teléfono. El contacto siempre ve tu número de la empresa.",
       "mirrorCopyHistory": "Copiar la conversación hasta ahora",
       "mirrorCopyHistoryHint": "Envía los últimos mensajes al grupo como contexto.",
+      "mirrorShareNumber": "Compartir el teléfono del contacto",
+      "mirrorShareNumberHint": "Publica su tarjeta de contacto en el grupo para que el agente pueda llamarlo o guardarlo.",
       "mirrorPromptSkip": "Ahora no",
       "mirrorPromptConfirm": "Crear mirror link",
       "mirrorAdd": "Mirror link",
@@ -703,7 +705,10 @@
       "colStatus": "Estado",
       "showLeadName": "Mostrar el nombre del lead en el grupo (si no, los mensajes llevan el prefijo \"Lead:\")",
       "nameShown": "nombre del lead: visible",
-      "nameHidden": "nombre del lead: oculto"
+      "nameHidden": "nombre del lead: oculto",
+      "shareLeadNumber": "Compartir el teléfono del lead en el grupo (tarjeta de contacto)",
+      "numberShared": "teléfono del lead: compartido",
+      "numberHidden": "teléfono del lead: oculto"
     },
     "contacts": {
       "title": "Contactos",
@@ -815,6 +820,7 @@
       "rotationLabel": "Agentes humanos (en rotación)",
       "groupPrefix": "Prefijo del grupo",
       "showLeadName": "Mostrar el nombre del lead en el grupo",
+      "shareLeadNumber": "Compartir el teléfono del lead en el grupo",
       "farewell": "Mensaje de despedida al lead (opcional)",
       "farewellPlaceholder": "Te conectamos con un asesor…",
       "webhookLabel": "Webhook",

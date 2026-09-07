@@ -1507,6 +1507,14 @@ function NodePanel({
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              checked={(d.shareLeadNumber as boolean) ?? false}
+              onChange={(e) => onPatch({ shareLeadNumber: e.target.checked })}
+            />
+            {t("shareLeadNumber")}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
               checked={(d.copyHistory as boolean) ?? true}
               onChange={(e) => onPatch({ copyHistory: e.target.checked })}
             />

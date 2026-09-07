@@ -288,7 +288,11 @@ export class ConversationsService {
   async createMirror(
     organizationId: string,
     id: string,
-    opts: { humanAgentId: string; copyHistory?: boolean },
+    opts: {
+      humanAgentId: string;
+      copyHistory?: boolean;
+      shareLeadNumber?: boolean;
+    },
     allowed?: string[] | null,
     assignedTo?: string | null,
   ) {
@@ -319,6 +323,7 @@ export class ConversationsService {
       {
         prefix: INBOX_GROUP_PREFIX,
         showLeadName: true,
+        shareLeadNumber: opts.shareLeadNumber ?? false,
         conversationId: c.id,
         // Host resolution lives in createMirrorThread so every entry point
         // agrees; a lead on a channel without groups borrows a WhatsApp one.

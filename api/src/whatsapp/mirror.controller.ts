@@ -74,6 +74,11 @@ class CreateLinkDto {
   @IsOptional()
   @IsBoolean()
   showLeadName?: boolean;
+
+  // Open each group with the lead's contact card (default false).
+  @IsOptional()
+  @IsBoolean()
+  shareLeadNumber?: boolean;
 }
 
 class UpdateLinkDto {
@@ -84,6 +89,10 @@ class UpdateLinkDto {
   @IsOptional()
   @IsBoolean()
   showLeadName?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  shareLeadNumber?: boolean;
 }
 
 @UseGuards(JwtOrApiKeyGuard, OrgRolesGuard)

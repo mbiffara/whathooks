@@ -47,7 +47,8 @@ import { ModuleRef } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ChannelRouterService } from '../channels/channel-router.service';
 import { CHANNEL_ROUTER } from '../channels/channel-router.token';
-import { isGroupAddress } from '../common/address';
+import { isGroupAddress, whatsappIdentity } from '../common/address';
+import { contactVcard } from '../common/vcard';
 import { Channel } from '@prisma/client';
 import type { ChannelDriver } from '../channels/channel-driver';
 import { MessageStoreService } from '../channels/message-store.service';
@@ -119,6 +120,7 @@ export class ConnectionManagerService
         agentNumber: string;
         groupPrefix: string;
         showLeadName: boolean;
+        shareLeadNumber: boolean;
         humanAgentId: string | null;
         groupSessionId: string | null;
       } | null;
@@ -921,6 +923,7 @@ export class ConnectionManagerService
           {
             prefix: link.groupPrefix,
             showLeadName: link.showLeadName,
+            shareLeadNumber: link.shareLeadNumber,
             linkId: link.id,
             conversationId: ctx.conversationId,
             groupSessionId: link.groupSessionId,
@@ -1095,6 +1098,12 @@ export class ConnectionManagerService
        * with no groups must pass one.
        */
       groupSessionId?: string | null;
+      /**
+       * Open the group with the lead's contact card so the agent can call
+       * or save them. Off unless the business asked for it: hiding the
+       * number is what a mirror is for.
+       */
+      shareLeadNumber?: boolean;
     },
   ) {
     if (agents.length === 0) throw new Error('Mirror thread needs an agent');
@@ -1139,7 +1148,62 @@ export class ConnectionManagerService
       `Mirror thread ${thread.id}: created group ${group.id} ` +
         `("${opts.prefix} #${seq}") on ${groupSessionId}`,
     );
+    if (opts.shareLeadNumber) {
+      // Best-effort: the group is usable without the card, and a failure
+      // here must not undo the handoff that already happened.
+      await this.shareLeadContact(
+        groupSessionId,
+        group.id,
+        leadJid,
+        opts.conversationId ?? null,
+      ).catch((e) =>
+        this.log.warn(`Mirror thread ${thread.id}: lead card failed: ${e}`),
+      );
+    }
     return thread;
+  }
+
+  /**
+   * Post the lead's contact card into a freshly opened mirror group. The
+   * lead's number lives on the conversation when WhatsApp addressed them by
+   * LID, and in the jid itself otherwise. A lead on another channel, or a
+   * LID we never resolved, has no number to share; say so rather than
+   * leave the agent wondering whether the option worked.
+   */
+  private async shareLeadContact(
+    sessionId: string,
+    groupJid: string,
+    leadJid: string,
+    conversationId: string | null,
+  ): Promise<void> {
+    const conversation = conversationId
+      ? await this.prisma.conversation.findUnique({
+          where: { id: conversationId },
+          select: { name: true, phoneNumber: true },
+        })
+      : await this.prisma.conversation.findFirst({
+          where: { sessionId, remoteJid: leadJid },
+          select: { name: true, phoneNumber: true },
+        });
+    const phoneNumber = whatsappIdentity(
+      leadJid,
+      conversation?.phoneNumber,
+    )?.phoneNumber;
+    if (!phoneNumber) {
+      await this.sendText(
+        sessionId,
+        groupJid,
+        '📇 El número del lead no está disponible en este canal.',
+        { source: MessageSource.MIRROR },
+      );
+      return;
+    }
+    await this.sendContactCard(
+      sessionId,
+      groupJid,
+      { name: conversation?.name?.trim() || `+${phoneNumber}`, phoneNumber },
+      { source: MessageSource.MIRROR },
+    );
   }
 
   /**
@@ -1199,6 +1263,7 @@ export class ConnectionManagerService
     agentNumber: string;
     groupPrefix: string;
     showLeadName: boolean;
+    shareLeadNumber: boolean;
     humanAgentId: string | null;
   } | null> {
     const cached = this.mirrorLinkCache.get(sessionId);
@@ -1210,6 +1275,7 @@ export class ConnectionManagerService
         agentNumber: true,
         groupPrefix: true,
         showLeadName: true,
+        shareLeadNumber: true,
         humanAgentId: true,
         groupSessionId: true,
         enabled: true,
@@ -1221,6 +1287,7 @@ export class ConnectionManagerService
           agentNumber: link.agentNumber,
           groupPrefix: link.groupPrefix,
           showLeadName: link.showLeadName,
+          shareLeadNumber: link.shareLeadNumber,
           humanAgentId: link.humanAgentId,
           groupSessionId: link.groupSessionId,
         }
@@ -1530,6 +1597,42 @@ export class ConnectionManagerService
       senderName: opts.senderName ?? null,
       type: MessageType.TEXT,
       text,
+      waMessageId: sent?.key?.id ?? null,
+      status: MessageStatus.SENT,
+      timestamp: new Date(),
+      incrementUnread: false,
+    });
+    return { waMessageId: sent?.key?.id ?? null, messageId: result.messageId };
+  }
+
+  /** Send a contact card (vCard) the recipient can tap to call or save. */
+  async sendContactCard(
+    sessionId: string,
+    to: string,
+    contact: { name: string; phoneNumber: string },
+    opts: { source?: MessageSource; senderName?: string | null } = {},
+  ): Promise<{ waMessageId: string | null; messageId: string }> {
+    const live = this.sessions.get(sessionId);
+    if (!live) throw new Error('Session is not connected');
+
+    const jid = toJid(to);
+    const { name, digits, vcard } = contactVcard(contact);
+    const sent = await live.sock.sendMessage(jid, {
+      contacts: { displayName: name, contacts: [{ displayName: name, vcard }] },
+    });
+    this.markOwnSend(sent?.key?.id);
+    const organizationId = await this.orgIdOf(sessionId);
+
+    const result = await this.persistMessage({
+      sessionId,
+      organizationId,
+      remoteJid: jid,
+      direction: MessageDirection.OUTBOUND,
+      fromMe: true,
+      source: opts.source ?? MessageSource.HUMAN,
+      senderName: opts.senderName ?? null,
+      type: MessageType.CONTACT,
+      text: `📇 ${name} +${digits}`,
       waMessageId: sent?.key?.id ?? null,
       status: MessageStatus.SENT,
       timestamp: new Date(),

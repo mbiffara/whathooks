@@ -38,6 +38,7 @@ interface MirrorLink {
   humanAgentName: string | null;
   groupPrefix: string;
   showLeadName: boolean;
+  shareLeadNumber: boolean;
   threads: number;
   session: {
     id: string;
@@ -69,6 +70,7 @@ export default function MirrorPage() {
   const [humanAgentId, setHumanAgentId] = useState("");
   const [groupPrefix, setGroupPrefix] = useState("");
   const [showLeadName, setShowLeadName] = useState(true);
+  const [shareLeadNumber, setShareLeadNumber] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +125,7 @@ export default function MirrorPage() {
           sessionId,
           humanAgentId,
           showLeadName,
+          shareLeadNumber,
           ...(groupPrefix.trim() ? { groupPrefix: groupPrefix.trim() } : {}),
         }),
       });
@@ -130,6 +133,7 @@ export default function MirrorPage() {
       setHumanAgentId("");
       setGroupPrefix("");
       setShowLeadName(true);
+      setShareLeadNumber(false);
     });
   }
 
@@ -321,6 +325,14 @@ export default function MirrorPage() {
           />
           {t("showLeadName")}
         </label>
+        <label className="flex items-center gap-2 pb-2 text-sm">
+          <input
+            type="checkbox"
+            checked={shareLeadNumber}
+            onChange={(e) => setShareLeadNumber(e.target.checked)}
+          />
+          {t("shareLeadNumber")}
+        </label>
         <button type="submit" disabled={busy} className="btn-primary">
           {t("createLink")}
         </button>
@@ -393,6 +405,24 @@ export default function MirrorPage() {
                       className="mt-0.5 text-[10px] text-[var(--color-muted)] hover:text-[var(--color-fg)] underline decoration-dotted"
                     >
                       {l.showLeadName ? t("nameShown") : t("nameHidden")}
+                    </button>
+                    <button
+                      onClick={() =>
+                        void run(() =>
+                          apiClient(`/mirror-links/${l.id}`, token, {
+                            method: "PATCH",
+                            body: JSON.stringify({
+                              shareLeadNumber: !l.shareLeadNumber,
+                            }),
+                          }),
+                        )
+                      }
+                      disabled={busy}
+                      className="mt-0.5 block text-[10px] text-[var(--color-muted)] hover:text-[var(--color-fg)] underline decoration-dotted"
+                    >
+                      {l.shareLeadNumber
+                        ? t("numberShared")
+                        : t("numberHidden")}
                     </button>
                   </td>
                   <td className="px-4 py-3">{l.threads}</td>

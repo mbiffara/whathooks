@@ -109,6 +109,7 @@ function MessagesInbox() {
     agentName: string;
   } | null>(null);
   const [mirrorCopyHistory, setMirrorCopyHistory] = useState(true);
+  const [mirrorShareNumber, setMirrorShareNumber] = useState(false);
   const [mirrorBusy, setMirrorBusy] = useState(false);
   const [mirrorError, setMirrorError] = useState<string | null>(null);
   const [unlinkOpen, setUnlinkOpen] = useState(false);
@@ -434,6 +435,9 @@ function MessagesInbox() {
     humanAgent: { id: string; name: string },
   ) {
     setMirrorCopyHistory(true);
+    // Privacy-sensitive, so it is a per-handoff choice: never carry the
+    // previous lead's answer over to the next prompt.
+    setMirrorShareNumber(false);
     setMirrorError(null);
     setMirrorPrompt({
       conversationId,
@@ -491,6 +495,7 @@ function MessagesInbox() {
           body: JSON.stringify({
             humanAgentId: mirrorPrompt.humanAgentId,
             copyHistory: mirrorCopyHistory,
+            shareLeadNumber: mirrorShareNumber,
           }),
         },
       );
@@ -719,6 +724,20 @@ function MessagesInbox() {
                 {t("mirrorCopyHistory")}
                 <span className="block text-xs text-[var(--color-muted)]">
                   {t("mirrorCopyHistoryHint")}
+                </span>
+              </span>
+            </label>
+            <label className="mt-3 flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={mirrorShareNumber}
+                onChange={(e) => setMirrorShareNumber(e.target.checked)}
+              />
+              <span>
+                {t("mirrorShareNumber")}
+                <span className="block text-xs text-[var(--color-muted)]">
+                  {t("mirrorShareNumberHint")}
                 </span>
               </span>
             </label>

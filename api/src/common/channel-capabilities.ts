@@ -55,6 +55,7 @@ export const GROUP_HANDOFF_NODES: FlowNodeType[] = [
   'assignHuman',
   'roundRobin',
   'assignGroup',
+  'assignContactAgent',
 ];
 
 export function capabilitiesOf(channel: Channel): ChannelCapabilities {

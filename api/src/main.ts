@@ -1,12 +1,13 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   // rawBody: true preserves the unparsed request body so the Stripe webhook
   // controller can verify signatures against the exact bytes Stripe sent.
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: false,
     rawBody: true,
   });
@@ -24,6 +25,9 @@ async function bootstrap() {
     origin: origins,
     credentials: true,
   });
+  // Express defaults to 100 KB, which a 500-row contact import batch can
+  // exceed once names are on it.
+  app.useBodyParser('json', { limit: '1mb' });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

@@ -10,7 +10,7 @@ import {
 } from '../flows/flow-graph';
 import { Channel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { whatsappIdentity } from '../common/address';
+import { contactIdentityWhere } from '../common/contact-identity';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { agentActiveNow } from './agent-schedule';
 import type {
@@ -61,6 +61,19 @@ interface RunRecorder {
   reply?: string | null;
 }
 const DEFAULT_GROUP_PREFIX = '🔒 Lead';
+
+/** How a handoff opens its group. Every field has the assign nodes' default. */
+export interface HandoffOptions {
+  prefix?: string;
+  showLeadName?: boolean;
+  shareLeadNumber?: boolean;
+  copyHistory?: boolean;
+  farewell?: string | null;
+  /** Set when a flow made the handoff: records FlowConversationState. */
+  flowId?: string;
+  /** Log label, e.g. `Flow f1`. */
+  origin: string;
+}
 
 /**
  * Runtime for Flows: walks a session's graph for each inbound DM. The
@@ -439,6 +452,54 @@ export class FlowEngineService {
         return undefined;
       }
 
+      case 'assignContactAgent': {
+        // Route on who the sender is, not on what they said: a contact with
+        // a human agent goes straight to them. Anyone else (unknown number,
+        // contact without an agent, agent since deleted) takes `fallback`
+        // so the flow can carry on with its bot or rotation.
+        const contact = await this.contactAgentFor(flow.organizationId, ctx);
+        if (!contact?.humanAgent) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: contact ? 'contact has no agent' : 'not a saved contact',
+          });
+          return this.follow(graph, node, 'fallback');
+        }
+        if (rec.dryRun) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: `would hand off to ${contact.humanAgent.name} (no group created)`,
+          });
+          const farewell = ((node.data.farewellText as string) ?? '').trim();
+          if (farewell) rec.reply = farewell;
+          rec.outcome = 'handed_off';
+          return undefined;
+        }
+        const who = await this.handoff(
+          sessionId,
+          ctx,
+          manager,
+          [contact.humanAgent],
+          {
+            ...this.handoffOptionsOf(node),
+            flowId: flow.id,
+            origin: `Flow ${flow.id}`,
+          },
+        ).catch((e) => {
+          this.log.warn(`Flow ${flow.id}: contact handoff failed: ${e}`);
+          return null;
+        });
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: who ?? 'failed',
+        });
+        rec.outcome = who ? 'handed_off' : rec.outcome;
+        return undefined;
+      }
+
       case 'webhook': {
         if (rec.dryRun) {
           rec.steps.push({
@@ -586,15 +647,51 @@ export class FlowEngineService {
       );
       return null;
     }
-    const showLeadName = (node.data.showLeadName as boolean) ?? true;
+    return this.handoff(sessionId, ctx, manager, humans, {
+      ...this.handoffOptionsOf(node),
+      flowId: flow.id,
+      origin: `Flow ${flow.id}`,
+    });
+  }
+
+  /** The group options every assign node shares, read off its data. */
+  private handoffOptionsOf(node: FlowNode): Omit<HandoffOptions, 'origin'> {
+    return {
+      prefix: (node.data.groupPrefix as string) || undefined,
+      showLeadName: (node.data.showLeadName as boolean) ?? true,
+      shareLeadNumber: (node.data.shareLeadNumber as boolean) ?? false,
+      copyHistory: (node.data.copyHistory as boolean) ?? true,
+      farewell: (node.data.farewellText as string) ?? null,
+    };
+  }
+
+  /**
+   * Hand a conversation to one or more human agents: open the mirror group,
+   * seed it, relay the triggering message, say goodbye to the lead, and
+   * record the handoff. The one path every assign node ends in, so what a
+   * handoff *is* stays defined once.
+   */
+  async handoff(
+    sessionId: string,
+    ctx: InboundAutomationCtx,
+    manager: ConnectionManagerService,
+    humans: Array<{
+      id: string;
+      name: string;
+      phoneNumber: string;
+      userId: string | null;
+    }>,
+    opts: HandoffOptions,
+  ): Promise<string> {
+    const showLeadName = opts.showLeadName ?? true;
     const thread = await manager.createMirrorThread(
       sessionId,
       ctx.remoteJid,
       humans.map((h) => ({ id: h.id, number: h.phoneNumber })),
       {
-        prefix: (node.data.groupPrefix as string) || DEFAULT_GROUP_PREFIX,
+        prefix: opts.prefix || DEFAULT_GROUP_PREFIX,
         showLeadName,
-        shareLeadNumber: (node.data.shareLeadNumber as boolean) ?? false,
+        shareLeadNumber: opts.shareLeadNumber ?? false,
         conversationId: ctx.conversationId,
         // Host resolution lives in createMirrorThread.
       },
@@ -604,7 +701,7 @@ export class FlowEngineService {
     // Defaults ON: a human taking over a conversation almost always wants to
     // see it, and the inbox's own mirror dialog has defaulted to copying since
     // it shipped. Only an explicit false (the box was unticked) skips it.
-    if ((node.data.copyHistory as boolean) ?? true) {
+    if (opts.copyHistory ?? true) {
       const transcript = await this.historyTranscript(
         ctx.conversationId,
         showLeadName ? ctx.pushName : null,
@@ -615,27 +712,32 @@ export class FlowEngineService {
             source: MessageSource.MIRROR,
           })
           .catch((e) =>
-            this.log.warn(`Flow ${flow.id}: history copy failed: ${e}`),
+            this.log.warn(`${opts.origin}: history copy failed: ${e}`),
           );
       }
     }
     await manager.forwardLeadToGroup(thread.sessionId, thread, ctx);
-    const farewell = (node.data.farewellText as string) ?? '';
-    if (farewell.trim()) {
-      await manager.sendOnSession(sessionId, ctx.remoteJid, farewell.trim(), {
+    const farewell = (opts.farewell ?? '').trim();
+    if (farewell) {
+      await manager.sendOnSession(sessionId, ctx.remoteJid, farewell, {
         source: MessageSource.API,
       });
     }
-    await this.prisma.flowConversationState.upsert({
-      where: { conversationId: ctx.conversationId },
-      create: {
-        flowId: flow.id,
-        conversationId: ctx.conversationId,
-        status: 'HANDED_OFF',
-        humanAgentId: humans[0].id,
-      },
-      update: { status: 'HANDED_OFF', humanAgentId: humans[0].id },
-    });
+    // Flow bookkeeping only exists for a flow: the model requires a flowId,
+    // and a handoff from elsewhere is already protected by the mirror thread
+    // check that runs before any flow does.
+    if (opts.flowId) {
+      await this.prisma.flowConversationState.upsert({
+        where: { conversationId: ctx.conversationId },
+        create: {
+          flowId: opts.flowId,
+          conversationId: ctx.conversationId,
+          status: 'HANDED_OFF',
+          humanAgentId: humans[0].id,
+        },
+        update: { status: 'HANDED_OFF', humanAgentId: humans[0].id },
+      });
+    }
     // Linked agents bridge into inbox assignment: the conversation shows up
     // as theirs in the dashboard too (first linked agent wins). Best-effort.
     const linked = humans.find((h) => h.userId);
@@ -646,12 +748,46 @@ export class FlowEngineService {
           data: { assignedToUserId: linked.userId },
         })
         .catch((e) =>
-          this.log.warn(`Flow ${flow.id}: handoff assignment failed: ${e}`),
+          this.log.warn(`${opts.origin}: handoff assignment failed: ${e}`),
         );
     }
     const names = humans.map((h) => h.name).join(', ');
-    this.log.log(`Flow ${flow.id}: handed ${ctx.conversationId} to ${names}`);
+    this.log.log(`${opts.origin}: handed ${ctx.conversationId} to ${names}`);
     return names;
+  }
+
+  /**
+   * The saved contact behind an inbound sender, with their human agent.
+   * Null when the sender is not in the book (or cannot be matched: an
+   * Instagram address, an unresolved LID).
+   */
+  private async contactAgentFor(
+    organizationId: string,
+    ctx: InboundAutomationCtx,
+  ): Promise<{
+    id: string;
+    humanAgent: {
+      id: string;
+      name: string;
+      phoneNumber: string;
+      userId: string | null;
+    } | null;
+  } | null> {
+    const where = contactIdentityWhere(
+      organizationId,
+      ctx.remoteJid,
+      ctx.phoneNumber,
+    );
+    if (!where) return null;
+    return this.prisma.contact.findFirst({
+      where,
+      select: {
+        id: true,
+        humanAgent: {
+          select: { id: true, name: true, phoneNumber: true, userId: true },
+        },
+      },
+    });
   }
 
   /**
@@ -693,16 +829,18 @@ export class FlowEngineService {
     // and either one matches an existing contact. Channels whose addresses are
     // opaque provider ids carry their contact identity elsewhere and are not
     // saved this way.
-    const wa = whatsappIdentity(ctx.remoteJid, ctx.phoneNumber);
-    if (!wa) return 'error';
-    const { lid, phoneNumber } = wa;
-    const identities = [
-      ...(lid ? [{ lid }] : []),
-      ...(phoneNumber ? [{ phoneNumber }] : []),
-    ];
-    if (identities.length === 0) return 'error';
+    const where = contactIdentityWhere(
+      organizationId,
+      ctx.remoteJid,
+      ctx.phoneNumber,
+    );
+    if (!where) return 'error';
+    const lid = where.OR.flatMap((i) => ('lid' in i ? [i.lid] : []))[0] ?? null;
+    const phoneNumber =
+      where.OR.flatMap((i) => ('phoneNumber' in i ? [i.phoneNumber] : []))[0] ??
+      null;
     const existing = await this.prisma.contact.findFirst({
-      where: { organizationId, OR: identities },
+      where,
       include: {
         sessions: { where: { id: sessionId }, select: { id: true } },
       },

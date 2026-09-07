@@ -632,6 +632,7 @@
       "noAssignee": "Unassigned",
       "hiddenNumber": "Hidden number",
       "saveContact": "Save contact",
+      "assignContactAgent": "Contact's agent",
       "saveContactHint": "Add this person to your contact book. This session does not save contacts automatically.",
       "contactSaved": "Contact saved",
       "contactExists": "Already in contacts",
@@ -733,7 +734,42 @@
       "colCompany": "Company",
       "colDetails": "Details",
       "colSessions": "Numbers",
-      "empty": "No contacts yet. Add the \"Save contact\" node to a flow, or create one here."
+      "empty": "No contacts yet. Add the \"Save contact\" node to a flow, or create one here.",
+      "agent": "Human agent",
+      "noAgent": "No human agent",
+      "colAgent": "Human agent",
+      "filterAgent": "Filter by human agent",
+      "allAgents": "All human agents",
+      "import": "Import",
+      "importDialog": {
+        "title": "Import contacts",
+        "fileHint": "An Excel or CSV file with one contact per row: a phone number with country code, optionally a name, and optionally a label naming the human agent who looks after them.",
+        "sheetEmpty": "The file has no sheet to read",
+        "noHeader": "Could not find a header row with column names",
+        "colPhone": "Phone column",
+        "colName": "Name column",
+        "colLabel": "Human agent column",
+        "ignoreColumn": "(none)",
+        "labelMapping": "Which human agent is each label?",
+        "withoutAgent": "Import without an agent",
+        "unmatched": "{count, plural, one {# label has no agent yet} other {# labels have no agent yet}}. Those contacts are imported without one.",
+        "previewValid": "{count, plural, one {# contact to import} other {# contacts to import}}",
+        "previewInvalid": "{count, plural, one {# row without a valid phone number} other {# rows without a valid phone number}}",
+        "previewDuplicates": "{count, plural, one {# repeated number} other {# repeated numbers}}",
+        "webhookNote": "Contacts that already exist with the same number get the file's name and agent. Imports do not fire webhooks.",
+        "start": "Import {count}",
+        "progress": "Importing batch {done} of {total}…",
+        "resultCreated": "{count} created",
+        "resultUpdated": "{count} updated",
+        "resultUnchanged": "{count} unchanged",
+        "resultSkipped": "{count, plural, one {# row skipped} other {# rows skipped}}",
+        "rowLabel": "Row {row}",
+        "reason": {
+          "invalid_phone": "not a valid phone number",
+          "duplicate_in_batch": "number repeated in the file",
+          "unknown_agent": "unknown human agent"
+        }
+      }
     },
     "tags": {
       "title": "Tags",
@@ -872,6 +908,7 @@
       "decisionQuestionPlaceholder": "e.g. Is the customer asking to cancel their subscription?",
       "decisionQuestionHint": "The agent reads the conversation and answers yes or no. An unclear answer takes the no branch.",
       "summaryHumanAgents": "{count, plural, one {# human agent} other {# human agents}}",
+      "summaryContactAgent": "From the contact's agent",
       "nodes": {
         "trigger": {
           "title": "Message received",
@@ -920,6 +957,10 @@
         "assignGroup": {
           "title": "Team group",
           "hint": "Creates the lead's mirror group with every selected human agent. Anyone in it can reply as the brand. Ends the flow."
+        },
+        "assignContactAgent": {
+          "title": "Assign the contact's agent",
+          "hint": "Hands the lead to the human agent saved on their contact (from an import or the Contacts page). Senders who aren't a contact, or have no agent, continue through Fallback. Matches by phone number, so a hidden number is only recognized once it has been resolved."
         },
         "saveContact": {
           "title": "Save contact",

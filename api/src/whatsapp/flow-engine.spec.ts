@@ -1066,3 +1066,132 @@ describe('simulated handoff shows the farewell', () => {
     expect(rec.reply).toBeUndefined();
   });
 });
+
+describe('assignContactAgent node', () => {
+  const contactWithAgent = {
+    id: 'c1',
+    humanAgent: {
+      id: 'ha1',
+      name: 'Antonio',
+      phoneNumber: '555ha1',
+      userId: 'user1',
+    },
+  };
+  const graph = (): FlowGraph => ({
+    nodes: [
+      node('t', 'trigger'),
+      node('ca', 'assignContactAgent', {
+        farewellText: 'Te atiende tu asesor.',
+      }),
+      node('r', 'agentReply', { agentId: 'agent1' }),
+    ],
+    edges: [edge('t', 'ca'), edge('ca', 'r', 'fallback')],
+  });
+
+  it('is a valid graph with only a fallback edge', () => {
+    expect(validateGraph(graph(), REFS)).toEqual([]);
+    const bad: FlowGraph = {
+      ...graph(),
+      edges: [edge('t', 'ca'), edge('ca', 'r', 'out')],
+    };
+    expect(validateGraph(bad, REFS).map((e) => e.code)).toContain(
+      'edgeBadHandle',
+    );
+  });
+
+  it('hands a saved contact to their agent and records the flow state', async () => {
+    const t = makeEngine({});
+    t.prisma.contact.findFirst.mockResolvedValue(contactWithAgent);
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    // Looked up by the org and the sender's identity, not by session.
+    expect(t.prisma.contact.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'org1',
+          OR: [{ phoneNumber: '549111' }],
+        },
+      }),
+    );
+    expect(t.created[0]).toMatchObject({
+      leadJid: CTX.remoteJid,
+      agents: [{ id: 'ha1', number: '555ha1' }],
+      opts: { prefix: '🔒 Lead', showLeadName: true, shareLeadNumber: false },
+    });
+    expect(t.forwarded).toHaveLength(1);
+    expect(t.sent[0]).toMatchObject({ text: 'Te atiende tu asesor.' });
+    expect(t.stateUpserts[0]).toMatchObject({
+      create: { status: 'HANDED_OFF', humanAgentId: 'ha1' },
+    });
+    // A linked agent also gets the inbox assignment.
+    expect(t.updates[0]).toMatchObject({
+      data: { assignedToUserId: 'user1' },
+    });
+    expect(t.agentReplies).toHaveLength(0);
+  });
+
+  it('falls through when the sender is not a contact', async () => {
+    const t = makeEngine({});
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.created).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(1);
+  });
+
+  it('falls through when the contact has no agent', async () => {
+    const t = makeEngine({});
+    t.prisma.contact.findFirst.mockResolvedValue({
+      id: 'c1',
+      humanAgent: null,
+    });
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.created).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(1);
+  });
+
+  it('simulates the handoff without opening a group', async () => {
+    const t = makeEngine({});
+    t.prisma.contact.findFirst.mockResolvedValue(contactWithAgent);
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      CTX,
+      t.manager as never,
+    );
+    expect(rec.outcome).toBe('handed_off');
+    expect(rec.steps[0].note).toContain('Antonio');
+    expect(rec.reply).toBe('Te atiende tu asesor.');
+    expect(t.created).toHaveLength(0);
+    expect(t.stateUpserts).toHaveLength(0);
+  });
+});
+
+describe('FlowEngineService.handoff', () => {
+  it('records no flow state when no flow made the handoff', async () => {
+    const t = makeEngine({});
+    const who = await t.engine.handoff(
+      's1',
+      CTX,
+      t.manager as never,
+      [{ id: 'ha1', name: 'Antonio', phoneNumber: '555ha1', userId: null }],
+      { origin: 'Test' },
+    );
+    expect(who).toBe('Antonio');
+    expect(t.created[0]).toMatchObject({ opts: { prefix: '🔒 Lead' } });
+    expect(t.forwarded).toHaveLength(1);
+    expect(t.stateUpserts).toHaveLength(0);
+    expect(t.updates).toHaveLength(0);
+  });
+});

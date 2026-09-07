@@ -361,6 +361,7 @@ model HumanAgent {
 
   mirrorLinks   MirrorLink[]
   mirrorThreads MirrorThread[]
+  contacts      Contact[]
 
   @@unique([organizationId, phoneNumber])
   @@index([organizationId])
@@ -660,12 +661,18 @@ model Contact {
   instagram      String?
   // Which of the org's numbers this person has written to.
   sessions       WaSession[]
+  // The human agent who owns this relationship. The "assign to the contact's
+  // agent" flow node hands an inbound DM from this person straight to them.
+  // Null = nobody in particular; the flow falls through to its other steps.
+  humanAgentId   String?
+  humanAgent     HumanAgent?  @relation(fields: [humanAgentId], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@unique([organizationId, phoneNumber])
   @@unique([organizationId, lid])
   @@index([organizationId])
+  @@index([organizationId, humanAgentId])
 }
 
 // Reusable canned response for the inbox composer, shared across the org.

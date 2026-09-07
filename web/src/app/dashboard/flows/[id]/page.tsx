@@ -1484,7 +1484,8 @@ function NodePanel({
 
       {(nt === "assignHuman" ||
         nt === "roundRobin" ||
-        nt === "assignGroup") && (
+        nt === "assignGroup" ||
+        nt === "assignContactAgent") && (
         <>
           <label className="flex flex-col gap-1 text-sm">
             {t("groupPrefix")}

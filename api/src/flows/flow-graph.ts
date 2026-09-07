@@ -24,6 +24,7 @@ export const FLOW_NODE_TYPES = [
   'assignTeammate',
   'saveContact',
   'assignGroup',
+  'assignContactAgent',
 ] as const;
 export type FlowNodeType = (typeof FLOW_NODE_TYPES)[number];
 
@@ -208,6 +209,7 @@ export function validateGraph(
     switch (n.type) {
       case 'trigger':
       case 'saveContact': // no configuration
+      case 'assignContactAgent': // only the shared group options below
         break;
       case 'keyword': {
         const kw = d.keywords;
@@ -404,7 +406,8 @@ export function validateGraph(
     if (
       n.type === 'assignHuman' ||
       n.type === 'roundRobin' ||
-      n.type === 'assignGroup'
+      n.type === 'assignGroup' ||
+      n.type === 'assignContactAgent'
     ) {
       if (!isOptStr(d.groupPrefix, 40)) {
         push(
@@ -518,6 +521,8 @@ export function allowedHandles(node: FlowNode): string[] {
       return [...intentsOf(node).map((i) => i.key), 'fallback'];
     case 'agentReply':
       return ['onHandoff'];
+    case 'assignContactAgent':
+      return ['fallback'];
     case 'trigger':
     case 'webhook':
     case 'tagConversation':

@@ -118,6 +118,7 @@ NODE TYPES (type → data fields → output handles):
 - intent → { agentId?, intents: [{ key, label, description? }] } → one handle per intent key, plus "fallback". Keys are short lowercase slugs; "fallback" is reserved.
 - agentReply → { agentId, prompt? } → optional "onHandoff". prompt is extra instructions for THIS step, appended to the agent's own (use it when one agent should answer differently on different branches). The AI agent answers; the walk ends after replying. Connect "onHandoff" to route the conversation when the agent decides a human is needed.
 - assignHuman → { humanAgentId, groupPrefix?, farewellText?, copyHistory?, shareLeadNumber? } → terminal. Creates a WhatsApp mirror group with that human; shareLeadNumber posts the lead's contact card in it.
+- assignContactAgent → { groupPrefix?, farewellText?, copyHistory?, shareLeadNumber? } → optional "fallback". Hands the lead to the human agent saved on their contact (from an import or the Contacts page). A sender who is not a contact, or has no agent, continues through "fallback": wire it to the general route. Put it first when the user says known customers go to their own salesperson.
 - roundRobin → { humanAgentIds: string[], same options } → terminal. Rotates leads across humans, one group per lead.
 - assignGroup → { humanAgentIds: string[], same options } → terminal. One shared group with every listed human.
 - webhook → { webhookId, note? } → "out". Notifies an external system, then continues.

@@ -137,6 +137,7 @@ describe('SessionLeadership', () => {
       sockets: 'none',
     });
     expect(t.leadership.ready()).toBe(false);
+    expect(t.leadership.hasSockets()).toBe(false);
     await t.leadership.tick();
     expect(t.leadership.status().sockets).toBe('up');
     expect(t.leadership.ready()).toBe(true);
@@ -169,7 +170,9 @@ describe('SessionLeadership', () => {
     expect(fresh.leadership.ready()).toBe(false);
     clock.now += 1_000;
     expect(fresh.leadership.ready()).toBe(true);
-    // Still not the leader: sends say a deploy is finishing, nothing hangs.
+    // In rotation for HTTP, but a send still has nowhere to go: the send
+    // guard reads socket ownership, which patience does not fake.
+    expect(fresh.leadership.hasSockets()).toBe(false);
     expect(fresh.leadership.status()).toMatchObject({
       leader: false,
       standby: true,
@@ -181,6 +184,7 @@ describe('SessionLeadership', () => {
       leader: true,
       sockets: 'up',
     });
+    expect(fresh.leadership.hasSockets()).toBe(true);
   });
 
   it('is ready when alone, even before the first tick', () => {

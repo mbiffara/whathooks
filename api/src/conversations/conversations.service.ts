@@ -653,10 +653,11 @@ export class ConversationsService {
       session.status !== 'CONNECTED' ||
       !this.channels.driverFor(session.channel).isLive(c.sessionId)
     ) {
-      // During a deploy the socket lives on the other task for a few
-      // seconds; "not connected" would send the operator to re-link a
-      // number that is fine.
-      if (session?.status === 'CONNECTED' && !this.manager.isReady()) {
+      // During a deploy the socket lives on the other task for a while;
+      // "not connected" would send the operator to re-link a number that
+      // is fine. This reads socket ownership, not health-check readiness:
+      // a task can be in rotation while another still holds the sockets.
+      if (session?.status === 'CONNECTED' && !this.manager.holdsSockets()) {
         throw new ServiceUnavailableException(HANDOVER_MESSAGE);
       }
       throw new BadRequestException('Session is not connected');

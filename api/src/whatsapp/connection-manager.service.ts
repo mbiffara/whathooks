@@ -203,6 +203,11 @@ export class ConnectionManagerService
     return this.leadership?.ready() ?? true;
   }
 
+  /** Whether this task holds the WhatsApp sockets (send guards). */
+  holdsSockets(): boolean {
+    return this.leadership?.hasSockets() ?? false;
+  }
+
   private get isLeader(): boolean {
     return this.leadership?.status().leader ?? false;
   }

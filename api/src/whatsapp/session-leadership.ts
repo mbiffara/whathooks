@@ -141,6 +141,16 @@ export class SessionLeadership {
     return this.now() - this.standbySince >= this.handoverPatienceMs;
   }
 
+  /**
+   * Whether a send from this task can reach WhatsApp right now: it leads
+   * and the sockets are open. Unlike `ready()`, patience plays no part: a
+   * standby task past its patience is in rotation for HTTP, but a send that
+   * lands on it still has nowhere to go and must say so, not "not connected".
+   */
+  hasSockets(): boolean {
+    return this.leader && this.sockets === 'up';
+  }
+
   start(intervalMs = 5_000): void {
     void this.tick();
     this.timer = setInterval(() => void this.tick(), intervalMs);

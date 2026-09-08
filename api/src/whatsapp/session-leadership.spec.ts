@@ -47,7 +47,11 @@ function task(
       },
       log: () => undefined,
     },
-    { reacquireAfterMs: 30_000, now: () => clock.now },
+    {
+      reacquireAfterMs: 30_000,
+      handoverPatienceMs: 60_000,
+      now: () => clock.now,
+    },
   );
   return { leadership, events };
 }
@@ -150,6 +154,33 @@ describe('SessionLeadership', () => {
     await old.leadership.tick();
     expect(store.data.get('whathooks:session-leader')).toBe('new');
     expect(old.leadership.status().leader).toBe(false);
+  });
+
+  it('stops waiting on a leader that never yields', async () => {
+    const store = new FakeStore();
+    const clock = { now: 0 };
+    // A leader running older code: holds the lock, ignores requests.
+    store.data.set('whathooks:session-leader', 'legacy');
+    const fresh = task(store, 'new', clock);
+    await fresh.leadership.tick();
+    expect(fresh.leadership.ready()).toBe(false);
+    clock.now += 59_000;
+    await fresh.leadership.tick();
+    expect(fresh.leadership.ready()).toBe(false);
+    clock.now += 1_000;
+    expect(fresh.leadership.ready()).toBe(true);
+    // Still not the leader: sends say a deploy is finishing, nothing hangs.
+    expect(fresh.leadership.status()).toMatchObject({
+      leader: false,
+      standby: true,
+    });
+    // The legacy task is stopped by ECS and its lease expires.
+    store.data.delete('whathooks:session-leader');
+    await fresh.leadership.tick();
+    expect(fresh.leadership.status()).toMatchObject({
+      leader: true,
+      sockets: 'up',
+    });
   });
 
   it('is ready when alone, even before the first tick', () => {

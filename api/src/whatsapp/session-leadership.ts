@@ -65,6 +65,13 @@ export interface LeadershipOptions {
   handoverTtlMs?: number;
   /** How long a yielded task waits for a free lock before taking it back. */
   reacquireAfterMs?: number;
+  /**
+   * How long a waiting task stays out of rotation before giving up on the
+   * handover and reporting ready anyway. A leader that never yields (older
+   * code, a stuck tick) must not block a deploy forever: past this point
+   * the deploy proceeds the old way, with ECS stopping the leader.
+   */
+  handoverPatienceMs?: number;
   now?: () => number;
 }
 
@@ -85,6 +92,7 @@ export class SessionLeadership {
   private readonly ttlMs: number;
   private readonly handoverTtlMs: number;
   private readonly reacquireAfterMs: number;
+  private readonly handoverPatienceMs: number;
   private readonly now: () => number;
 
   private leader = false;
@@ -92,6 +100,7 @@ export class SessionLeadership {
   private yielded = false;
   private yieldedAt = 0;
   private standby = false;
+  private standbySince = 0;
   private stopped = false;
   private timer?: ReturnType<typeof setInterval>;
 
@@ -106,6 +115,7 @@ export class SessionLeadership {
     this.ttlMs = opts.ttlMs ?? 20_000;
     this.handoverTtlMs = opts.handoverTtlMs ?? 30_000;
     this.reacquireAfterMs = opts.reacquireAfterMs ?? 30_000;
+    this.handoverPatienceMs = opts.handoverPatienceMs ?? 60_000;
     this.now = opts.now ?? Date.now;
   }
 
@@ -126,7 +136,9 @@ export class SessionLeadership {
    */
   ready(): boolean {
     if (this.leader) return this.sockets === 'up';
-    return !this.yielded && !this.standby;
+    if (this.yielded) return false;
+    if (!this.standby) return true;
+    return this.now() - this.standbySince >= this.handoverPatienceMs;
   }
 
   start(intervalMs = 5_000): void {
@@ -164,7 +176,10 @@ export class SessionLeadership {
         return;
       }
       // Someone else leads.
-      this.standby = true;
+      if (!this.standby) {
+        this.standby = true;
+        this.standbySince = this.now();
+      }
       if (this.leader) {
         this.hooks.log('Lost session leadership, closing sockets');
         this.leader = false;

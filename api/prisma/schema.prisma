@@ -785,6 +785,10 @@ model Message {
 
   @@index([conversationId, timestamp])
   @@index([organizationId])
+  // The monthly quota count (organizationId + createdAt range) runs on
+  // every send; without createdAt in the index it walks the org's whole
+  // history to keep this month's rows.
+  @@index([organizationId, createdAt])
   @@index([sessionId])
   @@index([waMessageId])
 }

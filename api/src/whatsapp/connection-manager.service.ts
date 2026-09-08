@@ -39,6 +39,8 @@ import {
 } from '@nestjs/common';
 import type Redis from 'ioredis';
 import { randomUUID } from 'crypto';
+import { SessionLeadership } from './session-leadership';
+import type { LeadershipStatus } from './session-leadership';
 import { REDIS_PUB } from '../common/redis/redis.module';
 import { MailService } from '../mail/mail.service';
 import { agentActiveNow } from './agent-schedule';
@@ -92,6 +94,10 @@ export interface InboundAutomationCtx {
 // How long a sent waMessageId stays in the own-send set. Only needs to
 // outlive the gap between the socket returning and the row being written.
 const OWN_SEND_TTL_MS = 60_000;
+
+/** What a caller sees while the sockets move between tasks. */
+export const HANDOVER_MESSAGE =
+  'A deploy is finishing up. Try again in a few seconds.';
 
 @Injectable()
 export class ConnectionManagerService
@@ -163,59 +169,41 @@ export class ConnectionManagerService
   }
 
   /**
-   * Session leadership: exactly one task may run the Baileys sockets. During
-   * start-then-stop deploys both tasks serve HTTP, but the new one waits for
-   * the old to release this Redis lock (SIGTERM → releaseLeadership) before
-   * connecting sessions — keeping the WhatsApp handover to seconds while HTTP
-   * never drops.
+   * Session leadership: exactly one task may run the Baileys sockets. See
+   * SessionLeadership for the handover between the outgoing and incoming
+   * task of a deploy; this class only supplies the hooks.
    */
-  private static readonly LEADER_KEY = 'whathooks:session-leader';
-  private static readonly LEADER_TTL_MS = 20_000;
-  private readonly instanceId = randomUUID();
-  private isLeader = false;
-  private leadershipTimer?: ReturnType<typeof setInterval>;
+  // Created in onModuleInit: the Redis client is a constructor parameter,
+  // and field initializers run before those are assigned.
+  private leadership?: SessionLeadership;
 
-  /** Acquire/renew leadership; on first acquisition restore the sockets. */
-  async onModuleInit() {
-    const tick = async () => {
-      if (this.shuttingDown) return;
-      try {
-        const key = ConnectionManagerService.LEADER_KEY;
-        const ttl = ConnectionManagerService.LEADER_TTL_MS;
-        const acquired = await this.redis.set(
-          key,
-          this.instanceId,
-          'PX',
-          ttl,
-          'NX',
-        );
-        if (acquired) {
-          if (!this.isLeader) {
-            this.isLeader = true;
-            this.log.log('Acquired session leadership');
-            await this.restoreSessions();
-          }
-          return;
-        }
-        const holder = await this.redis.get(key);
-        if (holder === this.instanceId) {
-          await this.redis.pexpire(key, ttl);
-          if (!this.isLeader) {
-            this.isLeader = true;
-            await this.restoreSessions();
-          }
-        } else if (this.isLeader) {
-          // Should not happen while healthy — another task took over.
-          this.log.warn('Lost session leadership — closing sockets');
-          this.isLeader = false;
-          this.closeAllSockets();
-        }
-      } catch (e) {
-        this.log.warn(`Leadership tick failed: ${e}`);
+  onModuleInit() {
+    this.leadership = new SessionLeadership(this.redis, randomUUID(), {
+      onAcquire: () => this.restoreSessions(),
+      onRelease: () => this.closeAllSockets(),
+      log: (m) => this.log.log(m),
+    });
+    this.leadership.start();
+  }
+
+  /** Whether this task holds the sockets, is waiting for them, or gave them up. */
+  leadershipStatus(): LeadershipStatus {
+    return (
+      this.leadership?.status() ?? {
+        leader: false,
+        yielded: false,
+        standby: false,
       }
-    };
-    void tick();
-    this.leadershipTimer = setInterval(() => void tick(), 5_000);
+    );
+  }
+
+  /** Whether this task should take traffic (health check). */
+  isReady(): boolean {
+    return this.leadership?.ready() ?? true;
+  }
+
+  private get isLeader(): boolean {
+    return this.leadership?.status().leader ?? false;
   }
 
   private async restoreSessions() {
@@ -251,22 +239,7 @@ export class ConnectionManagerService
 
   async onModuleDestroy() {
     this.shuttingDown = true;
-    if (this.leadershipTimer) clearInterval(this.leadershipTimer);
-    this.closeAllSockets();
-    // Release the lock only if we hold it, so the next task takes over fast.
-    if (this.isLeader) {
-      try {
-        const holder = await this.redis.get(
-          ConnectionManagerService.LEADER_KEY,
-        );
-        if (holder === this.instanceId) {
-          await this.redis.del(ConnectionManagerService.LEADER_KEY);
-        }
-        this.log.log('Released session leadership');
-      } catch {
-        /* the TTL will expire it */
-      }
-    }
+    await this.leadership?.release();
   }
 
   isLive(sessionId: string): boolean {
@@ -281,9 +254,7 @@ export class ConnectionManagerService
   /** Boot (or reboot) the Baileys socket for a session. */
   async start(sessionId: string): Promise<void> {
     if (!this.isLeader && !this.shuttingDown) {
-      throw new ServiceUnavailableException(
-        'A deploy is finishing up — try again in a few seconds.',
-      );
+      throw new ServiceUnavailableException(HANDOVER_MESSAGE);
     }
     const existing = this.sessions.get(sessionId);
     if (existing?.starting) return;
@@ -534,6 +505,15 @@ export class ConnectionManagerService
         if (!this.intentionalLogouts.has(sessionId)) {
           void this.markAlertedAndNotify(sessionId, 'sessionLoggedOut');
         }
+        return;
+      }
+
+      // Closed because this task gave the sockets to another one (deploy
+      // handover or shutdown): the number is not down, the other task is
+      // reconnecting it right now. Writing DISCONNECTED here would flap the
+      // dashboard and fire a status webhook per number on every deploy.
+      if (!this.isLeader) {
+        this.log.log(`Session ${sessionId} released to the next task`);
         return;
       }
 

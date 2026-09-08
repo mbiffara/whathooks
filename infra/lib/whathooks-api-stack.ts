@@ -1,5 +1,5 @@
-import * as path from 'path';
-import * as cdk from 'aws-cdk-lib';
+import * as path from "path";
+import * as cdk from "aws-cdk-lib";
 import {
   aws_certificatemanager as acm,
   aws_cloudwatch as cloudwatch,
@@ -16,8 +16,8 @@ import {
   aws_secretsmanager as secretsmanager,
   aws_sns as sns,
   aws_sns_subscriptions as subs,
-} from 'aws-cdk-lib';
-import { Construct } from 'constructs';
+} from "aws-cdk-lib";
+import { Construct } from "constructs";
 
 export interface WhathooksApiStackProps extends cdk.StackProps {
   /** Vercel app origin allowed by CORS, e.g. https://whathooks.vercel.app */
@@ -41,7 +41,7 @@ export interface WhathooksApiStackProps extends cdk.StackProps {
   /** Cache port (default 6379). */
   redisPort?: number;
   /** Place the task in 'public' (default, assigns a public IP) or 'private' subnets. */
-  taskSubnetType?: 'public' | 'private';
+  taskSubnetType?: "public" | "private";
   /** The api hostname, e.g. api.example.com. */
   domainName?: string;
   /**
@@ -66,53 +66,55 @@ export class WhathooksApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     // Import the VPC that already contains RDS + ElastiCache
     // ---------------------------------------------------------------------
-    const vpc = ec2.Vpc.fromLookup(this, 'Vpc', { vpcId: props.vpcId });
+    const vpc = ec2.Vpc.fromLookup(this, "Vpc", { vpcId: props.vpcId });
 
-    const usePrivate = props.taskSubnetType === 'private';
+    const usePrivate = props.taskSubnetType === "private";
     const taskSubnets: ec2.SubnetSelection = usePrivate
       ? { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }
       : { subnetType: ec2.SubnetType.PUBLIC };
 
     // Security group for the api task; we open the existing data-tier SGs to it.
-    const taskSg = new ec2.SecurityGroup(this, 'ApiSg', {
+    const taskSg = new ec2.SecurityGroup(this, "ApiSg", {
       vpc,
-      description: 'whathooks api task',
+      description: "whathooks api task",
       allowAllOutbound: true,
     });
 
     const dbSg = ec2.SecurityGroup.fromSecurityGroupId(
       this,
-      'ImportedDbSg',
+      "ImportedDbSg",
       props.dbSecurityGroupId,
       { mutable: true },
     );
-    dbSg.addIngressRule(taskSg, ec2.Port.tcp(dbPort), 'whathooks api');
+    dbSg.addIngressRule(taskSg, ec2.Port.tcp(dbPort), "whathooks api");
 
     const redisSg = ec2.SecurityGroup.fromSecurityGroupId(
       this,
-      'ImportedRedisSg',
+      "ImportedRedisSg",
       props.redisSecurityGroupId,
       { mutable: true },
     );
-    redisSg.addIngressRule(taskSg, ec2.Port.tcp(redisPort), 'whathooks api');
+    redisSg.addIngressRule(taskSg, ec2.Port.tcp(redisPort), "whathooks api");
 
     // ---------------------------------------------------------------------
     // Secrets — DATABASE_URL (existing) + a generated JWT signing secret
     // ---------------------------------------------------------------------
     const dbUrlSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
-      'DatabaseUrlSecret',
+      "DatabaseUrlSecret",
       props.databaseUrlSecretArn,
     );
-    const jwtSecret = new secretsmanager.Secret(this, 'JwtSecret', {
+    const jwtSecret = new secretsmanager.Secret(this, "JwtSecret", {
       generateSecretString: { excludePunctuation: true, passwordLength: 48 },
     });
     // Key material for encrypting each agent's provider API key at rest. Generated
     // once and retained; rotating it would make existing agent keys undecryptable.
     const agentEncryptionSecret = new secretsmanager.Secret(
       this,
-      'AgentEncryptionKey',
-      { generateSecretString: { excludePunctuation: true, passwordLength: 48 } },
+      "AgentEncryptionKey",
+      {
+        generateSecretString: { excludePunctuation: true, passwordLength: 48 },
+      },
     );
     agentEncryptionSecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
     // Stripe billing secrets, created out-of-band (like the DATABASE_URL secret):
@@ -123,20 +125,20 @@ export class WhathooksApiStack extends cdk.Stack {
     // deployment circuit breaker. Full ARNs make the IAM grant an exact match.
     const stripeKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
-      'StripeSecretKey',
-      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/stripe-secret-key-Wx93N1',
+      "StripeSecretKey",
+      "arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/stripe-secret-key-Wx93N1",
     );
     const stripeWebhookSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
-      'StripeWebhookSecret',
-      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/stripe-webhook-secret-KUJqYV',
+      "StripeWebhookSecret",
+      "arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/stripe-webhook-secret-KUJqYV",
     );
     // Resend API key for transactional email (invitations). Same out-of-band
     // create + complete-ARN import pattern as the Stripe secrets.
     const resendApiKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
-      'ResendApiKey',
-      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/resend-api-key-FVI7So',
+      "ResendApiKey",
+      "arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/resend-api-key-FVI7So",
     );
     // OpenAI key the platform pays for: powers agents on "included tokens",
     // metered per plan. Deliberately separate from any customer key and from
@@ -148,33 +150,33 @@ export class WhathooksApiStack extends cdk.Stack {
     //     --query ARN --output text
     const includedAiKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
-      'IncludedAiOpenAiKey',
-      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/included-ai-openai-key-fdRDpW',
+      "IncludedAiOpenAiKey",
+      "arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/included-ai-openai-key-fdRDpW",
     );
     // Zernio: the Instagram DM channel. Two secrets — the API key we call with,
     // and the shared secret Zernio HMACs into X-Zernio-Signature (we choose
     // that one when registering the endpoint at zernio.com/dashboard/webhooks).
     const zernioApiKeySecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
-      'ZernioApiKey',
-      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/zernio-api-key-K8C69B',
+      "ZernioApiKey",
+      "arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/zernio-api-key-K8C69B",
     );
     const zernioWebhookSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
-      'ZernioWebhookSecret',
-      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/zernio-webhook-secret-2G1Cnp',
+      "ZernioWebhookSecret",
+      "arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/zernio-webhook-secret-2G1Cnp",
     );
     // X (Twitter) Conversion API pixel token — server-side ad attribution.
     const xPixelTokenSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
-      'XPixelToken',
-      'arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/x-pixel-token-5JYldj',
+      "XPixelToken",
+      "arn:aws:secretsmanager:us-east-1:817950288909:secret:whathooks/x-pixel-token-5JYldj",
     );
 
     // ---------------------------------------------------------------------
     // Media bucket (private; browser loads objects via presigned URLs)
     // ---------------------------------------------------------------------
-    const mediaBucket = new s3.Bucket(this, 'MediaBucket', {
+    const mediaBucket = new s3.Bucket(this, "MediaBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
@@ -182,8 +184,8 @@ export class WhathooksApiStack extends cdk.Stack {
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET],
-          allowedOrigins: ['*'],
-          allowedHeaders: ['*'],
+          allowedOrigins: ["*"],
+          allowedHeaders: ["*"],
           maxAge: 3000,
         },
       ],
@@ -192,9 +194,9 @@ export class WhathooksApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     // ECS Fargate — the stateful Baileys api (single owner per socket → 1 task)
     // ---------------------------------------------------------------------
-    const cluster = new ecs.Cluster(this, 'Cluster', { vpc });
+    const cluster = new ecs.Cluster(this, "Cluster", { vpc });
 
-    const taskDef = new ecs.FargateTaskDefinition(this, 'ApiTask', {
+    const taskDef = new ecs.FargateTaskDefinition(this, "ApiTask", {
       cpu: 512,
       memoryLimitMiB: 1024,
       // The image is built locally; match the build host (Apple Silicon → arm64).
@@ -209,65 +211,64 @@ export class WhathooksApiStack extends cdk.Stack {
     // correct from any host: native on Apple Silicon, QEMU-emulated on x86 CI
     // (the deploy workflow sets up docker buildx + QEMU).
     const image = ecs.ContainerImage.fromAsset(
-      path.join(__dirname, '..', '..', 'api'),
+      path.join(__dirname, "..", "..", "api"),
       { platform: ecrAssets.Platform.LINUX_ARM64 },
     );
 
-    taskDef.addContainer('api', {
+    taskDef.addContainer("api", {
       image,
       logging: ecs.LogDrivers.awsLogs({
-        streamPrefix: 'whathooks-api',
+        streamPrefix: "whathooks-api",
         logRetention: logs.RetentionDays.TWO_WEEKS,
       }),
       portMappings: [{ containerPort: 3001 }],
       environment: {
-        NODE_ENV: 'production',
-        PORT: '3001',
+        NODE_ENV: "production",
+        PORT: "3001",
         // TEMP: Baileys debug logging while diagnosing silent new-contact
         // sends (2026-07-23). Revert to 'error' (or drop) once resolved.
-        BAILEYS_LOG_LEVEL: 'debug',
-        API_KEY_PREFIX: 'wh_live',
-        JWT_EXPIRES_IN: '7d',
+        BAILEYS_LOG_LEVEL: "debug",
+        API_KEY_PREFIX: "wh_live",
+        JWT_EXPIRES_IN: "7d",
         WEB_ORIGIN: props.webOrigin,
         REDIS_URL: props.redisUrl,
         MEDIA_BUCKET: mediaBucket.bucketName,
         AWS_REGION: this.region,
-        PUBLIC_API_URL: props.domainName
-          ? `https://${props.domainName}`
-          : '',
-        METRICS_NAMESPACE: 'whathooks',
+        PUBLIC_API_URL: props.domainName ? `https://${props.domainName}` : "",
+        METRICS_NAMESPACE: "whathooks",
         // Stripe recurring Price ids (live). Not sensitive — the secret key and
         // webhook signing secret live in `secrets:` below.
-        STRIPE_PRICE_STARTER: 'price_1TwMjhHVX3hp29uYiSlPH9jn',
-        STRIPE_PRICE_PRO: 'price_1TwMjiHVX3hp29uYoJQOBCbJ',
-        STRIPE_PRICE_BUSINESS: 'price_1TwMjjHVX3hp29uYWw5myxJR',
+        STRIPE_PRICE_STARTER: "price_1TwMjhHVX3hp29uYiSlPH9jn",
+        STRIPE_PRICE_PRO: "price_1TwMjiHVX3hp29uYoJQOBCbJ",
+        STRIPE_PRICE_BUSINESS: "price_1TwMjjHVX3hp29uYWw5myxJR",
         // Annual prices: 10 months for the price of 12 (created 2026-07-31).
-        STRIPE_PRICE_STARTER_YEAR: 'price_1TzHO0HVX3hp29uY2vW72tUc',
-        STRIPE_PRICE_PRO_YEAR: 'price_1TzHO0HVX3hp29uYIxWEwrFo',
-        STRIPE_PRICE_BUSINESS_YEAR: 'price_1TzHO1HVX3hp29uYG2Kbk37F',
+        STRIPE_PRICE_STARTER_YEAR: "price_1TzHO0HVX3hp29uY2vW72tUc",
+        STRIPE_PRICE_PRO_YEAR: "price_1TzHO0HVX3hp29uYIxWEwrFo",
+        STRIPE_PRICE_BUSINESS_YEAR: "price_1TzHO1HVX3hp29uYG2Kbk37F",
         // One-off 10M AI token pack ($9.99), live price.
-        STRIPE_PRICE_TOKENS_10M: 'price_1U1y49HVX3hp29uYVKOX3IEl',
+        STRIPE_PRICE_TOKENS_10M: "price_1U1y49HVX3hp29uYVKOX3IEl",
         // Instagram add-on ($8.99/mo per connected account), live price.
         // per_unit + licensed, so the subscription item quantity is the number
         // of accounts the org may connect.
-        STRIPE_PRICE_INSTAGRAM_SEAT: 'price_1U3FdtHVX3hp29uYzxtCg6YL',
+        STRIPE_PRICE_INSTAGRAM_SEAT: "price_1U3FdtHVX3hp29uYzxtCg6YL",
         // API-created portal configuration (not the Dashboard default).
-        STRIPE_PORTAL_CONFIG: 'bpc_1TtBhkHVX3hp29uYjDbNpayS',
+        STRIPE_PORTAL_CONFIG: "bpc_1TtBhkHVX3hp29uYjDbNpayS",
         // Sender for transactional email (Resend). notify.logicalminds.co is
         // the verified sending domain; without RESEND_API_KEY mail is skipped.
-        MAIL_FROM: 'whathooks <no-reply@notify.logicalminds.co>',
+        MAIL_FROM: "whathooks <no-reply@notify.logicalminds.co>",
         // X (Twitter) Conversion API — event ids from X Events Manager for
         // pixel re0yu. The pixel token rides in secrets: below.
-        X_PIXEL_ID: 're0yu',
-        X_EVENT_SIGNUP: 'tw-re0yu-re0yy',
-        X_EVENT_SUBSCRIBE: 'tw-re0yu-re0z0',
+        X_PIXEL_ID: "re0yu",
+        X_EVENT_SIGNUP: "tw-re0yu-re0yy",
+        X_EVENT_SUBSCRIBE: "tw-re0yu-re0z0",
       },
       secrets: {
         // Whole secret value is the connection string → injected as DATABASE_URL.
         DATABASE_URL: ecs.Secret.fromSecretsManager(dbUrlSecret),
         JWT_SECRET: ecs.Secret.fromSecretsManager(jwtSecret),
-        AGENT_ENCRYPTION_KEY:
-          ecs.Secret.fromSecretsManager(agentEncryptionSecret),
+        AGENT_ENCRYPTION_KEY: ecs.Secret.fromSecretsManager(
+          agentEncryptionSecret,
+        ),
         STRIPE_SECRET_KEY: ecs.Secret.fromSecretsManager(stripeKeySecret),
         STRIPE_WEBHOOK_SECRET:
           ecs.Secret.fromSecretsManager(stripeWebhookSecret),
@@ -287,35 +288,36 @@ export class WhathooksApiStack extends cdk.Stack {
     // "whathooks" CloudWatch namespace only.
     taskDef.addToTaskRolePolicy(
       new iam.PolicyStatement({
-        actions: ['cloudwatch:PutMetricData'],
-        resources: ['*'],
+        actions: ["cloudwatch:PutMetricData"],
+        resources: ["*"],
         conditions: {
-          StringEquals: { 'cloudwatch:namespace': 'whathooks' },
+          StringEquals: { "cloudwatch:namespace": "whathooks" },
         },
       }),
     );
 
-    const service = new ecs.FargateService(this, 'ApiService', {
+    const service = new ecs.FargateService(this, "ApiService", {
       cluster,
       taskDefinition: taskDef,
       desiredCount: 1,
       assignPublicIp: !usePrivate,
       vpcSubnets: taskSubnets,
       securityGroups: [taskSg],
-      // Start-then-stop: the new task serves HTTP immediately while the old
-      // one keeps the WhatsApp sockets until SIGTERM releases the Redis
-      // session-leadership lock (connection-manager) — zero HTTP downtime,
-      // seconds of socket handover.
+      // Start-then-stop. The new task asks the old one for the WhatsApp
+      // sockets as soon as it boots (SessionLeadership in the api); the old
+      // one yields within seconds and answers 503 on /v1/health from then
+      // on, so the balancer moves traffic to the task that can send. The
+      // grace period covers the new task's own 503s while it waits.
       minHealthyPercent: 100,
       maxHealthyPercent: 200,
-      healthCheckGracePeriod: cdk.Duration.seconds(90),
+      healthCheckGracePeriod: cdk.Duration.seconds(120),
       circuitBreaker: { rollback: true },
     });
 
     // ---------------------------------------------------------------------
     // ALB
     // ---------------------------------------------------------------------
-    const lb = new elbv2.ApplicationLoadBalancer(this, 'Alb', {
+    const lb = new elbv2.ApplicationLoadBalancer(this, "Alb", {
       vpc,
       internetFacing: true,
     });
@@ -324,7 +326,7 @@ export class WhathooksApiStack extends cdk.Stack {
     // validated here), else an imported ARN, else none (HTTP only).
     const zone =
       props.hostedZoneId && props.hostedZoneName
-        ? route53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
+        ? route53.HostedZone.fromHostedZoneAttributes(this, "Zone", {
             hostedZoneId: props.hostedZoneId,
             zoneName: props.hostedZoneName,
           })
@@ -332,25 +334,25 @@ export class WhathooksApiStack extends cdk.Stack {
 
     let cert: acm.ICertificate | undefined;
     if (zone && props.domainName) {
-      cert = new acm.Certificate(this, 'Cert', {
+      cert = new acm.Certificate(this, "Cert", {
         domainName: props.domainName,
         validation: acm.CertificateValidation.fromDns(zone),
       });
     } else if (props.certArn) {
-      cert = acm.Certificate.fromCertificateArn(this, 'Cert', props.certArn);
+      cert = acm.Certificate.fromCertificateArn(this, "Cert", props.certArn);
     }
 
     let listener: elbv2.ApplicationListener;
     if (cert) {
-      lb.addListener('HttpRedirect', {
+      lb.addListener("HttpRedirect", {
         port: 80,
         defaultAction: elbv2.ListenerAction.redirect({
-          protocol: 'HTTPS',
-          port: '443',
+          protocol: "HTTPS",
+          port: "443",
           permanent: true,
         }),
       });
-      listener = lb.addListener('Https', {
+      listener = lb.addListener("Https", {
         port: 443,
         certificates: [cert],
         open: true,
@@ -358,27 +360,35 @@ export class WhathooksApiStack extends cdk.Stack {
     } else {
       // No cert → HTTP only. NOTE: browsers block calls from the (HTTPS) Vercel
       // frontend to an HTTP api (mixed content). Add a cert for prod.
-      listener = lb.addListener('Http', { port: 80, open: true });
+      listener = lb.addListener("Http", { port: 80, open: true });
     }
 
-    listener.addTargets('ApiTarget', {
+    listener.addTargets("ApiTarget", {
       port: 3001,
       protocol: elbv2.ApplicationProtocol.HTTP,
       targets: [
-        service.loadBalancerTarget({ containerName: 'api', containerPort: 3001 }),
+        service.loadBalancerTarget({
+          containerName: "api",
+          containerPort: 3001,
+        }),
       ],
+      // Health flips within ~20s either way: /v1/health is how a task says
+      // whether it holds the WhatsApp sockets, and a slow check here is
+      // exactly the window in which sends fail during a deploy.
       healthCheck: {
-        path: '/v1/health',
-        healthyHttpCodes: '200',
-        interval: cdk.Duration.seconds(30),
+        path: "/v1/health",
+        healthyHttpCodes: "200",
+        interval: cdk.Duration.seconds(10),
         timeout: cdk.Duration.seconds(5),
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 2,
       },
       deregistrationDelay: cdk.Duration.seconds(10),
     });
 
     // Point the api hostname at the ALB automatically when we manage the zone.
     if (zone && props.domainName) {
-      new route53.ARecord(this, 'AliasRecord', {
+      new route53.ARecord(this, "AliasRecord", {
         zone,
         recordName: props.domainName,
         target: route53.RecordTarget.fromAlias(
@@ -390,8 +400,8 @@ export class WhathooksApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     // Monitoring — alarms (scale-up signal) + a dashboard for headroom
     // ---------------------------------------------------------------------
-    const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
-      displayName: 'whathooks api alarms',
+    const alarmTopic = new sns.Topic(this, "AlarmTopic", {
+      displayName: "whathooks api alarms",
     });
     if (props.alarmEmail) {
       alarmTopic.addSubscription(new subs.EmailSubscription(props.alarmEmail));
@@ -401,10 +411,10 @@ export class WhathooksApiStack extends cdk.Stack {
     service
       .metricMemoryUtilization({
         period: cdk.Duration.minutes(5),
-        statistic: 'Average',
+        statistic: "Average",
       })
-      .createAlarm(this, 'HighMemoryAlarm', {
-        alarmName: 'whathooks-api-high-memory',
+      .createAlarm(this, "HighMemoryAlarm", {
+        alarmName: "whathooks-api-high-memory",
         threshold: 75,
         evaluationPeriods: 3,
         datapointsToAlarm: 3,
@@ -412,46 +422,46 @@ export class WhathooksApiStack extends cdk.Stack {
           cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
         alarmDescription:
-          'API task memory >= 75% for 15min — add RAM (memoryLimitMiB) or shard sessions.',
+          "API task memory >= 75% for 15min — add RAM (memoryLimitMiB) or shard sessions.",
       })
       .addAlarmAction(snsAction);
 
     service
       .metricCpuUtilization({
         period: cdk.Duration.minutes(5),
-        statistic: 'Average',
+        statistic: "Average",
       })
-      .createAlarm(this, 'HighCpuAlarm', {
-        alarmName: 'whathooks-api-high-cpu',
+      .createAlarm(this, "HighCpuAlarm", {
+        alarmName: "whathooks-api-high-cpu",
         threshold: 80,
         evaluationPeriods: 3,
         datapointsToAlarm: 3,
         comparisonOperator:
           cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-        alarmDescription: 'API task CPU >= 80% for 15min.',
+        alarmDescription: "API task CPU >= 80% for 15min.",
       })
       .addAlarmAction(snsAction);
 
     // App-published gauges (active Baileys sockets + process RSS).
     const activeSessions = new cloudwatch.Metric({
-      namespace: 'whathooks',
-      metricName: 'ActiveSessions',
-      statistic: 'Maximum',
+      namespace: "whathooks",
+      metricName: "ActiveSessions",
+      statistic: "Maximum",
       period: cdk.Duration.minutes(5),
     });
     const processMemory = new cloudwatch.Metric({
-      namespace: 'whathooks',
-      metricName: 'ProcessMemoryMB',
-      statistic: 'Maximum',
+      namespace: "whathooks",
+      metricName: "ProcessMemoryMB",
+      statistic: "Maximum",
       period: cdk.Duration.minutes(5),
     });
 
-    new cloudwatch.Dashboard(this, 'Dashboard', {
-      dashboardName: 'whathooks-api',
+    new cloudwatch.Dashboard(this, "Dashboard", {
+      dashboardName: "whathooks-api",
     }).addWidgets(
       new cloudwatch.GraphWidget({
-        title: 'Task utilization (% of 0.5 vCPU / 1 GB)',
+        title: "Task utilization (% of 0.5 vCPU / 1 GB)",
         left: [
           service.metricMemoryUtilization({ period: cdk.Duration.minutes(5) }),
           service.metricCpuUtilization({ period: cdk.Duration.minutes(5) }),
@@ -460,7 +470,7 @@ export class WhathooksApiStack extends cdk.Stack {
         width: 12,
       }),
       new cloudwatch.GraphWidget({
-        title: 'Active sessions & process memory (MB)',
+        title: "Active sessions & process memory (MB)",
         left: [activeSessions],
         right: [processMemory],
         width: 12,
@@ -470,19 +480,20 @@ export class WhathooksApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     // Outputs
     // ---------------------------------------------------------------------
-    new cdk.CfnOutput(this, 'AlbDnsName', {
+    new cdk.CfnOutput(this, "AlbDnsName", {
       value: lb.loadBalancerDnsName,
       description:
-        'ALB hostname (DNS alias is created automatically when a hosted zone is set)',
+        "ALB hostname (DNS alias is created automatically when a hosted zone is set)",
     });
-    new cdk.CfnOutput(this, 'ApiBaseUrl', {
+    new cdk.CfnOutput(this, "ApiBaseUrl", {
       value: cert
         ? `https://${props.domainName ?? lb.loadBalancerDnsName}/v1`
         : `http://${lb.loadBalancerDnsName}/v1`,
     });
-    new cdk.CfnOutput(this, 'ApiTaskSecurityGroupId', {
+    new cdk.CfnOutput(this, "ApiTaskSecurityGroupId", {
       value: taskSg.securityGroupId,
-      description: 'Security group of the api task (already opened to RDS/Redis)',
+      description:
+        "Security group of the api task (already opened to RDS/Redis)",
     });
   }
 }

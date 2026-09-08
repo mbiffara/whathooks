@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   Channel,
@@ -54,7 +55,10 @@ import { MediaService } from '../media/media.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { addressIdentity, isGroupAddress } from '../common/address';
 import { ChannelRouterService } from '../channels/channel-router.service';
-import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
+import {
+  ConnectionManagerService,
+  HANDOVER_MESSAGE,
+} from '../whatsapp/connection-manager.service';
 import { FlowEngineService } from '../whatsapp/flow-engine.service';
 
 @Injectable()
@@ -649,6 +653,12 @@ export class ConversationsService {
       session.status !== 'CONNECTED' ||
       !this.channels.driverFor(session.channel).isLive(c.sessionId)
     ) {
+      // During a deploy the socket lives on the other task for a few
+      // seconds; "not connected" would send the operator to re-link a
+      // number that is fine.
+      if (session?.status === 'CONNECTED' && !this.manager.isReady()) {
+        throw new ServiceUnavailableException(HANDOVER_MESSAGE);
+      }
       throw new BadRequestException('Session is not connected');
     }
     // The channel rides along so the send paths below dispatch without

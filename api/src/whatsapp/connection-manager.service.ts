@@ -1124,9 +1124,18 @@ export class ConnectionManagerService
       (await this.prisma.mirrorThread.count({
         where: { sessionId: groupSessionId },
       })) + 1;
+    // When the business shares the lead's number, the group is named after
+    // it too: the agent's chat list then reads like a customer list, not
+    // like a numbered queue.
+    const lead = opts.shareLeadNumber
+      ? await this.leadIdentityFor(sessionId, leadJid, opts.conversationId)
+      : null;
+    const subject = lead?.phoneNumber
+      ? `${opts.prefix} #${seq} +${lead.phoneNumber}`
+      : `${opts.prefix} #${seq}`;
     const group = await this.createGroup(
       groupSessionId,
-      `${opts.prefix} #${seq}`,
+      subject,
       agents.map((a) => a.number),
     );
     const thread = await this.prisma.mirrorThread.create({
@@ -1148,15 +1157,10 @@ export class ConnectionManagerService
       `Mirror thread ${thread.id}: created group ${group.id} ` +
         `("${opts.prefix} #${seq}") on ${groupSessionId}`,
     );
-    if (opts.shareLeadNumber) {
+    if (lead) {
       // Best-effort: the group is usable without the card, and a failure
       // here must not undo the handoff that already happened.
-      await this.shareLeadContact(
-        groupSessionId,
-        group.id,
-        leadJid,
-        opts.conversationId ?? null,
-      ).catch((e) =>
+      await this.shareLeadContact(groupSessionId, group.id, lead).catch((e) =>
         this.log.warn(`Mirror thread ${thread.id}: lead card failed: ${e}`),
       );
     }
@@ -1164,18 +1168,16 @@ export class ConnectionManagerService
   }
 
   /**
-   * Post the lead's contact card into a freshly opened mirror group. The
-   * lead's number lives on the conversation when WhatsApp addressed them by
-   * LID, and in the jid itself otherwise. A lead on another channel, or a
-   * LID we never resolved, has no number to share; say so rather than
-   * leave the agent wondering whether the option worked.
+   * The lead's name and number as far as we know them. The number lives on
+   * the conversation when WhatsApp addressed them by LID, and in the jid
+   * itself otherwise; a lead on another channel, or a LID never resolved,
+   * has none.
    */
-  private async shareLeadContact(
+  private async leadIdentityFor(
     sessionId: string,
-    groupJid: string,
     leadJid: string,
-    conversationId: string | null,
-  ): Promise<void> {
+    conversationId: string | null | undefined,
+  ): Promise<{ name: string | null; phoneNumber: string | null }> {
     const conversation = conversationId
       ? await this.prisma.conversation.findUnique({
           where: { id: conversationId },
@@ -1185,11 +1187,25 @@ export class ConnectionManagerService
           where: { sessionId, remoteJid: leadJid },
           select: { name: true, phoneNumber: true },
         });
-    const phoneNumber = whatsappIdentity(
-      leadJid,
-      conversation?.phoneNumber,
-    )?.phoneNumber;
-    if (!phoneNumber) {
+    return {
+      name: conversation?.name?.trim() || null,
+      phoneNumber:
+        whatsappIdentity(leadJid, conversation?.phoneNumber)?.phoneNumber ??
+        null,
+    };
+  }
+
+  /**
+   * Post the lead's contact card into a freshly opened mirror group, or say
+   * why there is none rather than leave the agent wondering whether the
+   * option worked.
+   */
+  private async shareLeadContact(
+    sessionId: string,
+    groupJid: string,
+    lead: { name: string | null; phoneNumber: string | null },
+  ): Promise<void> {
+    if (!lead.phoneNumber) {
       await this.sendText(
         sessionId,
         groupJid,
@@ -1201,7 +1217,10 @@ export class ConnectionManagerService
     await this.sendContactCard(
       sessionId,
       groupJid,
-      { name: conversation?.name?.trim() || `+${phoneNumber}`, phoneNumber },
+      {
+        name: lead.name ?? `+${lead.phoneNumber}`,
+        phoneNumber: lead.phoneNumber,
+      },
       { source: MessageSource.MIRROR },
     );
   }

@@ -332,18 +332,15 @@ export class ConversationsService {
     if (opts.copyHistory) {
       // Best-effort: the group works without the transcript. Nothing here is
       // a "triggering" message, so the newest inbound row is kept.
-      const transcript = await this.flowEngine.historyTranscript(
+      await this.flowEngine.copyHistory(
+        this.manager,
+        thread.sessionId,
+        thread.groupJid,
         c.id,
         c.name,
         false,
+        `Mirror ${thread.id}`,
       );
-      if (transcript) {
-        await this.manager
-          .sendText(c.sessionId, thread.groupJid, transcript, {
-            source: MessageSource.MIRROR,
-          })
-          .catch(() => undefined);
-      }
     }
     return this.get(organizationId, id, allowed, assignedTo);
   }

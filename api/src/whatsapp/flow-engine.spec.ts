@@ -143,6 +143,11 @@ function makeEngine(overrides: {
   counterValues?: number[];
 }) {
   const sent: Array<{ to: string; text: string }> = [];
+  const sentMedia: Array<{
+    to: string;
+    mimeType: string;
+    caption?: string | null;
+  }> = [];
   const created: AnyRecord[] = [];
   const forwarded: AnyRecord[] = [];
   const dispatched: AnyRecord[] = [];
@@ -261,6 +266,17 @@ function makeEngine(overrides: {
       sent.push({ to, text });
       return Promise.resolve({ messageId: 'm', waMessageId: 'w' });
     }),
+    sendMedia: jest.fn(
+      (
+        sessionId: string,
+        to: string,
+        file: { mimeType: string; fileName?: string | null },
+        caption?: string | null,
+      ) => {
+        sentMedia.push({ to, mimeType: file.mimeType, caption });
+        return Promise.resolve({ messageId: 'm', waMessageId: 'w' });
+      },
+    ),
     // Channel-routed send: the engine uses this wherever the destination may
     // not be WhatsApp (farewells go to the lead, whatever channel they used).
     sendOnSession: jest.fn((sessionId: string, to: string, text: string) => {
@@ -269,10 +285,12 @@ function makeEngine(overrides: {
     }),
   };
 
+  const media = { getBuffer: jest.fn().mockResolvedValue(Buffer.from('jpg')) };
   const engine = new FlowEngineService(
     prisma as never,
     agentRunner as never,
     webhooks as never,
+    media as never,
   );
   return {
     engine,
@@ -283,6 +301,8 @@ function makeEngine(overrides: {
     sent,
     created,
     forwarded,
+    sentMedia,
+    media,
     dispatched,
     updates,
     stateUpserts,
@@ -423,6 +443,50 @@ describe('FlowEngineService.run', () => {
     // …without the triggering message, which is forwarded separately.
     expect(transcript?.text.includes(CTX.text)).toBe(false);
     expect(t.forwarded).toHaveLength(1);
+  });
+
+  it('re-sends the files from the history after the transcript', async () => {
+    const t = makeEngine({});
+    t.prisma.message.findMany.mockResolvedValue([
+      { direction: 'INBOUND', source: 'CONTACT', type: 'TEXT', text: CTX.text },
+      {
+        direction: 'INBOUND',
+        source: 'CONTACT',
+        type: 'IMAGE',
+        text: 'mi comprobante',
+        media: {
+          storageKey: 'org1/s1/x.jpg',
+          mimeType: 'image/jpeg',
+          fileName: null,
+          size: 1234,
+        },
+      },
+      { direction: 'INBOUND', source: 'CONTACT', type: 'TEXT', text: 'Hola' },
+    ]);
+    const graph: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('a', 'assignHuman', { humanAgentId: 'ha1', copyHistory: true }),
+      ],
+      edges: [edge('t', 'a')],
+    };
+    await t.engine.run(
+      { id: 'f1', graph, organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.media.getBuffer).toHaveBeenCalledWith('org1/s1/x.jpg');
+    expect(t.sentMedia).toEqual([
+      {
+        to: 'g@g.us',
+        mimeType: 'image/jpeg',
+        caption: '*Juan:* mi comprobante',
+      },
+    ]);
+    // The transcript still names the file where it happened.
+    const transcript = t.sent.find((s) => s.to === 'g@g.us');
+    expect(transcript?.text).toContain('*Juan:* mi comprobante');
   });
 
   it('saveContact creates the lead once and dispatches contact.created', async () => {
@@ -1064,5 +1128,134 @@ describe('simulated handoff shows the farewell', () => {
     );
     expect(rec.outcome).toBe('handed_off');
     expect(rec.reply).toBeUndefined();
+  });
+});
+
+describe('assignContactAgent node', () => {
+  const contactWithAgent = {
+    id: 'c1',
+    humanAgent: {
+      id: 'ha1',
+      name: 'Antonio',
+      phoneNumber: '555ha1',
+      userId: 'user1',
+    },
+  };
+  const graph = (): FlowGraph => ({
+    nodes: [
+      node('t', 'trigger'),
+      node('ca', 'assignContactAgent', {
+        farewellText: 'Te atiende tu asesor.',
+      }),
+      node('r', 'agentReply', { agentId: 'agent1' }),
+    ],
+    edges: [edge('t', 'ca'), edge('ca', 'r', 'fallback')],
+  });
+
+  it('is a valid graph with only a fallback edge', () => {
+    expect(validateGraph(graph(), REFS)).toEqual([]);
+    const bad: FlowGraph = {
+      ...graph(),
+      edges: [edge('t', 'ca'), edge('ca', 'r', 'out')],
+    };
+    expect(validateGraph(bad, REFS).map((e) => e.code)).toContain(
+      'edgeBadHandle',
+    );
+  });
+
+  it('hands a saved contact to their agent and records the flow state', async () => {
+    const t = makeEngine({});
+    t.prisma.contact.findFirst.mockResolvedValue(contactWithAgent);
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    // Looked up by the org and the sender's identity, not by session.
+    expect(t.prisma.contact.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'org1',
+          OR: [{ phoneNumber: '549111' }],
+        },
+      }),
+    );
+    expect(t.created[0]).toMatchObject({
+      leadJid: CTX.remoteJid,
+      agents: [{ id: 'ha1', number: '555ha1' }],
+      opts: { prefix: '🔒 Lead', showLeadName: true, shareLeadNumber: false },
+    });
+    expect(t.forwarded).toHaveLength(1);
+    expect(t.sent[0]).toMatchObject({ text: 'Te atiende tu asesor.' });
+    expect(t.stateUpserts[0]).toMatchObject({
+      create: { status: 'HANDED_OFF', humanAgentId: 'ha1' },
+    });
+    // A linked agent also gets the inbox assignment.
+    expect(t.updates[0]).toMatchObject({
+      data: { assignedToUserId: 'user1' },
+    });
+    expect(t.agentReplies).toHaveLength(0);
+  });
+
+  it('falls through when the sender is not a contact', async () => {
+    const t = makeEngine({});
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.created).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(1);
+  });
+
+  it('falls through when the contact has no agent', async () => {
+    const t = makeEngine({});
+    t.prisma.contact.findFirst.mockResolvedValue({
+      id: 'c1',
+      humanAgent: null,
+    });
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.created).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(1);
+  });
+
+  it('simulates the handoff without opening a group', async () => {
+    const t = makeEngine({});
+    t.prisma.contact.findFirst.mockResolvedValue(contactWithAgent);
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      CTX,
+      t.manager as never,
+    );
+    expect(rec.outcome).toBe('handed_off');
+    expect(rec.steps[0].note).toContain('Antonio');
+    expect(rec.reply).toBe('Te atiende tu asesor.');
+    expect(t.created).toHaveLength(0);
+    expect(t.stateUpserts).toHaveLength(0);
+  });
+});
+
+describe('FlowEngineService.handoff', () => {
+  it('records no flow state when no flow made the handoff', async () => {
+    const t = makeEngine({});
+    const who = await t.engine.handoff(
+      's1',
+      CTX,
+      t.manager as never,
+      [{ id: 'ha1', name: 'Antonio', phoneNumber: '555ha1', userId: null }],
+      { origin: 'Test' },
+    );
+    expect(who).toBe('Antonio');
+    expect(t.created[0]).toMatchObject({ opts: { prefix: '🔒 Lead' } });
+    expect(t.forwarded).toHaveLength(1);
+    expect(t.stateUpserts).toHaveLength(0);
+    expect(t.updates).toHaveLength(0);
   });
 });

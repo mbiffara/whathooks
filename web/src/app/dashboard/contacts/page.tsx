@@ -1,5 +1,6 @@
 "use client";
 
+import { ContactsImportDialog } from "@/components/contacts-import-dialog";
 import { Glyph } from "@/components/glyphs";
 import { apiClient } from "@/lib/client-api";
 import type { WaSession } from "@/lib/types";
@@ -19,7 +20,16 @@ interface Contact {
   instagram: string | null;
   /** Sessions (org numbers) this person has written to. */
   sessions: { id: string; label: string }[];
+  /** The human agent who looks after this person, if any. */
+  humanAgentId: string | null;
+  humanAgent: { id: string; name: string } | null;
   updatedAt: string;
+}
+
+interface HumanAgent {
+  id: string;
+  name: string;
+  phoneNumber: string;
 }
 
 type ContactForm = {
@@ -31,6 +41,8 @@ type ContactForm = {
   website: string;
   instagram: string;
   notes: string;
+  /** "" = no agent. */
+  humanAgentId: string;
 };
 
 const EMPTY: ContactForm = {
@@ -42,6 +54,7 @@ const EMPTY: ContactForm = {
   website: "",
   instagram: "",
   notes: "",
+  humanAgentId: "",
 };
 
 function toForm(c: Contact): ContactForm {
@@ -54,6 +67,7 @@ function toForm(c: Contact): ContactForm {
     website: c.website ?? "",
     instagram: c.instagram ?? "",
     notes: c.notes ?? "",
+    humanAgentId: c.humanAgentId ?? "",
   };
 }
 
@@ -68,6 +82,9 @@ export default function ContactsPage() {
   const [debounced, setDebounced] = useState("");
   const [sessions, setSessions] = useState<WaSession[]>([]);
   const [sessionFilter, setSessionFilter] = useState("");
+  const [agents, setAgents] = useState<HumanAgent[]>([]);
+  const [agentFilter, setAgentFilter] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState<ContactForm>(EMPTY);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -86,6 +103,9 @@ export default function ContactsPage() {
     apiClient<WaSession[]>("/sessions", token)
       .then(setSessions)
       .catch(() => setSessions([]));
+    apiClient<HumanAgent[]>("/human-agents", token)
+      .then(setAgents)
+      .catch(() => setAgents([]));
   }, [token]);
 
   const load = useCallback(async () => {
@@ -94,6 +114,7 @@ export default function ContactsPage() {
       const params = new URLSearchParams();
       if (debounced.trim()) params.set("q", debounced.trim());
       if (sessionFilter) params.set("sessionId", sessionFilter);
+      if (agentFilter) params.set("humanAgentId", agentFilter);
       const qs = params.toString();
       setContacts(
         await apiClient<Contact[]>(`/contacts${qs ? `?${qs}` : ""}`, token),
@@ -101,7 +122,7 @@ export default function ContactsPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : tc("failedToLoad"));
     }
-  }, [token, debounced, sessionFilter, tc]);
+  }, [token, debounced, sessionFilter, agentFilter, tc]);
 
   useEffect(() => {
     load();
@@ -213,6 +234,19 @@ export default function ContactsPage() {
               value={form.instagram}
               onChange={(e) => field("instagram", e.target.value)}
             />
+            <select
+              className="input"
+              aria-label={t("agent")}
+              value={form.humanAgentId}
+              onChange={(e) => field("humanAgentId", e.target.value)}
+            >
+              <option value="">{t("noAgent")}</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
           </div>
           <textarea
             className="input min-h-16"
@@ -275,18 +309,47 @@ export default function ContactsPage() {
             </option>
           ))}
         </select>
+        <select
+          className="input w-52"
+          value={agentFilter}
+          onChange={(e) => setAgentFilter(e.target.value)}
+          aria-label={t("filterAgent")}
+        >
+          <option value="">{t("allAgents")}</option>
+          {agents.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => setImportOpen(true)}
+          className="btn-ghost ml-auto inline-flex items-center gap-1.5 text-sm"
+        >
+          <Glyph name="upload" size={16} />
+          {t("import")}
+        </button>
         <button
           onClick={() => {
             setEditingId(null);
             setForm(EMPTY);
             setFormOpen((v) => !v);
           }}
-          className="btn-primary ml-auto inline-flex items-center gap-1.5 text-sm"
+          className="btn-primary inline-flex items-center gap-1.5 text-sm"
         >
           <Glyph name="userPlus" size={16} />
           {t("add")}
         </button>
       </div>
+
+      {importOpen && (
+        <ContactsImportDialog
+          token={token}
+          agents={agents}
+          onClose={() => setImportOpen(false)}
+          onDone={() => void load()}
+        />
+      )}
 
       {contacts === null ? (
         <p className="text-sm text-[var(--color-muted)]">{tc("loading")}</p>
@@ -299,6 +362,7 @@ export default function ContactsPage() {
               <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase text-[var(--color-muted)]">
                 <th className="px-4 py-3 font-medium">{t("colName")}</th>
                 <th className="px-4 py-3 font-medium">{t("colPhone")}</th>
+                <th className="px-4 py-3 font-medium">{t("colAgent")}</th>
                 <th className="px-4 py-3 font-medium">{t("colCompany")}</th>
                 <th className="px-4 py-3 font-medium">{t("colDetails")}</th>
                 <th className="px-4 py-3 font-medium">{t("colSessions")}</th>
@@ -331,6 +395,11 @@ export default function ContactsPage() {
                       </span>
                     ) : (
                       ""
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {c.humanAgent?.name ?? (
+                      <span className="text-[var(--color-muted)]">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">{c.company ?? ""}</td>

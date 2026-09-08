@@ -13,7 +13,8 @@ export type FlowNodeType =
   | "tagConversation"
   | "assignTeammate"
   | "saveContact"
-  | "assignGroup";
+  | "assignGroup"
+  | "assignContactAgent";
 
 export interface FlowIntent {
   key: string;
@@ -56,6 +57,7 @@ export const NODE_ICONS: Record<FlowNodeType, string> = {
   assignTeammate: "👤",
   saveContact: "📇",
   assignGroup: "👥",
+  assignContactAgent: "🎯",
 };
 
 /** Palette (what can be added — trigger is fixed). */
@@ -66,6 +68,7 @@ export const PALETTE: FlowNodeType[] = [
   "aiDecision",
   "agentReply",
   "assignHuman",
+  "assignContactAgent",
   "roundRobin",
   "webhook",
   "tagConversation",
@@ -94,6 +97,8 @@ export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
     case "roundRobin":
     case "assignGroup":
       return { humanAgentIds: [], groupPrefix: "", farewellText: "" };
+    case "assignContactAgent":
+      return { groupPrefix: "", farewellText: "" };
     case "webhook":
       return { webhookId: "", note: "" };
     case "tagConversation":
@@ -124,6 +129,8 @@ export function handlesFor(
     }
     case "agentReply":
       return ["onHandoff"];
+    case "assignContactAgent":
+      return ["fallback"];
     case "trigger":
     case "webhook":
     case "tagConversation":
@@ -174,6 +181,8 @@ export function summarize(
       const n = ((data.humanAgentIds as string[]) ?? []).length;
       return t("summaryHumanAgents", { count: n });
     }
+    case "assignContactAgent":
+      return t("summaryContactAgent");
     case "webhook": {
       const url = refs?.webhooks.find((w) => w.id === data.webhookId)?.url;
       return url ? url.replace(/^https?:\/\//, "").slice(0, 30) : "—";

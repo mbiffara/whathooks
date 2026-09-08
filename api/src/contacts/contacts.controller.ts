@@ -12,12 +12,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsEmail,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrgRolesGuard } from '../auth/org-roles.guard';
 import { OrgRoles } from '../common/decorators/org-roles.decorator';
@@ -25,6 +29,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
+import { MAX_CONTACTS_PER_ORG } from './contacts-import';
+import { ContactsImportService } from './contacts-import.service';
 
 class ContactFieldsDto {
   @IsOptional()
@@ -64,9 +70,42 @@ class ContactFieldsDto {
   @IsString()
   @MaxLength(64)
   instagram?: string;
+
+  // The human agent who looks after this person; "" clears it.
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  humanAgentId?: string;
 }
 
-const MAX_CONTACTS_PER_ORG = 5000;
+class BulkContactRowDto {
+  // Whatever the spreadsheet cell held: the import normalizes and reports
+  // per row, which a strict pattern here would turn into a 400 for the
+  // whole batch.
+  @IsString()
+  @MaxLength(40)
+  phoneNumber!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  humanAgentId?: string;
+}
+
+class BulkContactsDto {
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => BulkContactRowDto)
+  rows!: BulkContactRowDto[];
+}
+
+const AGENT_SELECT = { select: { id: true, name: true } };
 
 /** Org-scoped contact book. Any member can manage it. */
 @UseGuards(JwtAuthGuard, OrgRolesGuard)
@@ -76,6 +115,7 @@ export class ContactsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly webhooks: WebhookDispatchService,
+    private readonly importer: ContactsImportService,
   ) {}
 
   private orgOf(user: AuthUser): string {
@@ -90,6 +130,8 @@ export class ContactsController {
     @Query('q') q?: string,
     /** Only people who have written to this session (org number). */
     @Query('sessionId') sessionId?: string,
+    /** Only people looked after by this human agent. */
+    @Query('humanAgentId') humanAgentId?: string,
   ) {
     const needle = q?.trim();
     return this.prisma.contact.findMany({
@@ -97,6 +139,7 @@ export class ContactsController {
         organizationId: this.orgOf(user),
         // Org scope above already prevents reading another org's sessions.
         ...(sessionId ? { sessions: { some: { id: sessionId } } } : {}),
+        ...(humanAgentId ? { humanAgentId } : {}),
         ...(needle
           ? {
               OR: [
@@ -112,8 +155,20 @@ export class ContactsController {
       },
       orderBy: { updatedAt: 'desc' },
       take: 200,
-      include: { sessions: { select: { id: true, label: true } } },
+      include: {
+        sessions: { select: { id: true, label: true } },
+        humanAgent: AGENT_SELECT,
+      },
     });
+  }
+
+  /**
+   * One batch of a spreadsheet import (the client chunks the file). Upserts
+   * by phone number; see ContactsImportService for what wins on conflict.
+   */
+  @Post('bulk')
+  bulk(@CurrentUser() user: AuthUser, @Body() dto: BulkContactsDto) {
+    return this.importer.importChunk(this.orgOf(user), dto.rows);
   }
 
   @Post()
@@ -131,8 +186,10 @@ export class ContactsController {
       );
     }
     await this.requireFree(organizationId, dto, null);
+    await this.requireAgent(organizationId, dto.humanAgentId);
     const contact = await this.prisma.contact.create({
       data: { organizationId, ...clean(dto) },
+      include: { humanAgent: AGENT_SELECT },
     });
     void this.webhooks.dispatch({
       organizationId,
@@ -155,9 +212,11 @@ export class ContactsController {
     });
     if (!existing) throw new NotFoundException('Contact not found');
     await this.requireFree(organizationId, dto, id);
+    await this.requireAgent(organizationId, dto.humanAgentId);
     const contact = await this.prisma.contact.update({
       where: { id },
       data: clean(dto),
+      include: { humanAgent: AGENT_SELECT },
     });
     void this.webhooks.dispatch({
       organizationId,
@@ -176,6 +235,19 @@ export class ContactsController {
     if (!contact) throw new NotFoundException('Contact not found');
     await this.prisma.contact.delete({ where: { id } });
     return { ok: true };
+  }
+
+  /** A human agent id must belong to this org; blank means "none". */
+  private async requireAgent(
+    organizationId: string,
+    humanAgentId: string | undefined,
+  ) {
+    if (!humanAgentId?.trim()) return;
+    const agent = await this.prisma.humanAgent.findFirst({
+      where: { id: humanAgentId.trim(), organizationId },
+      select: { id: true },
+    });
+    if (!agent) throw new BadRequestException('Unknown human agent');
   }
 
   /** Reject a phone/lid already used by another contact of the org. */

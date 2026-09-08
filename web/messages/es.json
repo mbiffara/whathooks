@@ -632,6 +632,7 @@
       "noAssignee": "Sin asignar",
       "hiddenNumber": "Número oculto",
       "saveContact": "Guardar contacto",
+      "assignContactAgent": "Agente del contacto",
       "saveContactHint": "Agregá esta persona a tu libreta de contactos. Esta sesión no guarda contactos automáticamente.",
       "contactSaved": "Contacto guardado",
       "contactExists": "Ya está en contactos",
@@ -733,7 +734,42 @@
       "colCompany": "Empresa",
       "colDetails": "Datos",
       "colSessions": "Números",
-      "empty": "Aún no hay contactos. Agrega el nodo \"Guardar contacto\" a un flow, o crea uno acá."
+      "empty": "Aún no hay contactos. Agrega el nodo \"Guardar contacto\" a un flow, o crea uno acá.",
+      "agent": "Agente humano",
+      "noAgent": "Sin agente humano",
+      "colAgent": "Agente humano",
+      "filterAgent": "Filtrar por agente humano",
+      "allAgents": "Todos los agentes",
+      "import": "Importar",
+      "importDialog": {
+        "title": "Importar contactos",
+        "fileHint": "Un archivo Excel o CSV con un contacto por fila: teléfono con código de país, opcionalmente el nombre, y opcionalmente una etiqueta con el agente humano que lo atiende.",
+        "sheetEmpty": "El archivo no tiene ninguna hoja para leer",
+        "noHeader": "No se encontró una fila de encabezados con los nombres de columna",
+        "colPhone": "Columna del teléfono",
+        "colName": "Columna del nombre",
+        "colLabel": "Columna del agente humano",
+        "ignoreColumn": "(ninguna)",
+        "labelMapping": "¿Qué agente humano es cada etiqueta?",
+        "withoutAgent": "Importar sin agente",
+        "unmatched": "{count, plural, one {# etiqueta todavía no tiene agente} other {# etiquetas todavía no tienen agente}}. Esos contactos se importan sin agente.",
+        "previewValid": "{count, plural, one {# contacto para importar} other {# contactos para importar}}",
+        "previewInvalid": "{count, plural, one {# fila sin teléfono válido} other {# filas sin teléfono válido}}",
+        "previewDuplicates": "{count, plural, one {# número repetido} other {# números repetidos}}",
+        "webhookNote": "Los contactos que ya existen con el mismo número toman el nombre y el agente del archivo. Las importaciones no disparan webhooks.",
+        "start": "Importar {count}",
+        "progress": "Importando lote {done} de {total}…",
+        "resultCreated": "{count} creados",
+        "resultUpdated": "{count} actualizados",
+        "resultUnchanged": "{count} sin cambios",
+        "resultSkipped": "{count, plural, one {# fila omitida} other {# filas omitidas}}",
+        "rowLabel": "Fila {row}",
+        "reason": {
+          "invalid_phone": "no es un teléfono válido",
+          "duplicate_in_batch": "número repetido en el archivo",
+          "unknown_agent": "agente humano desconocido"
+        }
+      }
     },
     "tags": {
       "title": "Etiquetas",
@@ -855,6 +891,8 @@
       "simulatorTitle": "Probar este flow",
       "simulatorHint": "Tené una conversación de prueba con tu flow. No se entrega nada, no se crean grupos y no se guarda nada. Los nodos de IA sí se ejecutan sobre la transcripción, así que sus respuestas son reales.",
       "simulatorPlaceholder": "ej. Hola, ¿cuánto sale el plan?",
+      "simulatorPhone": "Simular como este número de WhatsApp (opcional). Permite que \"Asignar al agente del contacto\" encuentre el contacto.",
+      "simulatorPhonePlaceholder": "Número del contacto, ej. 5215512345678 (opcional)",
       "simulatorSendAsContact": "Enviar como contacto",
       "simulatorSendAsBusiness": "Como vos",
       "simulatorAsBusinessHint": "Agregá una respuesta de tu lado, para que los nodos de IA vean un ida y vuelta realista. El flow no se ejecuta con estas.",
@@ -872,6 +910,7 @@
       "decisionQuestionPlaceholder": "ej. ¿El cliente está pidiendo cancelar su suscripción?",
       "decisionQuestionHint": "El agente lee la conversación y responde sí o no. Si la respuesta no es clara, se toma la rama no.",
       "summaryHumanAgents": "{count, plural, one {# agente humano} other {# agentes humanos}}",
+      "summaryContactAgent": "Según el agente del contacto",
       "nodes": {
         "trigger": {
           "title": "Mensaje recibido",
@@ -920,6 +959,10 @@
         "assignGroup": {
           "title": "Grupo de agentes",
           "hint": "Crea el mirror link del lead con todos los agentes seleccionados. Cualquiera puede responder como la marca. Termina el flow."
+        },
+        "assignContactAgent": {
+          "title": "Asignar al agente del contacto",
+          "hint": "Deriva al lead al agente humano guardado en su contacto (por importación o desde Contactos). Quien no es contacto, o no tiene agente, sigue por Fallback. Empareja por número de teléfono, así que un número oculto solo se reconoce cuando ya se resolvió."
         },
         "saveContact": {
           "title": "Guardar contacto",

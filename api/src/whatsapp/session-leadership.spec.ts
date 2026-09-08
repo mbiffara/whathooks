@@ -14,18 +14,32 @@ class FakeStore implements LeadershipStore {
   pexpire(): Promise<number> {
     return Promise.resolve(1);
   }
-  del(key: string): Promise<number> {
-    return Promise.resolve(this.data.delete(key) ? 1 : 0);
+  /** The only script used is compare-and-delete. */
+  eval(_script: string, _n: number, key: string, owner: string) {
+    if (this.data.get(key) !== owner) return Promise.resolve(0);
+    this.data.delete(key);
+    return Promise.resolve(1);
   }
 }
 
-function task(store: FakeStore, id: string, clock: { now: number }) {
+function task(
+  store: FakeStore,
+  id: string,
+  clock: { now: number },
+  opts: { failAcquires?: number } = {},
+) {
   const events: string[] = [];
+  let failures = opts.failAcquires ?? 0;
   const leadership = new SessionLeadership(
     store,
     id,
     {
       onAcquire: () => {
+        if (failures > 0) {
+          failures -= 1;
+          events.push('acquire-failed');
+          throw new Error('db down');
+        }
         events.push('acquire');
       },
       onRelease: () => {
@@ -106,6 +120,36 @@ describe('SessionLeadership', () => {
       yielded: false,
     });
     expect(old.events).toEqual(['acquire', 'release', 'acquire']);
+  });
+
+  it('is not ready until the sockets are up, and retries a failed restore', async () => {
+    const store = new FakeStore();
+    const clock = { now: 0 };
+    const t = task(store, 'a', clock, { failAcquires: 1 });
+    await t.leadership.tick();
+    // Holds the lock, but nothing is open: keep traffic away.
+    expect(t.leadership.status()).toMatchObject({
+      leader: true,
+      sockets: 'none',
+    });
+    expect(t.leadership.ready()).toBe(false);
+    await t.leadership.tick();
+    expect(t.leadership.status().sockets).toBe('up');
+    expect(t.leadership.ready()).toBe(true);
+    expect(t.events).toEqual(['acquire-failed', 'acquire']);
+  });
+
+  it('never deletes a lock another task has since taken', async () => {
+    const store = new FakeStore();
+    const clock = { now: 0 };
+    const old = task(store, 'old', clock);
+    await old.leadership.tick();
+    // The lease expired and a newer task grabbed the key before we yield.
+    store.data.set('whathooks:session-leader', 'new');
+    store.data.set('whathooks:session-leader:handover', 'new');
+    await old.leadership.tick();
+    expect(store.data.get('whathooks:session-leader')).toBe('new');
+    expect(old.leadership.status().leader).toBe(false);
   });
 
   it('is ready when alone, even before the first tick', () => {

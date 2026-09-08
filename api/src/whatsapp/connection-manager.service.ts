@@ -193,6 +193,7 @@ export class ConnectionManagerService
         leader: false,
         yielded: false,
         standby: false,
+        sockets: 'none',
       }
     );
   }

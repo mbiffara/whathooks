@@ -29,8 +29,26 @@ export interface LeadershipStore {
   ): Promise<'OK' | null>;
   get(key: string): Promise<string | null>;
   pexpire(key: string, ttl: number): Promise<number>;
-  del(key: string): Promise<number>;
+  /** Server-side script, so "delete only if I still own it" is one step. */
+  eval(
+    script: string,
+    numKeys: number,
+    ...keysAndArgs: string[]
+  ): Promise<unknown>;
 }
+
+/**
+ * Compare-and-delete. Two round trips (GET, then DEL) leave a gap in which
+ * the lease can expire and someone else take the key, so the DEL would
+ * remove *their* lock and let a third task in. Redis runs a script
+ * atomically, so the check and the delete cannot be split.
+ */
+const DEL_IF_OWNED = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+  return redis.call("DEL", KEYS[1])
+end
+return 0
+`;
 
 export interface LeadershipHooks {
   /** Became the leader: open the sockets. */
@@ -51,11 +69,14 @@ export interface LeadershipOptions {
 }
 
 export interface LeadershipStatus {
+  /** Holds the lock. Sockets may still be coming up: see `sockets`. */
   leader: boolean;
   /** Handed the sockets to a newer task; not coming back unless it dies. */
   yielded: boolean;
   /** Another task holds the lock and this one is waiting for it. */
   standby: boolean;
+  /** Whether the sockets behind the lock are actually open. */
+  sockets: 'none' | 'restoring' | 'up';
 }
 
 export class SessionLeadership {
@@ -67,6 +88,7 @@ export class SessionLeadership {
   private readonly now: () => number;
 
   private leader = false;
+  private sockets: LeadershipStatus['sockets'] = 'none';
   private yielded = false;
   private yieldedAt = 0;
   private standby = false;
@@ -92,12 +114,19 @@ export class SessionLeadership {
       leader: this.leader,
       yielded: this.yielded,
       standby: this.standby,
+      sockets: this.sockets,
     };
   }
 
-  /** Whether this task should take traffic: it leads, or nobody else does. */
+  /**
+   * Whether this task should take traffic: it leads *and* its sockets are
+   * open, or nobody else leads. Holding the lock with the sockets still
+   * down (a restore that failed and is being retried) is not ready: the
+   * balancer would send traffic to a task that cannot send.
+   */
   ready(): boolean {
-    return this.leader || (!this.yielded && !this.standby);
+    if (this.leader) return this.sockets === 'up';
+    return !this.yielded && !this.standby;
   }
 
   start(intervalMs = 5_000): void {
@@ -125,6 +154,9 @@ export class SessionLeadership {
       if (holder === this.instanceId) {
         await this.store.pexpire(this.key, this.ttlMs);
         if (!this.leader) await this.becomeLeader();
+        // A restore that failed (database blip while opening the sockets)
+        // is retried on every renewal until it succeeds.
+        else if (this.sockets === 'none') await this.restore();
         // A newer task is waiting: give it the sockets now rather than when
         // ECS gets round to stopping this one.
         const request = await this.store.get(this.handoverKey);
@@ -136,6 +168,7 @@ export class SessionLeadership {
       if (this.leader) {
         this.hooks.log('Lost session leadership, closing sockets');
         this.leader = false;
+        this.sockets = 'none';
         this.hooks.onRelease();
       }
       await this.store.set(
@@ -158,12 +191,11 @@ export class SessionLeadership {
     // Not leader first, then close: the socket close handlers read it to
     // tell a handover from a real disconnect.
     this.leader = false;
+    this.sockets = 'none';
     this.hooks.onRelease();
     if (!held) return;
     try {
-      if ((await this.store.get(this.key)) === this.instanceId) {
-        await this.store.del(this.key);
-      }
+      await this.delIfOwned(this.key);
       this.hooks.log('Released session leadership');
     } catch {
       /* the TTL will expire it */
@@ -174,23 +206,42 @@ export class SessionLeadership {
     this.leader = true;
     this.standby = false;
     this.yielded = false;
-    // Our own request, if we ever left one, is fulfilled.
-    if ((await this.store.get(this.handoverKey)) === this.instanceId) {
-      await this.store.del(this.handoverKey);
-    }
     this.hooks.log('Acquired session leadership');
-    await this.hooks.onAcquire();
+    // Our own request, if we ever left one, is fulfilled. Best-effort: a
+    // stale request from us is harmless (we hold the lock and ignore our
+    // own id), and it expires on its own.
+    try {
+      await this.delIfOwned(this.handoverKey);
+    } catch (e) {
+      this.hooks.log(`Could not clear the handover request: ${e}`);
+    }
+    await this.restore();
+  }
+
+  /** Open the sockets; `ready()` stays false until this has succeeded. */
+  private async restore(): Promise<void> {
+    this.sockets = 'restoring';
+    try {
+      await this.hooks.onAcquire();
+      this.sockets = 'up';
+    } catch (e) {
+      this.sockets = 'none';
+      this.hooks.log(`Restoring sessions failed, will retry: ${e}`);
+    }
   }
 
   private async yield(): Promise<void> {
     this.hooks.log('Handing session leadership to a newer task');
     this.leader = false;
+    this.sockets = 'none';
     this.yielded = true;
     this.yieldedAt = this.now();
     this.hooks.onRelease();
-    if ((await this.store.get(this.key)) === this.instanceId) {
-      await this.store.del(this.key);
-    }
+    await this.delIfOwned(this.key);
+  }
+
+  private delIfOwned(key: string): Promise<unknown> {
+    return this.store.eval(DEL_IF_OWNED, 1, key, this.instanceId);
   }
 
   /**

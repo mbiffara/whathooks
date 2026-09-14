@@ -2,6 +2,7 @@ import { AdminOrgTable } from "@/components/admin-org-table";
 import { AdminUsageChart } from "@/components/admin-usage-chart";
 import { apiServer } from "@/lib/api";
 import type { AdminOrg, AdminOverview, AdminTimeseries } from "@/lib/types";
+import { Suspense } from "react";
 
 export default async function AdminPage() {
   const [overview, orgs, timeseries] = await Promise.all([
@@ -55,7 +56,10 @@ export default async function AdminPage() {
         </section>
       )}
 
-      <AdminOrgTable orgs={orgs} />
+      {/* AdminOrgTable reads the URL via useSearchParams, which needs a Suspense boundary. */}
+      <Suspense fallback={null}>
+        <AdminOrgTable orgs={orgs} />
+      </Suspense>
     </div>
   );
 }

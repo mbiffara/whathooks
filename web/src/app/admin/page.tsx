@@ -1,12 +1,14 @@
 import { AdminOrgTable } from "@/components/admin-org-table";
+import { AdminUsageChart } from "@/components/admin-usage-chart";
 import { apiServer } from "@/lib/api";
-import type { AdminOrg, AdminOverview } from "@/lib/types";
+import type { AdminOrg, AdminOverview, AdminTimeseries } from "@/lib/types";
 import { Suspense } from "react";
 
 export default async function AdminPage() {
-  const [overview, orgs] = await Promise.all([
+  const [overview, orgs, timeseries] = await Promise.all([
     apiServer<AdminOverview>("/admin/overview").catch(() => null),
     apiServer<AdminOrg[]>("/admin/organizations").catch(() => []),
+    apiServer<AdminTimeseries>("/admin/timeseries?days=30").catch(() => null),
   ]);
 
   const stats = overview
@@ -41,6 +43,18 @@ export default async function AdminPage() {
       </div>
 
       {overview?.system && <SystemHealth system={overview.system} />}
+
+      {timeseries && (
+        <section className="card flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Daily activity</h2>
+            <span className="text-xs text-[var(--color-muted)]">
+              all organizations · hover a day for details
+            </span>
+          </div>
+          <AdminUsageChart data={timeseries} />
+        </section>
+      )}
 
       {/* AdminOrgTable reads the URL via useSearchParams, which needs a Suspense boundary. */}
       <Suspense fallback={null}>

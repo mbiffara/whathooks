@@ -9,8 +9,10 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   IsBoolean,
   IsIn,
@@ -29,6 +31,13 @@ import { PLANS, TRIAL_LIMITS, currentMonthStart } from '../billing/plans';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
+import {
+  AdminTimeseries,
+  buildTimeseries,
+  clampDays,
+  DailyMessageRow,
+  windowStart,
+} from './admin-timeseries';
 
 export class OrgLimitsDto {
   // null clears the override (back to plan/trial defaults)
@@ -132,6 +141,43 @@ export class AdminController {
         uptimeSeconds: Math.round(process.uptime()),
       },
     };
+  }
+
+  /**
+   * Platform-wide messages and AI tokens per UTC day for the admin chart.
+   * `?days=` is clamped to [7, 90] (default 30); every day in the window is
+   * present, zero-filled, the last one being today.
+   */
+  @Get('timeseries')
+  async timeseries(@Query('days') daysRaw?: string): Promise<AdminTimeseries> {
+    const days = clampDays(daysRaw);
+    const now = new Date();
+    const from = windowStart(days, now);
+    const [messages, tokens] = await Promise.all([
+      // `createdAt` is a timestamp without time zone holding UTC, so truncating
+      // it directly yields UTC days without depending on the session timezone.
+      this.prisma.$queryRaw<DailyMessageRow[]>(Prisma.sql`
+        SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS day,
+               COUNT(*)::int AS total,
+               COUNT(*) FILTER (WHERE direction = 'INBOUND')::int AS inbound,
+               COUNT(*) FILTER (WHERE direction = 'OUTBOUND')::int AS outbound
+        FROM "Message"
+        WHERE "createdAt" >= ${from}
+        GROUP BY 1
+        ORDER BY 1
+      `),
+      this.prisma.aiTokenDailyUsage.groupBy({
+        by: ['day'],
+        where: { day: { gte: from } },
+        _sum: { tokens: true },
+      }),
+    ]);
+    return buildTimeseries({
+      days,
+      now,
+      messages,
+      tokens: tokens.map((t) => ({ day: t.day, tokens: t._sum.tokens ?? 0 })),
+    });
   }
 
   @Get('organizations')

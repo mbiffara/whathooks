@@ -65,6 +65,7 @@ describe('FlowsService.simulate conversation resolution', () => {
           { phoneNumber: '5491111' },
         ],
       },
+      orderBy: { lastMessageAt: 'desc' },
       select: { id: true },
     });
     expect(t.ctxs[0]).toMatchObject({

@@ -874,6 +874,7 @@
       "tagLabel": "Etiqueta",
       "newTagPlaceholder": "Nombre de la etiqueta…",
       "createTag": "Crear",
+      "tagDecisionHint": "Sí: la conversación tiene la etiqueta · No: no la tiene",
       "teammateLabel": "Miembro del equipo",
       "summaryNoKeywords": "sin palabras clave",
       "summaryIntents": "{count, plural, one {# intención} other {# intenciones}}",
@@ -927,6 +928,10 @@
         "aiDecision": {
           "title": "Decisión de IA",
           "hint": "Un agente de IA responde una pregunta de sí/no sobre la conversación y enruta según la respuesta."
+        },
+        "tagDecision": {
+          "title": "Decisión por etiqueta",
+          "hint": "Sigue por Sí si la conversación tiene la etiqueta elegida, o por No si no la tiene."
         },
         "intent": {
           "title": "Clasificar intención",

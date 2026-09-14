@@ -6,6 +6,7 @@ export type FlowNodeType =
   | "keywordCases"
   | "intent"
   | "aiDecision"
+  | "tagDecision"
   | "agentReply"
   | "assignHuman"
   | "roundRobin"
@@ -49,6 +50,7 @@ export const NODE_ICONS: Record<FlowNodeType, string> = {
   keywordCases: "🗂️",
   intent: "🧭",
   aiDecision: "🔀",
+  tagDecision: "🔖",
   agentReply: "🤖",
   assignHuman: "🧑‍💼",
   roundRobin: "🔁",
@@ -66,6 +68,7 @@ export const PALETTE: FlowNodeType[] = [
   "keywordCases",
   "intent",
   "aiDecision",
+  "tagDecision",
   "agentReply",
   "assignHuman",
   "assignContactAgent",
@@ -102,6 +105,7 @@ export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
     case "webhook":
       return { webhookId: "", note: "" };
     case "tagConversation":
+    case "tagDecision":
       return { tagId: "" };
     case "assignTeammate":
       return { userId: "" };
@@ -118,6 +122,7 @@ export function handlesFor(
   switch (type) {
     case "keyword":
     case "aiDecision":
+    case "tagDecision":
       return ["yes", "no"];
     case "keywordCases": {
       const cases = (data.cases as FlowKeywordCase[]) ?? [];
@@ -188,6 +193,7 @@ export function summarize(
       return url ? url.replace(/^https?:\/\//, "").slice(0, 30) : "—";
     }
     case "tagConversation":
+    case "tagDecision":
       return name(refs?.tags, data.tagId);
     case "assignTeammate":
       return name(refs?.members, data.userId);

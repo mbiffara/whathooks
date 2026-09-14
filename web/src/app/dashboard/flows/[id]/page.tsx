@@ -1222,6 +1222,81 @@ function KeywordsField({
   );
 }
 
+/** Tag selector with inline creation, shared by the two tag nodes. */
+function TagPicker({
+  tags,
+  value,
+  onPatch,
+  onCreateTag,
+}: {
+  tags: FlowRefs["tags"];
+  value: string;
+  onPatch: (patch: FlowNodeData) => void;
+  onCreateTag?: (name: string) => Promise<string | null>;
+}) {
+  const t = useTranslations("dash.flows");
+  const [newTag, setNewTag] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  async function createAndSelect() {
+    if (!onCreateTag || !newTag.trim() || creating) return;
+    setCreating(true);
+    try {
+      const id = await onCreateTag(newTag.trim());
+      if (id) {
+        onPatch({ tagId: id });
+        setNewTag("");
+      }
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <>
+      <label className="flex flex-col gap-1 text-sm">
+        {t("tagLabel")}
+        <select
+          className="input"
+          value={value}
+          onChange={(e) => onPatch({ tagId: e.target.value })}
+        >
+          <option value="">{t("select")}</option>
+          {tags.map((tg) => (
+            <option key={tg.id} value={tg.id}>
+              {tg.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {onCreateTag && (
+        <div className="flex gap-1.5">
+          <input
+            className="input h-8 flex-1 px-2 py-0 text-xs"
+            maxLength={30}
+            placeholder={t("newTagPlaceholder")}
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void createAndSelect();
+              }
+            }}
+          />
+          <button
+            onClick={() => void createAndSelect()}
+            disabled={!newTag.trim() || creating}
+            className="btn-ghost text-xs disabled:opacity-50"
+          >
+            {t("createTag")}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function NodePanel({
   node,
   refs,
@@ -1260,22 +1335,6 @@ function NodePanel({
   const hasHandoffEdge = handoffWired;
   const agentCanHandOff =
     refs.agents.find((a) => a.id === d.agentId)?.allowAutoStop !== false;
-  const [newTag, setNewTag] = useState("");
-  const [creatingTag, setCreatingTag] = useState(false);
-
-  async function createAndSelectTag() {
-    if (!onCreateTag || !newTag.trim() || creatingTag) return;
-    setCreatingTag(true);
-    try {
-      const id = await onCreateTag(newTag.trim());
-      if (id) {
-        onPatch({ tagId: id });
-        setNewTag("");
-      }
-    } finally {
-      setCreatingTag(false);
-    }
-  }
   return (
     <div className="flex flex-col gap-3">
       <div>
@@ -1583,48 +1642,20 @@ function NodePanel({
         </>
       )}
 
-      {nt === "tagConversation" && (
-        <>
-          <label className="flex flex-col gap-1 text-sm">
-            {t("tagLabel")}
-            <select
-              className="input"
-              value={(d.tagId as string) ?? ""}
-              onChange={(e) => onPatch({ tagId: e.target.value })}
-            >
-              <option value="">{t("select")}</option>
-              {refs.tags.map((tg) => (
-                <option key={tg.id} value={tg.id}>
-                  {tg.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {onCreateTag && (
-            <div className="flex gap-1.5">
-              <input
-                className="input h-8 flex-1 px-2 py-0 text-xs"
-                maxLength={30}
-                placeholder={t("newTagPlaceholder")}
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    void createAndSelectTag();
-                  }
-                }}
-              />
-              <button
-                onClick={() => void createAndSelectTag()}
-                disabled={!newTag.trim() || creatingTag}
-                className="btn-ghost text-xs disabled:opacity-50"
-              >
-                {t("createTag")}
-              </button>
-            </div>
-          )}
-        </>
+      {(nt === "tagConversation" || nt === "tagDecision") && (
+        <TagPicker
+          key={node.id}
+          tags={refs.tags}
+          value={(d.tagId as string) ?? ""}
+          onPatch={onPatch}
+          onCreateTag={onCreateTag}
+        />
+      )}
+
+      {nt === "tagDecision" && (
+        <p className="text-xs text-[var(--color-muted)]">
+          {t("tagDecisionHint")}
+        </p>
       )}
 
       {nt === "assignTeammate" && (

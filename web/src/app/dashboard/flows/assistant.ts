@@ -125,6 +125,7 @@ export function validateDraft(graph: DraftGraph, refs: FlowRefs): string[] {
         }
         break;
       case "tagConversation":
+      case "tagDecision":
         if (!inRefs(refs.tags, d.tagId)) {
           errors.push(
             `Node "${n.id}": tagId must be one of the provided tag ids`,

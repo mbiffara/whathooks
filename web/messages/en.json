@@ -874,6 +874,7 @@
       "tagLabel": "Tag",
       "newTagPlaceholder": "New tag name…",
       "createTag": "Create",
+      "tagDecisionHint": "Yes: the conversation has the tag \u00b7 No: it doesn't",
       "teammateLabel": "Team member",
       "summaryNoKeywords": "no keywords",
       "summaryIntents": "{count, plural, one {# intent} other {# intents}}",
@@ -891,7 +892,7 @@
       "simulatorTitle": "Test this flow",
       "simulatorHint": "Have a pretend conversation with your flow. Nothing is delivered, no groups are created and nothing is saved. The AI nodes do run on the transcript, so their answers are real.",
       "simulatorPlaceholder": "e.g. Hola, cuánto sale el plan?",
-      "simulatorPhone": "Simulate as this WhatsApp number (optional). Lets \"Assign the contact's agent\" find the contact.",
+      "simulatorPhone": "Simulate as this WhatsApp number (optional). Lets \"Assign the contact's agent\" find the contact, and lets the dry run read that conversation's real state (for example its tags) without changing it.",
       "simulatorPhonePlaceholder": "Contact number, e.g. 5215512345678 (optional)",
       "simulatorSendAsContact": "Send as contact",
       "simulatorSendAsBusiness": "As you",
@@ -927,6 +928,10 @@
         "aiDecision": {
           "title": "AI decision",
           "hint": "An AI agent answers one yes/no question about the conversation and routes on the answer."
+        },
+        "tagDecision": {
+          "title": "Tag decision",
+          "hint": "Routes to Yes if the conversation has the selected tag, otherwise to No."
         },
         "intent": {
           "title": "Classify intent",

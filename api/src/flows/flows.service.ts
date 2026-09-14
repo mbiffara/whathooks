@@ -275,11 +275,37 @@ export class FlowsService {
       role: m.from === 'contact' ? ('user' as const) : ('assistant' as const),
       text: m.text,
     }));
+    const remoteJid = `${phoneNumber ?? 'simulation'}@s.whatsapp.net`;
+    // Run against the REAL thread behind the pretend contact when there is
+    // one. Read-only nodes (tagDecision) look the conversation up by id, and
+    // a synthetic id matches nothing, so the editor answered "not tagged"
+    // for conversations production routes the other way. Lending the dry run
+    // the real id only makes its reads honest: every node with an effect
+    // stops at `rec.dryRun` before writing, so nothing here can touch it.
+    const existing =
+      phoneNumber && flow.sessionId
+        ? await this.prisma.conversation
+            .findFirst({
+              where: {
+                organizationId,
+                sessionId: flow.sessionId,
+                // A thread is keyed either by the phone jid or by a LID with
+                // the number stored alongside; the simulator only knows the
+                // number, so try both addressing modes.
+                OR: [{ remoteJid }, { phoneNumber }],
+              },
+              // The same contact can own two rows (a phone jid thread and a
+              // later LID thread): prefer the one that spoke most recently.
+              orderBy: { lastMessageAt: 'desc' },
+              select: { id: true },
+            })
+            .catch(() => null)
+        : null;
     const rec = await this.engine.simulate(
       { id: flow.id, graph, organizationId },
       {
-        conversationId: `sim_${flow.id}`,
-        remoteJid: `${phoneNumber ?? 'simulation'}@s.whatsapp.net`,
+        conversationId: existing?.id ?? `sim_${flow.id}`,
+        remoteJid,
         isGroup: false,
         mentionedMe: false,
         pushName: 'Simulation',

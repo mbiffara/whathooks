@@ -4,7 +4,31 @@ import { AdminWelcomeEmail } from "@/components/admin-welcome-email";
 import { Glyph } from "@/components/glyphs";
 import type { AdminOrg, Plan } from "@/lib/types";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+
+const PLANS: readonly Plan[] = ["STARTER", "PRO", "BUSINESS", "SPONSORED"];
+
+/** Stripe subscription statuses we always offer as filter options. */
+const SUB_STATUSES = ["active", "trialing", "past_due", "canceled"] as const;
+const SUB_STATUS_LABEL: Record<(typeof SUB_STATUSES)[number], string> = {
+  active: "Active",
+  trialing: "Trialing",
+  past_due: "Past due",
+  canceled: "Canceled",
+};
+/** Filter value for organizations without a subscription (`subscriptionStatus === null`). */
+const NONE = "NONE";
+
+function parsePlan(value: string | null): "ALL" | Plan {
+  return PLANS.includes(value as Plan) ? (value as Plan) : "ALL";
+}
+
+function parseStatus(value: string | null, known: readonly string[]): string {
+  if (!value) return "ALL";
+  if (value === NONE || known.includes(value)) return value;
+  return "ALL";
+}
 
 const SUB_BADGE: Record<string, string> = {
   active: "bg-[var(--color-brand)]/15 text-[var(--color-brand)]",
@@ -30,17 +54,67 @@ function SubscriptionBadge({ status }: { status: string | null }) {
   );
 }
 
-/** Admin org list with client-side search + plan/trial filters. */
+/**
+ * Admin org list with client-side search + plan/status filters.
+ * Plan and status are mirrored to the URL (`?plan=PRO&status=canceled`) so a
+ * filtered view can be shared or reloaded; the text search is not.
+ */
 export function AdminOrgTable({ orgs }: { orgs: AdminOrg[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  /** Statuses present in the data that we don't list by default (e.g. `unpaid`). */
+  const extraStatuses = useMemo(() => {
+    const known = new Set<string>(SUB_STATUSES);
+    const extra = new Set<string>();
+    for (const o of orgs) {
+      if (o.subscriptionStatus !== null && !known.has(o.subscriptionStatus)) {
+        extra.add(o.subscriptionStatus);
+      }
+    }
+    return [...extra].sort();
+  }, [orgs]);
+
   const [q, setQ] = useState("");
-  const [plan, setPlan] = useState<"ALL" | Plan>("ALL");
-  const [trialOnly, setTrialOnly] = useState(false);
+  const [plan, setPlan] = useState<"ALL" | Plan>(() =>
+    parsePlan(searchParams.get("plan")),
+  );
+  const [status, setStatus] = useState<string>(() =>
+    parseStatus(searchParams.get("status"), [
+      ...SUB_STATUSES,
+      ...extraStatuses,
+    ]),
+  );
+
+  function syncUrl(next: { plan: string; status: string }) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const key of ["plan", "status"] as const) {
+      if (next[key] === "ALL") params.delete(key);
+      else params.set(key, next[key]);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
+  function changePlan(value: string) {
+    const nextPlan = parsePlan(value);
+    setPlan(nextPlan);
+    syncUrl({ plan: nextPlan, status });
+  }
+
+  function changeStatus(value: string) {
+    setStatus(value);
+    syncUrl({ plan, status: value });
+  }
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return orgs.filter((o) => {
       if (plan !== "ALL" && o.plan !== plan) return false;
-      if (trialOnly && o.subscriptionStatus !== "trialing") return false;
+      if (status === NONE && o.subscriptionStatus !== null) return false;
+      if (status !== "ALL" && status !== NONE && o.subscriptionStatus !== status)
+        return false;
       if (
         needle &&
         !o.name.toLowerCase().includes(needle) &&
@@ -49,7 +123,7 @@ export function AdminOrgTable({ orgs }: { orgs: AdminOrg[] }) {
         return false;
       return true;
     });
-  }, [orgs, q, plan, trialOnly]);
+  }, [orgs, q, plan, status]);
 
   return (
     <section className="flex flex-col gap-3">
@@ -63,7 +137,7 @@ export function AdminOrgTable({ orgs }: { orgs: AdminOrg[] }) {
         <select
           className="input w-40"
           value={plan}
-          onChange={(e) => setPlan(e.target.value as typeof plan)}
+          onChange={(e) => changePlan(e.target.value)}
         >
           <option value="ALL">All plans</option>
           <option value="STARTER">Starter</option>
@@ -71,14 +145,24 @@ export function AdminOrgTable({ orgs }: { orgs: AdminOrg[] }) {
           <option value="BUSINESS">Business</option>
           <option value="SPONSORED">Sponsored</option>
         </select>
-        <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
-          <input
-            type="checkbox"
-            checked={trialOnly}
-            onChange={(e) => setTrialOnly(e.target.checked)}
-          />
-          Trialing only
-        </label>
+        <select
+          className="input w-40"
+          value={status}
+          onChange={(e) => changeStatus(e.target.value)}
+        >
+          <option value="ALL">All statuses</option>
+          {SUB_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {SUB_STATUS_LABEL[s]}
+            </option>
+          ))}
+          {extraStatuses.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+          <option value={NONE}>No subscription</option>
+        </select>
         <span className="ml-auto text-xs text-[var(--color-muted)]">
           {filtered.length} / {orgs.length}
         </span>

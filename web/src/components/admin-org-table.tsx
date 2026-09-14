@@ -4,7 +4,7 @@ import { AdminWelcomeEmail } from "@/components/admin-welcome-email";
 import { Glyph } from "@/components/glyphs";
 import type { AdminOrg, Plan } from "@/lib/types";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 const PLANS: readonly Plan[] = ["STARTER", "PRO", "BUSINESS", "SPONSORED"];
@@ -60,7 +60,6 @@ function SubscriptionBadge({ status }: { status: string | null }) {
  * filtered view can be shared or reloaded; the text search is not.
  */
 export function AdminOrgTable({ orgs }: { orgs: AdminOrg[] }) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -77,15 +76,16 @@ export function AdminOrgTable({ orgs }: { orgs: AdminOrg[] }) {
   }, [orgs]);
 
   const [q, setQ] = useState("");
-  const [plan, setPlan] = useState<"ALL" | Plan>(() =>
-    parsePlan(searchParams.get("plan")),
-  );
-  const [status, setStatus] = useState<string>(() =>
-    parseStatus(searchParams.get("status"), [
-      ...SUB_STATUSES,
-      ...extraStatuses,
-    ]),
-  );
+  // The URL is the single source of truth for plan/status: derived on every
+  // render so same-route navigations (sidebar "Admin" link, back/forward,
+  // hand-edited URL) keep the selects and the rows in sync. Next keeps the
+  // page mounted when only the query changes, so a useState initializer
+  // would go stale.
+  const plan = parsePlan(searchParams.get("plan"));
+  const status = parseStatus(searchParams.get("status"), [
+    ...SUB_STATUSES,
+    ...extraStatuses,
+  ]);
 
   function syncUrl(next: { plan: string; status: string }) {
     const params = new URLSearchParams(searchParams.toString());
@@ -94,17 +94,17 @@ export function AdminOrgTable({ orgs }: { orgs: AdminOrg[] }) {
       else params.set(key, next[key]);
     }
     const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // history.replaceState integrates with useSearchParams without a server
+    // round trip; the filter is client-side, so re-running the page (and its
+    // two API calls) on every change would be wasted work.
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
   }
 
   function changePlan(value: string) {
-    const nextPlan = parsePlan(value);
-    setPlan(nextPlan);
-    syncUrl({ plan: nextPlan, status });
+    syncUrl({ plan: parsePlan(value), status });
   }
 
   function changeStatus(value: string) {
-    setStatus(value);
     syncUrl({ plan, status: value });
   }
 

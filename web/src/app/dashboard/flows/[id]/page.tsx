@@ -19,6 +19,7 @@ import "@xyflow/react/dist/style.css";
 import { Glyph } from "@/components/glyphs";
 import { ApiError, apiClient } from "@/lib/client-api";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   createContext,
@@ -45,6 +46,11 @@ import { layoutDraft, type DraftGraph } from "../assistant";
 
 type FlowNodeData = Record<string, unknown>;
 type EditorNode = Node<FlowNodeData>;
+
+/** The three prompt fields the editor may create or retouch on an agent. */
+type AgentDraft = { name: string; soul: string; instructions: string };
+
+const EMPTY_AGENT_DRAFT: AgentDraft = { name: "", soul: "", instructions: "" };
 
 /** Structured validation finding from the API (flow-graph.ts). */
 type GraphErrorEntry = {
@@ -164,6 +170,11 @@ export default function FlowEditorPage() {
   const { id } = useParams<{ id: string }>();
   const { data: auth } = useSession();
   const token = auth?.accessToken;
+  // Creating or editing an agent is an ADMIN+ action in the API, so the
+  // shortcuts that need it stay hidden from MEMBER and OPERATOR instead of
+  // being offered and failing with a 403.
+  const canManageAgents =
+    auth?.user?.orgRole === "OWNER" || auth?.user?.orgRole === "ADMIN";
   const router = useRouter();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<EditorNode>([]);
@@ -403,11 +414,7 @@ export default function FlowEditorPage() {
    * no provider key is needed — which is what makes creating one here
    * reasonable instead of sending the user to the agents page mid-build.
    */
-  async function createAgent(draft: {
-    name: string;
-    soul: string;
-    instructions: string;
-  }): Promise<string | null> {
+  async function createAgent(draft: AgentDraft): Promise<string | null> {
     if (!token) return null;
     try {
       const agent = await apiClient<{ id: string; name: string }>(
@@ -446,6 +453,45 @@ export default function FlowEditorPage() {
       setError(e instanceof Error ? e.message : tc("somethingWentWrong"));
       return null;
     }
+  }
+
+  /** The prompt fields of one agent, for the panel's inline edit form. */
+  async function loadAgent(agentId: string): Promise<AgentDraft> {
+    const agent = await apiClient<{
+      name: string;
+      soul: string;
+      instructions: string;
+    }>(`/agents/${agentId}`, token);
+    return {
+      name: agent.name,
+      soul: agent.soul,
+      instructions: agent.instructions,
+    };
+  }
+
+  /**
+   * Retouch an agent's prompt without leaving the editor. The patch carries
+   * only the three prompt fields, so whatever the agents page set meanwhile —
+   * model, key, schedule — survives. Failures reach the caller: the panel
+   * shows them next to the form and keeps the draft.
+   */
+  async function updateAgent(agentId: string, draft: AgentDraft) {
+    const saved = await apiClient<{ id: string; name: string }>(
+      `/agents/${agentId}`,
+      token,
+      { method: "PATCH", body: JSON.stringify(draft) },
+    );
+    // Only the name is mirrored in refs, and only the name is shown from it.
+    setRefs((r) =>
+      r
+        ? {
+            ...r,
+            agents: r.agents
+              .map((a) => (a.id === agentId ? { ...a, name: saved.name } : a))
+              .sort((a, b) => a.name.localeCompare(b.name)),
+          }
+        : r,
+    );
   }
 
   /** The graph exactly as the canvas has it. */
@@ -1121,7 +1167,10 @@ export default function FlowEditorPage() {
                   onPatch={patchSelected}
                   onDelete={deleteSelected}
                   onCreateTag={createTag}
+                  canManageAgents={canManageAgents}
                   onCreateAgent={createAgent}
+                  onLoadAgent={loadAgent}
+                  onUpdateAgent={updateAgent}
                   handoffWired={edges.some(
                     (e) =>
                       e.source === selected.id &&
@@ -1297,13 +1346,311 @@ function TagPicker({
   );
 }
 
+/** Name, character and instructions — shared by the create and edit forms. */
+function AgentFields({
+  draft,
+  onChange,
+  disabled = false,
+}: {
+  draft: AgentDraft;
+  onChange: (draft: AgentDraft) => void;
+  disabled?: boolean;
+}) {
+  const t = useTranslations("dash.flows");
+  // The caps mirror CreateAgentDto/UpdateAgentDto, so the API never rejects
+  // text the field happily accepted.
+  return (
+    <>
+      <input
+        className="input h-8 px-2 py-0 text-xs"
+        placeholder={t("newAgentName")}
+        maxLength={80}
+        disabled={disabled}
+        value={draft.name}
+        onChange={(e) => onChange({ ...draft, name: e.target.value })}
+      />
+      <textarea
+        className="input min-h-14 text-xs"
+        placeholder={t("newAgentSoul")}
+        maxLength={4000}
+        disabled={disabled}
+        value={draft.soul}
+        onChange={(e) => onChange({ ...draft, soul: e.target.value })}
+      />
+      <textarea
+        className="input min-h-14 text-xs"
+        placeholder={t("newAgentInstructions")}
+        maxLength={8000}
+        disabled={disabled}
+        value={draft.instructions}
+        onChange={(e) => onChange({ ...draft, instructions: e.target.value })}
+      />
+    </>
+  );
+}
+
+/**
+ * Agent selector for the three nodes that run one, with the two shortcuts an
+ * ADMIN/OWNER gets: create a throwaway agent, and retouch the prompt of the
+ * chosen one. Both are hidden from lower roles, which the API refuses.
+ */
+function AgentPicker({
+  nodeType,
+  agentId,
+  agents,
+  onPatch,
+  canManageAgents,
+  onCreateAgent,
+  onLoadAgent,
+  onUpdateAgent,
+}: {
+  nodeType: FlowNodeType;
+  agentId: string;
+  agents: FlowRefs["agents"];
+  onPatch: (patch: FlowNodeData) => void;
+  canManageAgents: boolean;
+  onCreateAgent?: (draft: AgentDraft) => Promise<string | null>;
+  onLoadAgent?: (agentId: string) => Promise<AgentDraft>;
+  onUpdateAgent?: (agentId: string, draft: AgentDraft) => Promise<void>;
+}) {
+  const t = useTranslations("dash.flows");
+  const tcCommon = useTranslations("common");
+  const [newAgentOpen, setNewAgentOpen] = useState(false);
+  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [agentDraft, setAgentDraft] = useState<AgentDraft>(EMPTY_AGENT_DRAFT);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editDraft, setEditDraft] = useState<AgentDraft>(EMPTY_AGENT_DRAFT);
+  const [loadingAgent, setLoadingAgent] = useState(false);
+  const [savingAgent, setSavingAgent] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const [agentSaved, setAgentSaved] = useState(false);
+
+  // The confirmation is a one-line "done", not a banner to dismiss.
+  useEffect(() => {
+    if (!agentSaved) return;
+    const handle = setTimeout(() => setAgentSaved(false), 4000);
+    return () => clearTimeout(handle);
+  }, [agentSaved]);
+
+  const canEdit = canManageAgents && Boolean(onLoadAgent && onUpdateAgent);
+  const canCreate = canManageAgents && Boolean(onCreateAgent);
+
+  /** A role refusal has its own wording; everything else keeps the API's. */
+  function messageOf(e: unknown): string {
+    if (e instanceof ApiError && e.status === 403) return t("agentForbidden");
+    return e instanceof Error ? e.message : tcCommon("somethingWentWrong");
+  }
+
+  function closeEdit() {
+    setEditOpen(false);
+    setEditDraft(EMPTY_AGENT_DRAFT);
+  }
+
+  async function openEdit() {
+    if (!onLoadAgent || !agentId || loadingAgent) return;
+    setEditOpen(true);
+    setLoadingAgent(true);
+    setAgentError(null);
+    setAgentSaved(false);
+    try {
+      setEditDraft(await onLoadAgent(agentId));
+    } catch (e) {
+      // Gone, forbidden or offline: say so and take the form away rather
+      // than leave an empty one that would overwrite the agent on save.
+      setAgentError(messageOf(e));
+      closeEdit();
+    } finally {
+      setLoadingAgent(false);
+    }
+  }
+
+  async function saveEdit() {
+    if (!onUpdateAgent || !agentId || savingAgent) return;
+    setSavingAgent(true);
+    setAgentError(null);
+    try {
+      await onUpdateAgent(agentId, {
+        name: editDraft.name.trim(),
+        soul: editDraft.soul.trim(),
+        instructions: editDraft.instructions.trim(),
+      });
+      closeEdit();
+      setAgentSaved(true);
+    } catch (e) {
+      // The draft stays put, so an expired token or a hiccup costs a retry
+      // and not the text the user just wrote.
+      setAgentError(messageOf(e));
+    } finally {
+      setSavingAgent(false);
+    }
+  }
+
+  const editComplete =
+    Boolean(editDraft.name.trim()) &&
+    Boolean(editDraft.soul.trim()) &&
+    Boolean(editDraft.instructions.trim());
+
+  return (
+    <label className="flex flex-col gap-1 text-sm">
+      {t("aiAgent")}
+      <select
+        className="input"
+        value={agentId}
+        onChange={(e) => {
+          // Another agent means another prompt: the open draft is not it.
+          closeEdit();
+          setAgentError(null);
+          setAgentSaved(false);
+          onPatch({ agentId: e.target.value });
+        }}
+      >
+        {/* These two nodes only need a model and credentials, never a
+            persona, so "included tokens" is a valid default rather than
+            a missing setting. agentReply does need the persona. */}
+        <option value="">
+          {nodeType === "agentReply" ? t("select") : t("aiIncludedOption")}
+        </option>
+        {agents.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+            {a.enabled ? "" : ` ${t("agentDisabledSuffix")}`}
+          </option>
+        ))}
+      </select>
+      {nodeType !== "agentReply" && !agentId && (
+        <span className="text-xs text-[var(--color-muted)]">
+          {t("aiIncludedHint")}
+        </span>
+      )}
+
+      {agentError && (
+        <span className="text-xs text-[var(--color-danger)]">{agentError}</span>
+      )}
+      {agentSaved && (
+        <span role="status" className="text-xs text-[var(--color-brand)]">
+          {t("agentSaved")}
+        </span>
+      )}
+
+      {!newAgentOpen && !editOpen && (canCreate || (canEdit && agentId)) && (
+        <div className="flex flex-wrap gap-3">
+          {canCreate && (
+            <button
+              type="button"
+              onClick={() => setNewAgentOpen(true)}
+              className="text-xs text-[var(--color-brand)] hover:underline"
+            >
+              {t("newAgent")}
+            </button>
+          )}
+          {canEdit && agentId && (
+            <button
+              type="button"
+              onClick={() => void openEdit()}
+              className="text-xs text-[var(--color-brand)] hover:underline"
+            >
+              {t("editAgent")}
+            </button>
+          )}
+        </div>
+      )}
+
+      {canCreate && onCreateAgent && newAgentOpen && (
+        <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] p-2">
+          <AgentFields draft={agentDraft} onChange={setAgentDraft} />
+          <span className="text-[10px] text-[var(--color-muted)]">
+            {t("newAgentNote")}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={
+                creatingAgent ||
+                !agentDraft.name.trim() ||
+                !agentDraft.soul.trim() ||
+                !agentDraft.instructions.trim()
+              }
+              onClick={async () => {
+                setCreatingAgent(true);
+                const id = await onCreateAgent({
+                  name: agentDraft.name.trim(),
+                  soul: agentDraft.soul.trim(),
+                  instructions: agentDraft.instructions.trim(),
+                });
+                setCreatingAgent(false);
+                if (id) {
+                  onPatch({ agentId: id });
+                  setNewAgentOpen(false);
+                  setAgentDraft(EMPTY_AGENT_DRAFT);
+                }
+              }}
+              className="btn-primary flex-1 text-xs disabled:opacity-50"
+            >
+              {creatingAgent ? "…" : t("newAgentCreate")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewAgentOpen(false)}
+              className="btn-ghost text-xs"
+            >
+              {tcCommon("cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {canEdit && editOpen && (
+        <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] p-2">
+          <AgentFields
+            draft={editDraft}
+            onChange={setEditDraft}
+            disabled={loadingAgent}
+          />
+          <span className="text-[10px] text-[var(--color-muted)]">
+            {loadingAgent ? tcCommon("loading") : t("editAgentHint")}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={loadingAgent || savingAgent || !editComplete}
+              onClick={() => void saveEdit()}
+              className="btn-primary flex-1 text-xs disabled:opacity-50"
+            >
+              {savingAgent ? "…" : tcCommon("save")}
+            </button>
+            <button
+              type="button"
+              onClick={closeEdit}
+              className="btn-ghost text-xs"
+            >
+              {tcCommon("cancel")}
+            </button>
+          </div>
+          <Link
+            href="/dashboard/agents"
+            // A new tab: the canvas may hold unsaved changes.
+            target="_blank"
+            rel="noopener noreferrer"
+            className="self-start text-[10px] text-[var(--color-brand)] hover:underline"
+          >
+            {t("editAgentFull")}
+          </Link>
+        </div>
+      )}
+    </label>
+  );
+}
+
 function NodePanel({
   node,
   refs,
   onPatch,
   onDelete,
   onCreateTag,
+  canManageAgents = false,
   onCreateAgent,
+  onLoadAgent,
+  onUpdateAgent,
   handoffWired = false,
 }: {
   node: EditorNode;
@@ -1311,25 +1658,17 @@ function NodePanel({
   onPatch: (patch: FlowNodeData) => void;
   onDelete: () => void;
   onCreateTag?: (name: string) => Promise<string | null>;
-  onCreateAgent?: (draft: {
-    name: string;
-    soul: string;
-    instructions: string;
-  }) => Promise<string | null>;
+  /** True for ADMIN/OWNER — the roles the API lets create and edit agents. */
+  canManageAgents?: boolean;
+  onCreateAgent?: (draft: AgentDraft) => Promise<string | null>;
+  onLoadAgent?: (agentId: string) => Promise<AgentDraft>;
+  onUpdateAgent?: (agentId: string, draft: AgentDraft) => Promise<void>;
   /** True when this node has an onHandoff edge drawn from it. */
   handoffWired?: boolean;
 }) {
   const t = useTranslations("dash.flows");
-  const tcCommon = useTranslations("common");
   const nt = node.type as FlowNodeType;
   const d = node.data;
-  const [newAgentOpen, setNewAgentOpen] = useState(false);
-  const [creatingAgent, setCreatingAgent] = useState(false);
-  const [agentDraft, setAgentDraft] = useState({
-    name: "",
-    soul: "",
-    instructions: "",
-  });
   // An onHandoff edge is dead unless the agent may pause itself, so warn
   // rather than let the branch sit there silently never firing.
   const hasHandoffEdge = handoffWired;
@@ -1356,111 +1695,19 @@ function NodePanel({
       )}
 
       {(nt === "intent" || nt === "agentReply" || nt === "aiDecision") && (
-        <label className="flex flex-col gap-1 text-sm">
-          {t("aiAgent")}
-          <select
-            className="input"
-            value={(d.agentId as string) ?? ""}
-            onChange={(e) => onPatch({ agentId: e.target.value })}
-          >
-            {/* These two nodes only need a model and credentials, never a
-                persona, so "included tokens" is a valid default rather than
-                a missing setting. agentReply does need the persona. */}
-            <option value="">
-              {nt === "agentReply" ? t("select") : t("aiIncludedOption")}
-            </option>
-            {refs.agents.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-                {a.enabled ? "" : ` ${t("agentDisabledSuffix")}`}
-              </option>
-            ))}
-          </select>
-          {nt !== "agentReply" && !d.agentId && (
-            <span className="text-xs text-[var(--color-muted)]">
-              {t("aiIncludedHint")}
-            </span>
-          )}
-          {onCreateAgent && !newAgentOpen && (
-            <button
-              type="button"
-              onClick={() => setNewAgentOpen(true)}
-              className="self-start text-xs text-[var(--color-brand)] hover:underline"
-            >
-              {t("newAgent")}
-            </button>
-          )}
-          {onCreateAgent && newAgentOpen && (
-            <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] p-2">
-              <input
-                className="input h-8 px-2 py-0 text-xs"
-                placeholder={t("newAgentName")}
-                maxLength={80}
-                value={agentDraft.name}
-                onChange={(e) =>
-                  setAgentDraft({ ...agentDraft, name: e.target.value })
-                }
-              />
-              <textarea
-                className="input min-h-14 text-xs"
-                placeholder={t("newAgentSoul")}
-                value={agentDraft.soul}
-                onChange={(e) =>
-                  setAgentDraft({ ...agentDraft, soul: e.target.value })
-                }
-              />
-              <textarea
-                className="input min-h-14 text-xs"
-                placeholder={t("newAgentInstructions")}
-                value={agentDraft.instructions}
-                onChange={(e) =>
-                  setAgentDraft({
-                    ...agentDraft,
-                    instructions: e.target.value,
-                  })
-                }
-              />
-              <span className="text-[10px] text-[var(--color-muted)]">
-                {t("newAgentNote")}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={
-                    creatingAgent ||
-                    !agentDraft.name.trim() ||
-                    !agentDraft.soul.trim() ||
-                    !agentDraft.instructions.trim()
-                  }
-                  onClick={async () => {
-                    setCreatingAgent(true);
-                    const id = await onCreateAgent({
-                      name: agentDraft.name.trim(),
-                      soul: agentDraft.soul.trim(),
-                      instructions: agentDraft.instructions.trim(),
-                    });
-                    setCreatingAgent(false);
-                    if (id) {
-                      onPatch({ agentId: id });
-                      setNewAgentOpen(false);
-                      setAgentDraft({ name: "", soul: "", instructions: "" });
-                    }
-                  }}
-                  className="btn-primary flex-1 text-xs disabled:opacity-50"
-                >
-                  {creatingAgent ? "…" : t("newAgentCreate")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewAgentOpen(false)}
-                  className="btn-ghost text-xs"
-                >
-                  {tcCommon("cancel")}
-                </button>
-              </div>
-            </div>
-          )}
-        </label>
+        <AgentPicker
+          // Remounted per node: a half-written draft must not follow the
+          // user to the next node it would then be saved against.
+          key={node.id}
+          nodeType={nt}
+          agentId={(d.agentId as string) ?? ""}
+          agents={refs.agents}
+          onPatch={onPatch}
+          canManageAgents={canManageAgents}
+          onCreateAgent={onCreateAgent}
+          onLoadAgent={onLoadAgent}
+          onUpdateAgent={onUpdateAgent}
+        />
       )}
 
       {nt === "intent" && (

@@ -34,6 +34,20 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const PAGE_LIMIT = 40;
 
+/**
+ * True when a conversations poll brought nothing new. Keeping the previous
+ * array reference in that case skips the re-render of the whole inbox — which
+ * is what used to interrupt audio/video playback in the open thread.
+ */
+function sameConversations(
+  prev: Conversation[],
+  next: Conversation[],
+): boolean {
+  if (prev === next) return true;
+  if (prev.length !== next.length) return false;
+  return JSON.stringify(prev) === JSON.stringify(next);
+}
+
 function mergeMessages(
   existing: ChatMessage[],
   incoming: ChatMessage[],
@@ -217,7 +231,7 @@ function MessagesInbox() {
         `/conversations?${params.toString()}`,
         token,
       );
-      setConversations(data);
+      setConversations((prev) => (sameConversations(prev, data) ? prev : data));
     } catch {
       /* ignore poll errors */
     } finally {
@@ -612,21 +626,24 @@ function MessagesInbox() {
 
   // Save a sent message's text as an org-shared quick reply (the API
   // dedupes on identical text, so re-saving is a no-op).
-  async function saveQuickReply(text: string) {
-    if (!token || !text.trim()) return;
-    try {
-      const saved = await apiClient<QuickReply>("/quick-replies", token, {
-        method: "POST",
-        body: JSON.stringify({ text: text.trim() }),
-      });
-      setQuickReplies((prev) => [
-        saved,
-        ...prev.filter((q) => q.id !== saved.id),
-      ]);
-    } catch {
-      /* cap reached or transient failure — nothing to roll back */
-    }
-  }
+  const saveQuickReply = useCallback(
+    async (text: string) => {
+      if (!token || !text.trim()) return;
+      try {
+        const saved = await apiClient<QuickReply>("/quick-replies", token, {
+          method: "POST",
+          body: JSON.stringify({ text: text.trim() }),
+        });
+        setQuickReplies((prev) => [
+          saved,
+          ...prev.filter((q) => q.id !== saved.id),
+        ]);
+      } catch {
+        /* cap reached or transient failure — nothing to roll back */
+      }
+    },
+    [token],
+  );
 
   // Platform-admin testing tool: the API also clears flow/mirror state so
   // the next inbound message starts the automation from scratch.

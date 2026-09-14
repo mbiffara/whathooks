@@ -944,6 +944,7 @@ export default function FlowEditorPage() {
                 onClick={() => {
                   setError(null);
                   setGraphErrors(null);
+                  raisedAgentError.current = null;
                 }}
                 aria-label={tc("close")}
                 className="shrink-0 rounded px-1 hover:opacity-75"
@@ -1452,6 +1453,11 @@ function AgentPicker({
   // Which load is the current one. Switching agents mid-flight must not let
   // the older GET land in the form and be saved onto the new agent.
   const loadSeq = useRef(0);
+  // A node switch remounts this panel: retire the old instance's loads so a
+  // late response cannot report to the page banner on behalf of a dead form.
+  useEffect(() => () => {
+    loadSeq.current++;
+  }, []);
 
   // The confirmation is a one-line "done", not a banner to dismiss.
   useEffect(() => {

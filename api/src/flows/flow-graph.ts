@@ -16,6 +16,7 @@ export const FLOW_NODE_TYPES = [
   'keywordCases',
   'intent',
   'aiDecision',
+  'tagDecision',
   'agentReply',
   'assignHuman',
   'roundRobin',
@@ -392,6 +393,7 @@ export function validateGraph(
         }
         break;
       case 'tagConversation':
+      case 'tagDecision':
         if (!isStr(d.tagId, 64) || !refs.tagIds.has(d.tagId)) {
           push('tagMissing', `Node "${n.id}": pick a tag`, n.id);
         }
@@ -514,6 +516,7 @@ export function allowedHandles(node: FlowNode): string[] {
   switch (node.type) {
     case 'keyword':
     case 'aiDecision':
+    case 'tagDecision':
       return ['yes', 'no'];
     case 'keywordCases':
       return [...casesOf(node).map((c) => c.key), 'fallback'];

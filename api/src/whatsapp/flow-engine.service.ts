@@ -305,6 +305,36 @@ export class FlowEngineService {
         return this.follow(graph, node, branch);
       }
 
+      case 'tagDecision': {
+        // Read-only, so the simulator runs it for real: seeing the branch a
+        // live conversation would take is the point of a dry run.
+        const tagId = node.data.tagId as string | undefined;
+        let has = false;
+        let note: string | undefined;
+        if (!tagId) {
+          note = 'no (tag not configured)';
+        } else {
+          const hit = await this.prisma.conversation
+            .findFirst({
+              where: { id: ctx.conversationId, tags: { some: { id: tagId } } },
+              select: { id: true },
+            })
+            .catch((e) => {
+              this.log.warn(`Flow ${flow.id}: tagDecision lookup failed: ${e}`);
+              return null;
+            });
+          has = hit !== null;
+        }
+        // A failed lookup takes "no", the same safer branch as aiDecision.
+        const branch = has ? 'yes' : 'no';
+        rec.steps.push({
+          nodeId: node.id,
+          type: node.type,
+          note: note ?? branch,
+        });
+        return this.follow(graph, node, branch);
+      }
+
       case 'intent': {
         const intents = intentsOf(node);
         const key = await this.agentRunner.classify(

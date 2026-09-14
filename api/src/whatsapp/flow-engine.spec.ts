@@ -84,6 +84,36 @@ describe('validateGraph', () => {
     expect(errors.some((e) => e.message.includes('"maybe"'))).toBe(true);
   });
 
+  it('requires a known tag on a tagDecision node', () => {
+    const g: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('d', 'tagDecision', { tagId: 'nope' }),
+      ],
+      edges: [edge('t', 'd')],
+    };
+    expect(validateGraph(g, REFS).map((e) => e.code)).toContain('tagMissing');
+  });
+
+  it('only lets a tagDecision branch on yes/no', () => {
+    const g: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('d', 'tagDecision', { tagId: 'tag1' }),
+        node('r', 'agentReply', { agentId: 'agent1' }),
+      ],
+      edges: [edge('t', 'd'), edge('d', 'r', 'out')],
+    };
+    const errors = validateGraph(g, REFS);
+    expect(errors.some((e) => e.message.includes('"out"'))).toBe(true);
+
+    const ok: FlowGraph = {
+      nodes: g.nodes,
+      edges: [edge('t', 'd'), edge('d', 'r', 'yes')],
+    };
+    expect(validateGraph(ok, REFS)).toEqual([]);
+  });
+
   it('rejects outputs on terminal nodes and duplicate handles', () => {
     const g: FlowGraph = {
       nodes: [
@@ -205,6 +235,8 @@ function makeEngine(overrides: {
         updates.push(args);
         return Promise.resolve({});
       }),
+      // tagDecision reads the conversation's tags; null = it has none.
+      findFirst: jest.fn().mockResolvedValue(null),
     },
     message: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -790,6 +822,72 @@ describe('aiDecision routing', () => {
       t.manager as never,
     );
     expect(t.agentReplies).toHaveLength(1);
+  });
+});
+
+describe('tagDecision routing', () => {
+  const graph = (tagId = 'tag1'): FlowGraph => ({
+    nodes: [
+      node('t', 'trigger'),
+      node('d', 'tagDecision', { tagId }),
+      node('a', 'assignHuman', { humanAgentId: 'ha1' }),
+      node('r', 'agentReply', { agentId: 'agent1' }),
+    ],
+    edges: [edge('t', 'd'), edge('d', 'a', 'yes'), edge('d', 'r', 'no')],
+  });
+
+  it('takes yes when the conversation has the tag', async () => {
+    const t = makeEngine({});
+    t.prisma.conversation.findFirst.mockResolvedValue({ id: 'conv1' });
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.prisma.conversation.findFirst).toHaveBeenCalledWith({
+      where: { id: 'conv1', tags: { some: { id: 'tag1' } } },
+      select: { id: true },
+    });
+    expect(t.created).toHaveLength(1); // handed to a human
+  });
+
+  it('takes no when the conversation does not have the tag', async () => {
+    const t = makeEngine({});
+    t.prisma.conversation.findFirst.mockResolvedValue(null);
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.created).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(1);
+  });
+
+  it('takes no without a tag configured, and says so in the step', async () => {
+    const t = makeEngine({});
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph(''), organizationId: 'org1' },
+      CTX,
+      t.manager as never,
+    );
+    expect(t.prisma.conversation.findFirst).not.toHaveBeenCalled();
+    expect(rec.steps.find((s) => s.nodeId === 'd')?.note).toBe(
+      'no (tag not configured)',
+    );
+  });
+
+  it('reads the real tags in a dry run, without touching the conversation', async () => {
+    const t = makeEngine({});
+    t.prisma.conversation.findFirst.mockResolvedValue({ id: 'conv1' });
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      CTX,
+      t.manager as never,
+    );
+    expect(rec.steps.find((s) => s.nodeId === 'd')?.note).toBe('yes');
+    expect(t.prisma.conversation.update).not.toHaveBeenCalled();
   });
 });
 

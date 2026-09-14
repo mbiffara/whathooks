@@ -191,6 +191,24 @@ export interface AdminOverview {
   };
 }
 
+export interface AdminTimeseriesPoint {
+  /** UTC calendar day, 'YYYY-MM-DD'. */
+  day: string;
+  messages: number;
+  inbound: number;
+  outbound: number;
+  tokens: number;
+}
+
+/** GET /admin/timeseries — one zero-filled entry per UTC day, last one is today. */
+export interface AdminTimeseries {
+  days: number;
+  from: string;
+  to: string;
+  series: AdminTimeseriesPoint[];
+  totals: Omit<AdminTimeseriesPoint, "day">;
+}
+
 export interface AdminOrg {
   id: string;
   name: string;

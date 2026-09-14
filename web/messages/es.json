@@ -892,7 +892,7 @@
       "simulatorTitle": "Probar este flow",
       "simulatorHint": "Tené una conversación de prueba con tu flow. No se entrega nada, no se crean grupos y no se guarda nada. Los nodos de IA sí se ejecutan sobre la transcripción, así que sus respuestas son reales.",
       "simulatorPlaceholder": "ej. Hola, ¿cuánto sale el plan?",
-      "simulatorPhone": "Simular como este número de WhatsApp (opcional). Permite que \"Asignar al agente del contacto\" encuentre el contacto.",
+      "simulatorPhone": "Simular como este número de WhatsApp (opcional). Permite que \"Asignar al agente del contacto\" encuentre el contacto y que la simulación lea el estado real de esa conversación (por ejemplo sus etiquetas) sin modificarla.",
       "simulatorPhonePlaceholder": "Número del contacto, ej. 5215512345678 (opcional)",
       "simulatorSendAsContact": "Enviar como contacto",
       "simulatorSendAsBusiness": "Como vos",

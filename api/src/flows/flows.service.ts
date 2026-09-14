@@ -294,6 +294,9 @@ export class FlowsService {
                 // number, so try both addressing modes.
                 OR: [{ remoteJid }, { phoneNumber }],
               },
+              // The same contact can own two rows (a phone jid thread and a
+              // later LID thread): prefer the one that spoke most recently.
+              orderBy: { lastMessageAt: 'desc' },
               select: { id: true },
             })
             .catch(() => null)

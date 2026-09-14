@@ -455,6 +455,28 @@ export default function FlowEditorPage() {
     }
   }
 
+  // What the agent panel last put in the page banner, so a retry that works
+  // can take it back without clearing a message something else owns.
+  const raisedAgentError = useRef<string | null>(null);
+
+  /**
+   * Raise (or withdraw) an agent failure at page level: the inline copy dies
+   * with the panel the moment the user clicks another node. The banner holds
+   * one message at a time — save() already clears both sources before it
+   * writes — so a failure here replaces any older graph warnings rather than
+   * hiding behind them.
+   */
+  const reportAgentError = useCallback((message: string | null) => {
+    const mine = raisedAgentError.current;
+    raisedAgentError.current = message;
+    if (message === null) {
+      if (mine !== null) setError((e) => (e === mine ? null : e));
+      return;
+    }
+    setGraphErrors(null);
+    setError(message);
+  }, []);
+
   /** The prompt fields of one agent, for the panel's inline edit form. */
   async function loadAgent(agentId: string): Promise<AgentDraft> {
     const agent = await apiClient<{
@@ -1171,7 +1193,7 @@ export default function FlowEditorPage() {
                   onCreateAgent={createAgent}
                   onLoadAgent={loadAgent}
                   onUpdateAgent={updateAgent}
-                  onAgentError={setError}
+                  onAgentError={reportAgentError}
                   handoffWired={edges.some(
                     (e) =>
                       e.source === selected.id &&
@@ -1412,8 +1434,9 @@ function AgentPicker({
   onCreateAgent?: (draft: AgentDraft) => Promise<string | null>;
   onLoadAgent?: (agentId: string) => Promise<AgentDraft>;
   onUpdateAgent?: (agentId: string, draft: AgentDraft) => Promise<void>;
-  /** Also raise the failure above the panel, which a node switch unmounts. */
-  onError?: (message: string) => void;
+  /** Raise the failure above the panel, which a node switch unmounts; null
+   *  withdraws the one this panel raised. */
+  onError?: (message: string | null) => void;
 }) {
   const t = useTranslations("dash.flows");
   const tcCommon = useTranslations("common");
@@ -1472,6 +1495,7 @@ function AgentPicker({
       const loaded = await onLoadAgent(agentId);
       if (seq !== loadSeq.current) return;
       setEditDraft(loaded);
+      onError?.(null);
     } catch (e) {
       if (seq !== loadSeq.current) return;
       // Gone, forbidden or offline: say so and take the form away rather
@@ -1494,6 +1518,7 @@ function AgentPicker({
         instructions: editDraft.instructions.trim(),
       });
       closeEdit();
+      onError?.(null);
       setAgentSaved(true);
     } catch (e) {
       // The draft stays put, so an expired token or a hiccup costs a retry
@@ -1688,7 +1713,7 @@ function NodePanel({
   onCreateAgent?: (draft: AgentDraft) => Promise<string | null>;
   onLoadAgent?: (agentId: string) => Promise<AgentDraft>;
   onUpdateAgent?: (agentId: string, draft: AgentDraft) => Promise<void>;
-  onAgentError?: (message: string) => void;
+  onAgentError?: (message: string | null) => void;
   /** True when this node has an onHandoff edge drawn from it. */
   handoffWired?: boolean;
 }) {

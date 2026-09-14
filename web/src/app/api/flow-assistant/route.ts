@@ -123,6 +123,7 @@ NODE TYPES (type → data fields → output handles):
 - assignGroup → { humanAgentIds: string[], same options } → terminal. One shared group with every listed human.
 - webhook → { webhookId, note? } → "out". Notifies an external system, then continues.
 - tagConversation → { tagId } → "out". Tags the conversation, then continues.
+- tagDecision → { tagId } → "yes", "no". Branches on a tag the conversation ALREADY has: "yes" when it carries that tag, "no" when it does not. tagId must be one of the tag ids listed below. Use it to treat known cases differently (a lead already tagged "customer", "vip" or "no molestar") instead of asking an AI something the database knows.
 - assignTeammate → { userId } → "out". Assigns the conversation in the inbox, then continues.
 - saveContact → {} → "out". Saves the sender to the contact book, then continues.
 
@@ -147,7 +148,10 @@ COMMON PATTERNS:
 - keyword vs keywordCases vs intent vs aiDecision: keyword for a single
   yes/no on wording, keywordCases for many wordings to many branches, intent
   when the AI must categorise, aiDecision when the AI must judge one
-  yes/no question.
+  yes/no question. Prefer tagDecision over aiDecision whenever the question
+  is about a tag the conversation already carries — it is exact and free.
+- "Returning customers skip the bot": tagDecision on the customer tag →
+  "yes" → the human route; "no" → the normal chain.
 - "AI answers unless X": keyword → "no" → agentReply; "yes" → the exception.
 - Branch on intent AND reply: the intent node only CLASSIFIES (it never
   replies). Put it before the actions: route each intent key to its chain

@@ -55,11 +55,16 @@ function senderLabel(
 }
 
 /**
- * Memoized: the inbox re-renders on every conversation poll and on every
- * keystroke in the composer. Re-rendering a bubble tears down its <audio> or
- * <video>, which restarts playback mid-message. The default shallow compare is
- * enough because `mergeMessages` keeps the same `message` object across polls
- * and the inbox passes a stable `onSaveQuickReply`.
+ * What keeps media playing is `MessageBody` living at module level: declared
+ * inside this component it would be a different type on every render, so React
+ * would unmount the old subtree and remount the <audio>/<video>, restarting
+ * playback a few seconds in.
+ *
+ * `memo` on top of that is an optimization: the inbox re-renders on every
+ * conversation poll and on every keystroke in the composer, and none of that
+ * changes a bubble. The default shallow compare is enough because
+ * `mergeMessages` keeps the same `message` object across polls and the inbox
+ * passes a stable `onSaveQuickReply`.
  */
 export const MessageBubble = memo(function MessageBubble({
   message,
@@ -179,7 +184,12 @@ export const MessageBubble = memo(function MessageBubble({
   );
 });
 
-/** The message payload itself: text, media player, or a placeholder label. */
+/**
+ * The message payload itself: text, media player, or a placeholder label.
+ * Keep it here, at module level: a component declared inside `MessageBubble`'s
+ * render is a brand-new type each time, which React remounts — and a remounted
+ * <audio>/<video> starts over from zero.
+ */
 function MessageBody({
   message,
   t,

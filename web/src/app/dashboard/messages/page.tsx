@@ -217,6 +217,16 @@ function MessagesInbox() {
     return () => window.removeEventListener("keydown", onKey);
   }, [qrOpen]);
 
+  // The conversation list shows relative times ("3m", "2h"). A poll that brings
+  // nothing new now keeps the previous state references, so nothing else would
+  // re-render the inbox and those labels would freeze. Tick once a minute.
+  // MessageBubble is memoized, so this never reaches the open thread's <audio>.
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setClockTick((n) => n + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
+
   // Load + poll conversations
   const loadConversations = useCallback(async () => {
     if (!token) return;

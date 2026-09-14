@@ -838,7 +838,10 @@ describe('tagDecision routing', () => {
 
   it('takes yes when the conversation has the tag', async () => {
     const t = makeEngine({});
-    t.prisma.conversation.findFirst.mockResolvedValue({ id: 'conv1' });
+    t.prisma.conversation.findFirst.mockResolvedValue({
+      id: 'conv1',
+      tags: [{ id: 'tag1' }],
+    });
     await t.engine.run(
       { id: 'f1', graph: graph(), organizationId: 'org1' },
       's1',
@@ -846,15 +849,21 @@ describe('tagDecision routing', () => {
       t.manager as never,
     );
     expect(t.prisma.conversation.findFirst).toHaveBeenCalledWith({
-      where: { id: 'conv1', tags: { some: { id: 'tag1' } } },
-      select: { id: true },
+      where: { id: 'conv1' },
+      select: {
+        id: true,
+        tags: { where: { id: 'tag1' }, select: { id: true } },
+      },
     });
     expect(t.created).toHaveLength(1); // handed to a human
   });
 
   it('takes no when the conversation does not have the tag', async () => {
     const t = makeEngine({});
-    t.prisma.conversation.findFirst.mockResolvedValue(null);
+    t.prisma.conversation.findFirst.mockResolvedValue({
+      id: 'conv1',
+      tags: [],
+    });
     await t.engine.run(
       { id: 'f1', graph: graph(), organizationId: 'org1' },
       's1',
@@ -863,6 +872,41 @@ describe('tagDecision routing', () => {
     );
     expect(t.created).toHaveLength(0);
     expect(t.agentReplies).toHaveLength(1);
+  });
+
+  it('says so when the lookup fails, instead of reporting a plain no', async () => {
+    const t = makeEngine({});
+    t.prisma.conversation.findFirst.mockRejectedValue(new Error('db down'));
+    await t.engine.run(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    // Still the safe branch...
+    expect(t.created).toHaveLength(0);
+    expect(t.agentReplies).toHaveLength(1);
+    // ...but the recorded run says the tag was never actually read.
+    const steps = (t.runs[0]?.data as AnyRecord).steps as Array<{
+      nodeId: string;
+      note?: string;
+    }>;
+    expect(steps.find((s) => s.nodeId === 'd')?.note).toBe(
+      'no (tag lookup failed)',
+    );
+  });
+
+  it('marks the tag unknown when a simulation has no stored conversation', async () => {
+    const t = makeEngine({});
+    t.prisma.conversation.findFirst.mockResolvedValue(null);
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph(), organizationId: 'org1' },
+      { ...CTX, conversationId: 'sim_f1' },
+      t.manager as never,
+    );
+    expect(rec.steps.find((s) => s.nodeId === 'd')?.note).toBe(
+      'no (simulated conversation, tags unknown)',
+    );
   });
 
   it('takes no without a tag configured, and says so in the step', async () => {
@@ -880,7 +924,10 @@ describe('tagDecision routing', () => {
 
   it('reads the real tags in a dry run, without touching the conversation', async () => {
     const t = makeEngine({});
-    t.prisma.conversation.findFirst.mockResolvedValue({ id: 'conv1' });
+    t.prisma.conversation.findFirst.mockResolvedValue({
+      id: 'conv1',
+      tags: [{ id: 'tag1' }],
+    });
     const rec = await t.engine.simulate(
       { id: 'f1', graph: graph(), organizationId: 'org1' },
       CTX,

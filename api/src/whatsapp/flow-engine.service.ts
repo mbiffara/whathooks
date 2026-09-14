@@ -314,18 +314,32 @@ export class FlowEngineService {
         if (!tagId) {
           note = 'no (tag not configured)';
         } else {
-          const hit = await this.prisma.conversation
+          // Ask for the conversation and the one tag in the same query: "no
+          // such conversation" and "conversation without the tag" are
+          // different answers, and only the second one means the routing
+          // state is real. `undefined` is the third: the lookup itself broke.
+          const convo = await this.prisma.conversation
             .findFirst({
-              where: { id: ctx.conversationId, tags: { some: { id: tagId } } },
-              select: { id: true },
+              where: { id: ctx.conversationId },
+              select: {
+                id: true,
+                tags: { where: { id: tagId }, select: { id: true } },
+              },
             })
             .catch((e) => {
               this.log.warn(`Flow ${flow.id}: tagDecision lookup failed: ${e}`);
-              return null;
+              return undefined;
             });
-          has = hit !== null;
+          // Every failure below takes "no", the same safer branch as
+          // aiDecision — but says why, so a database outage or a simulation
+          // with no stored thread is never read back as "not tagged".
+          if (convo === undefined) note = 'no (tag lookup failed)';
+          else if (!convo) {
+            note = rec.dryRun
+              ? 'no (simulated conversation, tags unknown)'
+              : 'no (conversation not found)';
+          } else has = convo.tags.length > 0;
         }
-        // A failed lookup takes "no", the same safer branch as aiDecision.
         const branch = has ? 'yes' : 'no';
         rec.steps.push({
           nodeId: node.id,

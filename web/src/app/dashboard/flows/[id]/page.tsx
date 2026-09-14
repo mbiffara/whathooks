@@ -1455,9 +1455,12 @@ function AgentPicker({
   const loadSeq = useRef(0);
   // A node switch remounts this panel: retire the old instance's loads so a
   // late response cannot report to the page banner on behalf of a dead form.
-  useEffect(() => () => {
-    loadSeq.current++;
-  }, []);
+  useEffect(
+    () => () => {
+      loadSeq.current++;
+    },
+    [],
+  );
 
   // The confirmation is a one-line "done", not a banner to dismiss.
   useEffect(() => {

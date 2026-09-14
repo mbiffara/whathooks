@@ -889,7 +889,7 @@
       "newAgentNote": "Usa los tokens de IA incluidos en tu plan y puede derivar a una persona. Podés cambiar ambas cosas en Agentes.",
       "newAgentCreate": "Crear y usar",
       "editAgent": "Editar agente",
-      "editAgentHint": "Los cambios aplican de inmediato a todas las conversaciones que usan este agente, incluidas las que están en curso.",
+      "editAgentHint": "Los cambios aplican de inmediato a todas las conversaciones que usan este agente, desde el próximo mensaje.",
       "editAgentFull": "Configuración completa",
       "agentSaved": "Agente guardado",
       "agentForbidden": "No tenés permiso para editar agentes.",

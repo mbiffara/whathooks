@@ -889,7 +889,7 @@
       "newAgentNote": "Runs on your plan's included AI tokens, and may hand off to a human. Change either on the Agents page.",
       "newAgentCreate": "Create and use",
       "editAgent": "Edit agent",
-      "editAgentHint": "Changes apply immediately to every conversation using this agent, including the ones in progress.",
+      "editAgentHint": "Changes apply immediately to every conversation using this agent, starting with the next message.",
       "editAgentFull": "Full settings",
       "agentSaved": "Agent saved",
       "agentForbidden": "You don't have permission to edit agents.",

@@ -1171,6 +1171,7 @@ export default function FlowEditorPage() {
                   onCreateAgent={createAgent}
                   onLoadAgent={loadAgent}
                   onUpdateAgent={updateAgent}
+                  onAgentError={setError}
                   handoffWired={edges.some(
                     (e) =>
                       e.source === selected.id &&
@@ -1357,8 +1358,8 @@ function AgentFields({
   disabled?: boolean;
 }) {
   const t = useTranslations("dash.flows");
-  // The caps mirror CreateAgentDto/UpdateAgentDto, so the API never rejects
-  // text the field happily accepted.
+  // Only the name is capped (as the DTO caps it). A long prompt is let
+  // through and refused loudly by the API, rather than silently cut here.
   return (
     <>
       <input
@@ -1372,7 +1373,6 @@ function AgentFields({
       <textarea
         className="input min-h-14 text-xs"
         placeholder={t("newAgentSoul")}
-        maxLength={4000}
         disabled={disabled}
         value={draft.soul}
         onChange={(e) => onChange({ ...draft, soul: e.target.value })}
@@ -1380,7 +1380,6 @@ function AgentFields({
       <textarea
         className="input min-h-14 text-xs"
         placeholder={t("newAgentInstructions")}
-        maxLength={8000}
         disabled={disabled}
         value={draft.instructions}
         onChange={(e) => onChange({ ...draft, instructions: e.target.value })}
@@ -1403,6 +1402,7 @@ function AgentPicker({
   onCreateAgent,
   onLoadAgent,
   onUpdateAgent,
+  onError,
 }: {
   nodeType: FlowNodeType;
   agentId: string;
@@ -1412,6 +1412,8 @@ function AgentPicker({
   onCreateAgent?: (draft: AgentDraft) => Promise<string | null>;
   onLoadAgent?: (agentId: string) => Promise<AgentDraft>;
   onUpdateAgent?: (agentId: string, draft: AgentDraft) => Promise<void>;
+  /** Also raise the failure above the panel, which a node switch unmounts. */
+  onError?: (message: string) => void;
 }) {
   const t = useTranslations("dash.flows");
   const tcCommon = useTranslations("common");
@@ -1424,6 +1426,9 @@ function AgentPicker({
   const [savingAgent, setSavingAgent] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
   const [agentSaved, setAgentSaved] = useState(false);
+  // Which load is the current one. Switching agents mid-flight must not let
+  // the older GET land in the form and be saved onto the new agent.
+  const loadSeq = useRef(0);
 
   // The confirmation is a one-line "done", not a banner to dismiss.
   useEffect(() => {
@@ -1441,26 +1446,40 @@ function AgentPicker({
     return e instanceof Error ? e.message : tcCommon("somethingWentWrong");
   }
 
+  /** Shown beside the form, and above the panel in case this one unmounts. */
+  function fail(e: unknown) {
+    const message = messageOf(e);
+    setAgentError(message);
+    onError?.(message);
+  }
+
   function closeEdit() {
     setEditOpen(false);
     setEditDraft(EMPTY_AGENT_DRAFT);
+    setAgentError(null);
   }
 
   async function openEdit() {
-    if (!onLoadAgent || !agentId || loadingAgent) return;
+    if (!onLoadAgent || !agentId) return;
+    // A second click supersedes the first rather than being swallowed.
+    const seq = ++loadSeq.current;
     setEditOpen(true);
+    setEditDraft(EMPTY_AGENT_DRAFT);
     setLoadingAgent(true);
     setAgentError(null);
     setAgentSaved(false);
     try {
-      setEditDraft(await onLoadAgent(agentId));
+      const loaded = await onLoadAgent(agentId);
+      if (seq !== loadSeq.current) return;
+      setEditDraft(loaded);
     } catch (e) {
+      if (seq !== loadSeq.current) return;
       // Gone, forbidden or offline: say so and take the form away rather
       // than leave an empty one that would overwrite the agent on save.
-      setAgentError(messageOf(e));
       closeEdit();
+      fail(e);
     } finally {
-      setLoadingAgent(false);
+      if (seq === loadSeq.current) setLoadingAgent(false);
     }
   }
 
@@ -1479,7 +1498,7 @@ function AgentPicker({
     } catch (e) {
       // The draft stays put, so an expired token or a hiccup costs a retry
       // and not the text the user just wrote.
-      setAgentError(messageOf(e));
+      fail(e);
     } finally {
       setSavingAgent(false);
     }
@@ -1496,10 +1515,14 @@ function AgentPicker({
       <select
         className="input"
         value={agentId}
+        // Changing it mid-save would land the reply on another agent.
+        disabled={savingAgent}
         onChange={(e) => {
-          // Another agent means another prompt: the open draft is not it.
+          // Another agent means another prompt: the open draft is not it,
+          // and an in-flight load for the old one is no longer wanted.
+          loadSeq.current++;
+          setLoadingAgent(false);
           closeEdit();
-          setAgentError(null);
           setAgentSaved(false);
           onPatch({ agentId: e.target.value });
         }}
@@ -1620,8 +1643,9 @@ function AgentPicker({
             </button>
             <button
               type="button"
+              disabled={savingAgent}
               onClick={closeEdit}
-              className="btn-ghost text-xs"
+              className="btn-ghost text-xs disabled:opacity-50"
             >
               {tcCommon("cancel")}
             </button>
@@ -1651,6 +1675,7 @@ function NodePanel({
   onCreateAgent,
   onLoadAgent,
   onUpdateAgent,
+  onAgentError,
   handoffWired = false,
 }: {
   node: EditorNode;
@@ -1663,6 +1688,7 @@ function NodePanel({
   onCreateAgent?: (draft: AgentDraft) => Promise<string | null>;
   onLoadAgent?: (agentId: string) => Promise<AgentDraft>;
   onUpdateAgent?: (agentId: string, draft: AgentDraft) => Promise<void>;
+  onAgentError?: (message: string) => void;
   /** True when this node has an onHandoff edge drawn from it. */
   handoffWired?: boolean;
 }) {
@@ -1707,6 +1733,7 @@ function NodePanel({
           onCreateAgent={onCreateAgent}
           onLoadAgent={onLoadAgent}
           onUpdateAgent={onUpdateAgent}
+          onError={onAgentError}
         />
       )}
 

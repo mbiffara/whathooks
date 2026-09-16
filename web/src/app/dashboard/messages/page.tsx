@@ -1455,10 +1455,7 @@ function MessagesInbox() {
                   return (
                     <Fragment key={m.id}>
                       {key !== null && key !== prevKey && (
-                        <div
-                          key={`day-${key}`}
-                          className="flex justify-center py-2"
-                        >
+                        <div className="flex justify-center py-2">
                           <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
                             {dayLabel(m.timestamp, locale, {
                               today: t("dayToday"),

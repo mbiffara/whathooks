@@ -579,6 +579,8 @@
       "agentResponding": "🤖 {name} is responding",
       "pauseAgent": "Pause agent",
       "loadOlder": "Load older",
+      "dayToday": "Today",
+      "dayYesterday": "Yesterday",
       "loadingMessages": "Loading messages…",
       "noMessages": "No messages yet.",
       "disconnectedNote": "This number is disconnected. Messages can't be sent.",

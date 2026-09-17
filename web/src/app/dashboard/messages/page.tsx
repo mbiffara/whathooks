@@ -11,18 +11,21 @@ import type {
 import { ChannelBadge } from "@/components/channel-badge";
 import {
   contactNumber,
+  dayKey,
+  dayLabel,
   previewText,
   relativeTime,
 } from "@/components/messages/utils";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import type { TeamMember, WaSession } from "@/lib/types";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Glyph } from "@/components/glyphs";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  Fragment,
   Suspense,
   useCallback,
   useEffect,
@@ -66,6 +69,7 @@ function mergeMessages(
 
 function MessagesInbox() {
   const t = useTranslations("dash.messages");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const tc = useTranslations("common");
   const tStatus = useTranslations("dash.status");
@@ -1439,13 +1443,34 @@ function MessagesInbox() {
                   {t("noMessages")}
                 </div>
               ) : (
-                messages.map((m) => (
-                  <MessageBubble
-                    key={m.id}
-                    message={m}
-                    onSaveQuickReply={saveQuickReply}
-                  />
-                ))
+                messages.map((m, i) => {
+                  // A day pill before the first message of each day. The array
+                  // is sorted ascending, so comparing with the previous message
+                  // is enough to print a given day exactly once. The 60s clock
+                  // tick re-runs this map, so "Today" becomes "Yesterday" on
+                  // its own at midnight.
+                  const key = dayKey(m.timestamp);
+                  const prevKey =
+                    i > 0 ? dayKey(messages[i - 1].timestamp) : null;
+                  return (
+                    <Fragment key={m.id}>
+                      {key !== null && key !== prevKey && (
+                        <div className="flex justify-center py-2">
+                          <span className="badge bg-[var(--color-chip)] text-[var(--color-muted)]">
+                            {dayLabel(m.timestamp, locale, {
+                              today: t("dayToday"),
+                              yesterday: t("dayYesterday"),
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      <MessageBubble
+                        message={m}
+                        onSaveQuickReply={saveQuickReply}
+                      />
+                    </Fragment>
+                  );
+                })
               )}
             </div>
 

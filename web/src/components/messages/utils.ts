@@ -112,3 +112,44 @@ export function contactNumber(c: {
   if (!c.contact || c.remoteJid?.endsWith("@lid")) return null;
   return `+${c.contact}`;
 }
+
+/** A Date's calendar day in the reader's timezone, as "YYYY-MM-DD". */
+function localDay(d: Date): string {
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+/** The message's calendar day, or null when the timestamp is unusable. */
+export function dayKey(iso: string): string | null {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return localDay(d);
+}
+
+/**
+ * The label for a thread's day separator, WhatsApp-style: "Today",
+ * "Yesterday", "March 22", and the year once the day is from another one.
+ * Comparisons are by calendar day, not by elapsed hours, so a message from
+ * 23:58 last night reads "Yesterday" at 00:02.
+ */
+export function dayLabel(
+  iso: string,
+  locale: string,
+  labels: { today: string; yesterday: string },
+  now: Date = new Date(),
+): string {
+  const d = new Date(iso);
+  const key = dayKey(iso);
+  if (key === null) return "";
+  if (key === localDay(now)) return labels.today;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (key === localDay(yesterday)) return labels.yesterday;
+  return d.toLocaleDateString(
+    locale,
+    d.getFullYear() === now.getFullYear()
+      ? { day: "numeric", month: "long" }
+      : { day: "numeric", month: "long", year: "numeric" },
+  );
+}

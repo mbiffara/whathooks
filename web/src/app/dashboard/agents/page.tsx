@@ -38,6 +38,7 @@ type Draft = {
   useIncludedAi: boolean;
   allowAutoStop: boolean;
   notifyOnHandoff: boolean;
+  allowSendMedia: boolean;
   replyDelayMinSeconds: number;
   replyDelayMaxSeconds: number;
   scheduleEnabled: boolean;
@@ -70,6 +71,7 @@ const EMPTY: Draft = {
   useIncludedAi: false,
   allowAutoStop: false,
   notifyOnHandoff: false,
+  allowSendMedia: false,
   replyDelayMinSeconds: 0,
   replyDelayMaxSeconds: 0,
   scheduleEnabled: false,
@@ -133,6 +135,7 @@ export default function AgentsPage() {
         model: draft.model,
         allowAutoStop: draft.allowAutoStop,
         notifyOnHandoff: draft.allowAutoStop && draft.notifyOnHandoff,
+        allowSendMedia: draft.allowSendMedia,
         replyDelayMinSeconds: draft.replyDelayMinSeconds,
         replyDelayMaxSeconds: draft.replyDelayMaxSeconds,
         scheduleEnabled: draft.scheduleEnabled,
@@ -644,6 +647,31 @@ export default function AgentsPage() {
               </span>
             </label>
           )}
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={draft.allowSendMedia}
+              onChange={(e) =>
+                setDraft({ ...draft, allowSendMedia: e.target.checked })
+              }
+            />
+            <span>
+              {t("allowSendMedia")}
+              <span className="block text-xs text-[var(--color-muted)]">
+                {t.rich("allowSendMediaNote", {
+                  link: (chunks) => (
+                    <Link
+                      href="/dashboard/media-library"
+                      className="underline hover:text-[var(--color-fg)]"
+                    >
+                      {chunks}
+                    </Link>
+                  ),
+                })}
+              </span>
+            </span>
+          </label>
           <div>
             <label className="label">{t("mcpTools")}</label>
             {!mcpAllowed ? (
@@ -883,6 +911,7 @@ export default function AgentsPage() {
                               useIncludedAi: a.useIncludedAi,
                               allowAutoStop: a.allowAutoStop,
                               notifyOnHandoff: a.notifyOnHandoff,
+                              allowSendMedia: a.allowSendMedia ?? false,
                               replyDelayMinSeconds: a.replyDelayMinSeconds,
                               replyDelayMaxSeconds: a.replyDelayMaxSeconds,
                               scheduleEnabled: a.scheduleEnabled,

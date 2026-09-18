@@ -92,6 +92,7 @@
       "sessions": "Connected accounts",
       "messages": "Messages",
       "quickReplies": "Quick replies",
+      "mediaLibrary": "Files",
       "tags": "Tags",
       "contacts": "Contacts",
       "agents": "Agents",
@@ -503,6 +504,8 @@
       "replyDelayNote": "Waits a random time in this range before replying, showing a “typing…” indicator meanwhile. Feels more human than an instant answer.",
       "allowAutoStop": "Allow auto-stop",
       "allowAutoStopNote": "Give the agent a tool to pause itself on a conversation (hand off to a human) when it doesn’t know how to answer. You resume it from the conversation.",
+      "allowSendMedia": "Allow sending files",
+      "allowSendMediaNote": "Give the agent a send_media tool with the files in your <link>library</link>. It sees each file's name and description and sends one only when the contact asks for what it contains, or your instructions say to.",
       "mcpTools": "MCP tools",
       "mcpUpgrade": "Give your agent tools via MCP servers. Available on the Pro plan and higher. <link>Upgrade in Billing</link>.",
       "mcpNote": "The agent can call tools on these MCP servers while replying. The connection is made by the model provider (Anthropic or OpenAI) and the tokens count against your key or your included allowance. Only add servers you trust. Tools act on whatever your contacts write.",
@@ -789,6 +792,17 @@
       "add": "Add quick reply",
       "empty": "No quick replies yet. Save one from a sent message in the inbox, or create one here."
     },
+    "mediaLibrary": {
+      "title": "Files",
+      "subtitle": "Files your automations can send: catalogues, price lists, menus, photos. The \"Send a file\" flow step and agents with file sending pick from here.",
+      "chooseFile": "Choose a file",
+      "namePlaceholder": "Name (e.g. Catalogue 2026)",
+      "descriptionPlaceholder": "When to send it, written for the agent (e.g. when someone asks for prices or the product list)",
+      "add": "Add file",
+      "limits": "Up to 25 MB per file, 50 files. Instagram only delivers PNG, JPG, GIF, MP4, M4A/AAC/WAV audio and PDF.",
+      "empty": "No files yet. Add one to send it from a flow or let an agent send it.",
+      "preview": "Open file"
+    },
     "humanAgents": {
       "title": "Human agents",
       "subtitle": "The people on your team who answer chats from their own WhatsApp. Used by <mirror>Mirror Link</mirror> to route leads without revealing their numbers.",
@@ -877,6 +891,12 @@
       "newTagPlaceholder": "New tag name…",
       "createTag": "Create",
       "tagDecisionHint": "Yes: the conversation has the tag \u00b7 No: it doesn't",
+      "mediaLabel": "File",
+      "mediaHint": "Sent as an image, video, audio or document, whichever the file is.",
+      "mediaEmpty": "Your library has no files yet.",
+      "mediaManage": "Manage files",
+      "captionLabel": "Caption (optional)",
+      "captionPlaceholder": "e.g. Here is our current catalogue 📄",
       "teammateLabel": "Team member",
       "summaryNoKeywords": "no keywords",
       "summaryIntents": "{count, plural, one {# intent} other {# intents}}",
@@ -939,6 +959,10 @@
         "tagDecision": {
           "title": "Tag decision",
           "hint": "Routes to Yes if the conversation has the selected tag, otherwise to No."
+        },
+        "sendMedia": {
+          "title": "Send a file",
+          "hint": "Sends one file from your library to the contact, with an optional caption, then continues."
         },
         "intent": {
           "title": "Classify intent",
@@ -1020,6 +1044,9 @@
         "edgeDupeHandle": "Two connections leave the same output \"{handle}\"",
         "edgeFromTerminal": "This node ends the flow and cannot have outputs",
         "nodeNeedsWhatsapp": "Needs a WhatsApp number: handoff groups are WhatsApp groups",
+        "mediaMissing": "Pick a file from the library",
+        "mediaUnsupported": "This channel cannot deliver that file: {reason}",
+        "captionTooLong": "The caption can have up to {max} characters",
       "edgeBadHandle": "Output \"{handle}\" is not one of: {allowed}"
       }
     }

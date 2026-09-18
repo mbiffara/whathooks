@@ -45,6 +45,8 @@ export interface Agent {
   maxTokens: number;
   allowAutoStop: boolean;
   notifyOnHandoff: boolean;
+  /** May call send_media with files from the org's library. */
+  allowSendMedia: boolean;
   replyDelayMinSeconds: number;
   replyDelayMaxSeconds: number;
   scheduleEnabled: boolean;

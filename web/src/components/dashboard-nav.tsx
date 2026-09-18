@@ -25,6 +25,7 @@ type IconName =
   | "humanAgents"
   | "flows"
   | "quickReplies"
+  | "mediaLibrary"
   | "tags"
   | "contacts"
   | "docs"
@@ -105,6 +106,9 @@ function NavIcon({ name }: { name: IconName }) {
     ),
     admin: <path d="M12 2l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-4z" />,
     quickReplies: <path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z" />,
+    mediaLibrary: (
+      <path d="M21 12.5l-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8" />
+    ),
     docs: (
       <>
         <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" />
@@ -191,6 +195,7 @@ const GROUPS: { key: string | null; links: NavLink[] }[] = [
       { href: "/dashboard/messages", key: "messages" },
       { href: "/dashboard/contacts", key: "contacts" },
       { href: "/dashboard/quick-replies", key: "quickReplies" },
+      { href: "/dashboard/media-library", key: "mediaLibrary" },
       { href: "/dashboard/tags", key: "tags" },
       { href: "/dashboard/sessions", key: "sessions" },
     ],

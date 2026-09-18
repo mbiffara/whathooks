@@ -92,6 +92,7 @@
       "sessions": "Cuentas conectadas",
       "messages": "Mensajes",
       "quickReplies": "Respuestas rápidas",
+      "mediaLibrary": "Archivos",
       "tags": "Etiquetas",
       "contacts": "Contactos",
       "agents": "Agentes",
@@ -503,6 +504,8 @@
       "replyDelayNote": "Espera un tiempo aleatorio dentro de este rango antes de responder, mostrando mientras tanto el indicador de “escribiendo…”. Se siente más humano que una respuesta instantánea.",
       "allowAutoStop": "Permitir auto-pausa",
       "allowAutoStopNote": "Le da al agente una herramienta para pausarse en una conversación (derivar a un humano) cuando no sabe qué responder. Tú lo reanudas desde la conversación.",
+      "allowSendMedia": "Permitir enviar archivos",
+      "allowSendMediaNote": "Le da al agente una herramienta send_media con los archivos de tu <link>biblioteca</link>. Ve el nombre y la descripción de cada uno y envía un archivo solo cuando el contacto pide lo que contiene, o tus instrucciones lo indican.",
       "mcpTools": "Herramientas MCP",
       "mcpUpgrade": "Dale herramientas a tu agente mediante servidores MCP. Disponible en el plan Pro y superiores. <link>Mejora tu plan en Facturación</link>.",
       "mcpNote": "El agente puede llamar herramientas de estos servidores MCP al responder. La conexión la hace el proveedor del modelo (Anthropic u OpenAI) y los tokens cuentan contra tu clave o tu cupo incluido. Agrega solo servidores de confianza. Las herramientas actúan según lo que escriban tus contactos.",
@@ -789,6 +792,17 @@
       "add": "Agregar respuesta rápida",
       "empty": "Aún no hay respuestas rápidas. Guarda una desde un mensaje enviado en el chat, o crea una acá."
     },
+    "mediaLibrary": {
+      "title": "Archivos",
+      "subtitle": "Archivos que tus automatizaciones pueden enviar: catálogos, listas de precios, menús, fotos. El paso \"Enviar un archivo\" de los flujos y los agentes con envío de archivos eligen de acá.",
+      "chooseFile": "Elegir un archivo",
+      "namePlaceholder": "Nombre (ej. Catálogo 2026)",
+      "descriptionPlaceholder": "Cuándo enviarlo, escrito para el agente (ej. cuando alguien pide precios o la lista de productos)",
+      "add": "Agregar archivo",
+      "limits": "Hasta 25 MB por archivo, 50 archivos. Instagram solo entrega PNG, JPG, GIF, MP4, audio M4A/AAC/WAV y PDF.",
+      "empty": "Todavía no hay archivos. Agregá uno para enviarlo desde un flujo o dejar que un agente lo envíe.",
+      "preview": "Abrir archivo"
+    },
     "humanAgents": {
       "title": "Agentes humanos",
       "subtitle": "Las personas de tu equipo que responden chats desde su propio WhatsApp. <mirror>Mirror Link</mirror> los usa para derivar leads sin revelar sus números.",
@@ -877,6 +891,12 @@
       "newTagPlaceholder": "Nombre de la etiqueta…",
       "createTag": "Crear",
       "tagDecisionHint": "Sí: la conversación tiene la etiqueta · No: no la tiene",
+      "mediaLabel": "Archivo",
+      "mediaHint": "Se envía como imagen, video, audio o documento, según el archivo.",
+      "mediaEmpty": "Tu biblioteca todavía no tiene archivos.",
+      "mediaManage": "Administrar archivos",
+      "captionLabel": "Texto que acompaña (opcional)",
+      "captionPlaceholder": "ej. Acá va nuestro catálogo actual 📄",
       "teammateLabel": "Miembro del equipo",
       "summaryNoKeywords": "sin palabras clave",
       "summaryIntents": "{count, plural, one {# intención} other {# intenciones}}",
@@ -939,6 +959,10 @@
         "tagDecision": {
           "title": "Decisión por etiqueta",
           "hint": "Sigue por Sí si la conversación tiene la etiqueta elegida, o por No si no la tiene."
+        },
+        "sendMedia": {
+          "title": "Enviar un archivo",
+          "hint": "Envía un archivo de tu biblioteca al contacto, con un texto opcional, y continúa."
         },
         "intent": {
           "title": "Clasificar intención",
@@ -1020,6 +1044,9 @@
         "edgeDupeHandle": "Dos conexiones salen de la misma salida \"{handle}\"",
         "edgeFromTerminal": "Este nodo termina el flow y no puede tener salidas",
         "nodeNeedsWhatsapp": "Necesita un número de WhatsApp: los grupos de derivación son grupos de WhatsApp",
+        "mediaMissing": "Elegí un archivo de la biblioteca",
+        "mediaUnsupported": "Este canal no puede entregar ese archivo: {reason}",
+        "captionTooLong": "El texto que acompaña puede tener hasta {max} caracteres",
       "edgeBadHandle": "La salida \"{handle}\" no es una de: {allowed}"
       }
     }

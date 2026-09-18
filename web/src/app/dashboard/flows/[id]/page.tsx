@@ -1966,6 +1966,47 @@ function NodePanel({
         </p>
       )}
 
+      {nt === "sendMedia" && (
+        <>
+          <label className="flex flex-col gap-1 text-sm">
+            {t("mediaLabel")}
+            <select
+              className="input"
+              value={(d.mediaItemId as string) ?? ""}
+              onChange={(e) => onPatch({ mediaItemId: e.target.value })}
+            >
+              <option value="">{t("select")}</option>
+              {(refs.mediaItems ?? []).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} · {m.fileName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-xs text-[var(--color-muted)]">
+            {(refs.mediaItems ?? []).length === 0
+              ? t("mediaEmpty")
+              : t("mediaHint")}{" "}
+            <Link
+              href="/dashboard/media-library"
+              className="underline hover:text-[var(--color-fg)]"
+            >
+              {t("mediaManage")}
+            </Link>
+          </p>
+          <label className="flex flex-col gap-1 text-sm">
+            {t("captionLabel")}
+            <textarea
+              className="input min-h-16 text-xs"
+              maxLength={1024}
+              placeholder={t("captionPlaceholder")}
+              value={(d.caption as string) ?? ""}
+              onChange={(e) => onPatch({ caption: e.target.value })}
+            />
+          </label>
+        </>
+      )}
+
       {nt === "assignTeammate" && (
         <label className="flex flex-col gap-1 text-sm">
           {t("teammateLabel")}

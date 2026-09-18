@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { INCLUDED_AI_MODEL } from './dto/agent.dto';
 import { EncryptionService } from './encryption.service';
 import { AgentMcpServer, isAgentMcpServers } from './mcp-servers';
+import { MediaLibraryService } from '../media-library/media-library.service';
 
 const HISTORY_LIMIT = 20;
 // MCP tool rounds run server-side at the provider (Anthropic's MCP connector,
@@ -30,6 +31,21 @@ export interface AgentReply {
   reason?: string;
   /** notify_owner tool call: message for the owner's email (null = not called). */
   notify?: string | null;
+  /**
+   * send_media tool calls, in order: library item ids the agent asked to
+   * send after its text. Ids are whatever the model wrote; the sender
+   * resolves them against the org's library and drops the rest.
+   */
+  media?: Array<{ itemId: string; caption: string | null }>;
+}
+
+/** A library file as the agent is told about it. */
+export interface AgentMediaItem {
+  id: string;
+  name: string;
+  description: string | null;
+  mimeType: string;
+  fileName: string;
 }
 
 // A tool the agent may call to pause itself on a conversation (handoff to human).
@@ -70,6 +86,94 @@ const NOTIFY_SCHEMA = {
   required: ['message'],
 };
 
+// Offered only when the agent's allowSendMedia is on AND the org's library
+// has files: the prompt lists them by id, so the model can only name a file
+// it was shown. The text reply goes out first, then each file in call order.
+const SEND_MEDIA_TOOL = 'send_media';
+const SEND_MEDIA_DESCRIPTION =
+  'Send one of the files listed under "Files you can send" to the contact, ' +
+  'right after your text reply. Call it once per file. Only send a file when ' +
+  'it is relevant to what the contact asked or your instructions say to.';
+const SEND_MEDIA_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    item_id: {
+      type: 'string',
+      description:
+        'The id of the file, exactly as listed in your instructions.',
+    },
+    caption: {
+      type: 'string',
+      description:
+        'Optional short caption shown with the file. Leave empty when your text reply already says what it is.',
+    },
+  },
+  required: ['item_id'],
+};
+
+/** The optional client-side tools, in the order every provider lists them. */
+function builtinTools(agent: Agent, media: AgentMediaItem[]) {
+  return [
+    ...(agent.allowAutoStop
+      ? [
+          {
+            name: HANDOFF_TOOL,
+            description: HANDOFF_DESCRIPTION,
+            schema: HANDOFF_SCHEMA,
+          },
+        ]
+      : []),
+    {
+      name: NOTIFY_TOOL,
+      description: NOTIFY_DESCRIPTION,
+      schema: NOTIFY_SCHEMA,
+    },
+    ...(agent.allowSendMedia && media.length > 0
+      ? [
+          {
+            name: SEND_MEDIA_TOOL,
+            description: SEND_MEDIA_DESCRIPTION,
+            schema: SEND_MEDIA_SCHEMA,
+          },
+        ]
+      : []),
+  ];
+}
+
+/** Fold one tool call into the reply signals. Unknown names are ignored. */
+function applyToolCall(
+  reply: AgentReply,
+  name: string,
+  args: Record<string, unknown>,
+): void {
+  if (name === HANDOFF_TOOL) {
+    reply.handoff = true;
+    reply.reason = typeof args.reason === 'string' ? args.reason : undefined;
+  } else if (name === NOTIFY_TOOL) {
+    reply.notify =
+      (typeof args.message === 'string' && args.message.trim()) || null;
+  } else if (name === SEND_MEDIA_TOOL) {
+    const itemId = typeof args.item_id === 'string' ? args.item_id.trim() : '';
+    if (!itemId) return;
+    (reply.media ??= []).push({
+      itemId,
+      caption:
+        (typeof args.caption === 'string' && args.caption.trim()) || null,
+    });
+  }
+}
+
+function parseArgs(raw: string | null | undefined): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(raw || '{}');
+    return parsed && typeof parsed === 'object'
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Runs an AI agent: builds a system prompt from the agent's soul + instructions,
  * feeds the recent conversation as history, and returns the reply text. Each
@@ -85,6 +189,7 @@ export class AgentRunnerService {
     private readonly prisma: PrismaService,
     private readonly encryption: EncryptionService,
     private readonly quota: QuotaService,
+    private readonly library: MediaLibraryService,
   ) {}
 
   /** Agents can only run if we can decrypt their stored API keys. */
@@ -160,24 +265,30 @@ export class AgentRunnerService {
       (await this.loadHistory(conversationId, convo?.isGroup ?? false));
     if (!turns.length) return null;
 
-    const knowledge = await this.prisma.agentKnowledgeDoc.findMany({
-      where: { agentId: agent.id },
-      orderBy: { createdAt: 'asc' },
-      select: { fileName: true, text: true },
-    });
+    const [knowledge, media] = await Promise.all([
+      this.prisma.agentKnowledgeDoc.findMany({
+        where: { agentId: agent.id },
+        orderBy: { createdAt: 'asc' },
+        select: { fileName: true, text: true },
+      }),
+      agent.allowSendMedia
+        ? this.library.summaries(agent.organizationId)
+        : Promise.resolve([]),
+    ]);
     const system = buildSystemPrompt(
       agent,
       convo?.isGroup ?? false,
       agent.allowAutoStop,
       knowledge,
       stepInstructions,
+      media,
     );
     try {
       // Included AI is OpenAI-only; the provider column is irrelevant there.
       const reply =
         agent.provider === 'OPENAI' || metered
-          ? await this.replyOpenAI(agent, apiKey, system, turns, metered)
-          : await this.replyAnthropic(agent, apiKey, system, turns);
+          ? await this.replyOpenAI(agent, apiKey, system, turns, metered, media)
+          : await this.replyAnthropic(agent, apiKey, system, turns, media);
       return reply;
     } catch (e) {
       this.log.error(`Agent "${agent.name}" reply failed: ${e}`);
@@ -403,31 +514,28 @@ export class AgentRunnerService {
     apiKey: string,
     system: string,
     turns: Turn[],
+    media: AgentMediaItem[],
   ): Promise<AgentReply> {
     const client = new Anthropic({ apiKey });
     const mcpServers = isAgentMcpServers(agent.mcpServers)
       ? agent.mcpServers
       : [];
     if (mcpServers.length > 0) {
-      return this.replyAnthropicMcp(agent, client, system, turns, mcpServers);
+      return this.replyAnthropicMcp(
+        agent,
+        client,
+        system,
+        turns,
+        mcpServers,
+        media,
+      );
     }
 
-    const tools: Anthropic.Tool[] = [
-      ...(agent.allowAutoStop
-        ? [
-            {
-              name: HANDOFF_TOOL,
-              description: HANDOFF_DESCRIPTION,
-              input_schema: HANDOFF_SCHEMA,
-            },
-          ]
-        : []),
-      {
-        name: NOTIFY_TOOL,
-        description: NOTIFY_DESCRIPTION,
-        input_schema: NOTIFY_SCHEMA,
-      },
-    ];
+    const tools: Anthropic.Tool[] = builtinTools(agent, media).map((t) => ({
+      name: t.name,
+      description: t.description,
+      input_schema: t.schema,
+    }));
     const response = await client.messages.create({
       model: agent.model,
       max_tokens: agent.maxTokens,
@@ -451,6 +559,7 @@ export class AgentRunnerService {
     system: string,
     turns: Turn[],
     mcpServers: AgentMcpServer[],
+    media: AgentMediaItem[],
   ): Promise<AgentReply> {
     const servers = mcpServers.map((s) => ({
       type: 'url' as const,
@@ -467,20 +576,11 @@ export class AgentRunnerService {
         type: 'mcp_toolset' as const,
         mcp_server_name: s.name,
       })),
-      ...(agent.allowAutoStop
-        ? [
-            {
-              name: HANDOFF_TOOL,
-              description: HANDOFF_DESCRIPTION,
-              input_schema: HANDOFF_SCHEMA,
-            },
-          ]
-        : []),
-      {
-        name: NOTIFY_TOOL,
-        description: NOTIFY_DESCRIPTION,
-        input_schema: NOTIFY_SCHEMA,
-      },
+      ...builtinTools(agent, media).map((t) => ({
+        name: t.name,
+        description: t.description,
+        input_schema: t.schema,
+      })),
     ];
 
     const messages: Anthropic.Beta.BetaMessageParam[] = turns.map((t) => ({
@@ -522,6 +622,7 @@ export class AgentRunnerService {
     system: string,
     turns: Turn[],
     metered = false,
+    media: AgentMediaItem[] = [],
   ): Promise<AgentReply> {
     const client = new OpenAI({ apiKey });
     const mcpServers = isAgentMcpServers(agent.mcpServers)
@@ -535,30 +636,20 @@ export class AgentRunnerService {
         turns,
         metered,
         mcpServers,
+        media,
       );
     }
-    const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
-      ...(agent.allowAutoStop
-        ? [
-            {
-              type: 'function' as const,
-              function: {
-                name: HANDOFF_TOOL,
-                description: HANDOFF_DESCRIPTION,
-                parameters: HANDOFF_SCHEMA,
-              },
-            },
-          ]
-        : []),
-      {
-        type: 'function' as const,
-        function: {
-          name: NOTIFY_TOOL,
-          description: NOTIFY_DESCRIPTION,
-          parameters: NOTIFY_SCHEMA,
-        },
+    const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = builtinTools(
+      agent,
+      media,
+    ).map((t) => ({
+      type: 'function' as const,
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.schema,
       },
-    ];
+    }));
     const response = await client.chat.completions.create({
       model: agent.model,
       messages: [
@@ -589,25 +680,21 @@ export class AgentRunnerService {
     }
 
     const message = response.choices[0]?.message;
-    let handoff = false;
-    let reason: string | undefined;
-    let notify: string | null = null;
+    const reply: AgentReply = {
+      text: message?.content?.trim() || null,
+      handoff: false,
+      reason: undefined,
+      notify: null,
+    };
     for (const call of message?.tool_calls ?? []) {
       if (call.type !== 'function') continue;
-      let args: { reason?: string; message?: string } = {};
-      try {
-        args = JSON.parse(call.function.arguments || '{}');
-      } catch {
-        /* ignore malformed args */
-      }
-      if (call.function.name === HANDOFF_TOOL) {
-        handoff = true;
-        reason = args.reason;
-      } else if (call.function.name === NOTIFY_TOOL) {
-        notify = args.message?.trim() || null;
-      }
+      applyToolCall(
+        reply,
+        call.function.name,
+        parseArgs(call.function.arguments),
+      );
     }
-    return { text: message?.content?.trim() || null, handoff, reason, notify };
+    return reply;
   }
 
   /**
@@ -628,6 +715,7 @@ export class AgentRunnerService {
     turns: Turn[],
     metered: boolean,
     mcpServers: AgentMcpServer[],
+    media: AgentMediaItem[],
   ): Promise<AgentReply> {
     const tools: OpenAI.Responses.Tool[] = [
       ...mcpServers.map((s) => ({
@@ -640,24 +728,13 @@ export class AgentRunnerService {
           ? { authorization: this.encryption.decrypt(s.authTokenCiphertext) }
           : {}),
       })),
-      ...(agent.allowAutoStop
-        ? [
-            {
-              type: 'function' as const,
-              name: HANDOFF_TOOL,
-              description: HANDOFF_DESCRIPTION,
-              parameters: HANDOFF_SCHEMA,
-              strict: false,
-            },
-          ]
-        : []),
-      {
+      ...builtinTools(agent, media).map((t) => ({
         type: 'function' as const,
-        name: NOTIFY_TOOL,
-        description: NOTIFY_DESCRIPTION,
-        parameters: NOTIFY_SCHEMA,
+        name: t.name,
+        description: t.description,
+        parameters: t.schema,
         strict: false,
-      },
+      })),
     ];
     const response = await client.responses.create({
       model: agent.model,
@@ -702,53 +779,51 @@ export function extractOpenAIResponsesReply(
   output: OpenAI.Responses.ResponseOutputItem[],
 ): AgentReply {
   let text = '';
-  let handoff = false;
-  let reason: string | undefined;
-  let notify: string | null = null;
+  const reply: AgentReply = {
+    text: null,
+    handoff: false,
+    reason: undefined,
+    notify: null,
+  };
   for (const item of output) {
     if (item.type === 'message') {
       for (const part of item.content) {
         if (part.type === 'output_text') text += part.text;
       }
     } else if (item.type === 'function_call') {
-      let args: { reason?: string; message?: string } = {};
-      try {
-        args = JSON.parse(item.arguments || '{}') as typeof args;
-      } catch {
-        /* ignore malformed args */
-      }
-      if (item.name === HANDOFF_TOOL) {
-        handoff = true;
-        reason = args.reason;
-      } else if (item.name === NOTIFY_TOOL) {
-        notify = args.message?.trim() || null;
-      }
+      applyToolCall(reply, item.name, parseArgs(item.arguments));
     }
   }
-  return { text: text.trim() || null, handoff, reason, notify };
+  reply.text = text.trim() || null;
+  return reply;
 }
 
-/** Pull the reply text + handoff signal out of Anthropic content blocks. */
-function extractAnthropicReply(
+/** Pull the reply text + tool signals out of Anthropic content blocks. */
+export function extractAnthropicReply(
   content: Array<Anthropic.ContentBlock | Anthropic.Beta.BetaContentBlock>,
 ): AgentReply {
   let text = '';
-  let handoff = false;
-  let reason: string | undefined;
-  let notify: string | null = null;
+  const reply: AgentReply = {
+    text: null,
+    handoff: false,
+    reason: undefined,
+    notify: null,
+  };
   for (const block of content) {
     if (block.type === 'text') {
       text += block.text;
-    } else if (block.type === 'tool_use' && block.name === HANDOFF_TOOL) {
-      handoff = true;
-      reason = (block.input as { reason?: string })?.reason;
-    } else if (block.type === 'tool_use' && block.name === NOTIFY_TOOL) {
-      notify = (block.input as { message?: string })?.message?.trim() || null;
+    } else if (block.type === 'tool_use') {
+      const input =
+        block.input && typeof block.input === 'object'
+          ? (block.input as Record<string, unknown>)
+          : {};
+      applyToolCall(reply, block.name, input);
     }
     // mcp_tool_use / mcp_tool_result blocks are the server-side tool calls —
     // nothing to do client-side; the model folds results into its text.
   }
-  return { text: text.trim() || null, handoff, reason, notify };
+  reply.text = text.trim() || null;
+  return reply;
 }
 
 /**
@@ -795,6 +870,8 @@ function buildSystemPrompt(
    * placed last so it wins where the two disagree.
    */
   stepInstructions?: string | null,
+  /** Library files the agent may send (empty = no send_media tool). */
+  media: AgentMediaItem[] = [],
 ): string {
   return [
     `You are ${agent.name}, an assistant replying to customer messages.`,
@@ -836,6 +913,22 @@ function buildSystemPrompt(
           '',
         ]
       : []),
+    ...(media.length
+      ? [
+          '# Files you can send',
+          'Your operator keeps these files for you to send with the send_media',
+          'tool (one call per file, using the id exactly as written). Send a',
+          'file only when the contact asks for what it contains, or your',
+          'instructions say to; never send one just because you can. Your text',
+          'reply is delivered first, then the file.',
+          ...media.map(
+            (m) =>
+              `- ${m.id}: ${m.name} (${mediaKindLabel(m.mimeType)}, ${m.fileName})` +
+              (m.description ? ` — ${m.description}` : ''),
+          ),
+          '',
+        ]
+      : []),
     ...(stepInstructions?.trim()
       ? [
           '# This step',
@@ -849,6 +942,14 @@ function buildSystemPrompt(
     'quotation marks, no meta-commentary, and no explanation of your reasoning.',
     'Keep replies concise and conversational, suitable for a chat message.',
   ].join('\n');
+}
+
+function mediaKindLabel(mimeType: string): string {
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  if (mimeType === 'application/pdf') return 'PDF';
+  return 'document';
 }
 
 function mediaPlaceholder(type: string): string | null {

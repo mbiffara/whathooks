@@ -1,5 +1,9 @@
+import type Anthropic from '@anthropic-ai/sdk';
 import type OpenAI from 'openai';
-import { extractOpenAIResponsesReply } from './agent-runner.service';
+import {
+  extractAnthropicReply,
+  extractOpenAIResponsesReply,
+} from './agent-runner.service';
 
 type Item = OpenAI.Responses.ResponseOutputItem;
 
@@ -75,6 +79,20 @@ describe('extractOpenAIResponsesReply', () => {
     });
   });
 
+  it('collects send_media calls in order, dropping ones without an id', () => {
+    const out = extractOpenAIResponsesReply([
+      message('Te paso el catálogo y la lista.'),
+      call('send_media', '{"item_id":"cat","caption":" Catálogo 2026 "}'),
+      call('send_media', '{"caption":"no id"}'),
+      call('send_media', '{"item_id":"precios"}'),
+    ]);
+    expect(out.text).toBe('Te paso el catálogo y la lista.');
+    expect(out.media).toEqual([
+      { itemId: 'cat', caption: 'Catálogo 2026' },
+      { itemId: 'precios', caption: null },
+    ]);
+  });
+
   it('survives malformed tool arguments', () => {
     const out = extractOpenAIResponsesReply([
       call('handoff_to_human', '{not json'),
@@ -85,5 +103,47 @@ describe('extractOpenAIResponsesReply', () => {
 
   it('returns null text for an empty reply', () => {
     expect(extractOpenAIResponsesReply([message('   ')]).text).toBeNull();
+  });
+});
+
+describe('extractAnthropicReply', () => {
+  const text = (t: string): Anthropic.ContentBlock => ({
+    type: 'text',
+    text: t,
+    citations: null,
+  });
+  // The SDK's ToolUseBlock carries provider bookkeeping fields the extractor
+  // never reads; the cast keeps the fixture to what matters.
+  const use = (name: string, input: unknown): Anthropic.ContentBlock =>
+    ({ type: 'tool_use', id: 'tu_1', name, input }) as Anthropic.ContentBlock;
+
+  it('reads text plus the three tool signals', () => {
+    const out = extractAnthropicReply([
+      text('Acá tenés el catálogo.'),
+      use('send_media', { item_id: 'cat', caption: '' }),
+      use('notify_owner', { message: 'Pidió el catálogo' }),
+      use('handoff_to_human', { reason: 'quiere hablar con alguien' }),
+    ]);
+    expect(out).toEqual({
+      text: 'Acá tenés el catálogo.',
+      handoff: true,
+      reason: 'quiere hablar con alguien',
+      notify: 'Pidió el catálogo',
+      media: [{ itemId: 'cat', caption: null }],
+    });
+  });
+
+  it('ignores tools it does not know and non-object input', () => {
+    const out = extractAnthropicReply([
+      use('something_else', { x: 1 }),
+      use('send_media', 'not an object'),
+      text('ok'),
+    ]);
+    expect(out).toEqual({
+      text: 'ok',
+      handoff: false,
+      reason: undefined,
+      notify: null,
+    });
   });
 });

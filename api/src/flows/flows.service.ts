@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { QuotaService } from '../billing/quota.service';
+import { MediaLibraryService } from '../media-library/media-library.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionManagerService } from '../whatsapp/connection-manager.service';
 import { FlowEngineService } from '../whatsapp/flow-engine.service';
@@ -51,6 +52,7 @@ export class FlowsService {
     private readonly engine: FlowEngineService,
     private readonly quota: QuotaService,
     private readonly manager: ConnectionManagerService,
+    private readonly library: MediaLibraryService,
   ) {}
 
   async list(organizationId: string) {
@@ -347,34 +349,36 @@ export class FlowsService {
 
   /** Everything the editor's pickers need, in one call. */
   async references(organizationId: string) {
-    const [agents, humanAgents, webhooks, tags, members] = await Promise.all([
-      this.prisma.agent.findMany({
-        where: { organizationId },
-        // allowAutoStop tells the editor whether an onHandoff branch on this
-        // agent can ever fire — without it the tool is never offered.
-        select: { id: true, name: true, enabled: true, allowAutoStop: true },
-        orderBy: { name: 'asc' },
-      }),
-      this.prisma.humanAgent.findMany({
-        where: { organizationId },
-        select: { id: true, name: true, phoneNumber: true },
-        orderBy: { name: 'asc' },
-      }),
-      this.prisma.webhook.findMany({
-        where: { organizationId },
-        select: { id: true, url: true, active: true },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.tag.findMany({
-        where: { organizationId },
-        select: { id: true, name: true, color: true },
-        orderBy: { name: 'asc' },
-      }),
-      this.prisma.membership.findMany({
-        where: { organizationId },
-        select: { user: { select: { id: true, name: true, email: true } } },
-      }),
-    ]);
+    const [agents, humanAgents, webhooks, tags, members, mediaItems] =
+      await Promise.all([
+        this.prisma.agent.findMany({
+          where: { organizationId },
+          // allowAutoStop tells the editor whether an onHandoff branch on this
+          // agent can ever fire — without it the tool is never offered.
+          select: { id: true, name: true, enabled: true, allowAutoStop: true },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.humanAgent.findMany({
+          where: { organizationId },
+          select: { id: true, name: true, phoneNumber: true },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.webhook.findMany({
+          where: { organizationId },
+          select: { id: true, url: true, active: true },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.tag.findMany({
+          where: { organizationId },
+          select: { id: true, name: true, color: true },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.membership.findMany({
+          where: { organizationId },
+          select: { user: { select: { id: true, name: true, email: true } } },
+        }),
+        this.library.summaries(organizationId),
+      ]);
     return {
       agents,
       humanAgents,
@@ -384,6 +388,7 @@ export class FlowsService {
         id: m.user.id,
         name: m.user.name ?? m.user.email,
       })),
+      mediaItems,
     };
   }
 
@@ -414,6 +419,9 @@ export class FlowsService {
       webhookIds: new Set(r.webhooks.map((w) => w.id)),
       tagIds: new Set(r.tags.map((t) => t.id)),
       memberIds: new Set(r.members.map((m) => m.id)),
+      mediaItems: new Map(
+        r.mediaItems.map((m) => [m.id, { mimeType: m.mimeType, size: m.size }]),
+      ),
       channel: session?.channel,
       hasWhatsappNumber: whatsappCount > 0,
     };

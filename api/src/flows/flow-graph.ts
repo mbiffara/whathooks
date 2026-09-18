@@ -26,6 +26,7 @@ export const FLOW_NODE_TYPES = [
   'saveContact',
   'assignGroup',
   'assignContactAgent',
+  'sendMedia',
 ] as const;
 export type FlowNodeType = (typeof FLOW_NODE_TYPES)[number];
 
@@ -75,6 +76,13 @@ export interface FlowGraphRefs {
   webhookIds: Set<string>;
   tagIds: Set<string>;
   memberIds: Set<string>;
+  /**
+   * The org's media library, keyed by item id, with what a channel needs to
+   * say whether it can deliver the file. Optional so callers that validate
+   * graphs without a library (older tests, detached checks) keep working;
+   * a sendMedia node then fails as "pick a file".
+   */
+  mediaItems?: Map<string, { mimeType: string; size: number }>;
   /**
    * The channel this flow's session runs on. Omitted by the simulator and by
    * callers validating a detached draft, where there is no session yet.
@@ -403,6 +411,38 @@ export function validateGraph(
           push('teammateMissing', `Node "${n.id}": pick a team member`, n.id);
         }
         break;
+      case 'sendMedia': {
+        const item = isStr(d.mediaItemId, 64)
+          ? refs.mediaItems?.get(d.mediaItemId)
+          : undefined;
+        if (!item) {
+          push('mediaMissing', `Node "${n.id}": pick a file`, n.id);
+        } else if (refs.channel) {
+          // The same file can be fine on WhatsApp and refused by Instagram
+          // (an mp3, a .docx). Say so here, where the node is being drawn.
+          const verdict = capabilitiesOf(refs.channel).attachment(
+            item.mimeType,
+            item.size,
+          );
+          if (!verdict.ok) {
+            push(
+              'mediaUnsupported',
+              `Node "${n.id}": ${verdict.message}`,
+              n.id,
+              { channel: refs.channel, reason: verdict.message },
+            );
+          }
+        }
+        if (!isOptStr(d.caption, 1024)) {
+          push(
+            'captionTooLong',
+            `Node "${n.id}": caption too long (max 1024)`,
+            n.id,
+            { max: 1024 },
+          );
+        }
+        break;
+      }
     }
     // Shared optional fields on assign nodes: empty means "use the default".
     if (
@@ -531,6 +571,7 @@ export function allowedHandles(node: FlowNode): string[] {
     case 'tagConversation':
     case 'assignTeammate':
     case 'saveContact':
+    case 'sendMedia':
       return ['out'];
     default:
       return [];

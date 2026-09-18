@@ -46,6 +46,7 @@ function makeService(
     engine as never,
     {} as never,
     {} as never,
+    { summaries: jest.fn().mockResolvedValue([]) } as never,
   );
   return { service, prisma, ctxs };
 }

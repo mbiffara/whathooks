@@ -50,6 +50,8 @@ const nodeDataSchema = z.object({
   shareLeadNumber: z.boolean().nullable(),
   copyHistory: z.boolean().nullable(),
   note: z.string().nullable(),
+  mediaItemId: z.string().nullable(),
+  caption: z.string().nullable(),
 });
 
 const graphSchema = z.object({
@@ -126,6 +128,7 @@ NODE TYPES (type → data fields → output handles):
 - tagDecision → { tagId } → "yes", "no". Branches on a tag the conversation ALREADY has: "yes" when it carries that tag, "no" when it does not. tagId must be one of the tag ids listed below. Use it to treat known cases differently (a lead already tagged "customer", "vip" or "no molestar") instead of asking an AI something the database knows.
 - assignTeammate → { userId } → "out". Assigns the conversation in the inbox, then continues.
 - saveContact → {} → "out". Saves the sender to the contact book, then continues.
+- sendMedia → { mediaItemId, caption? } → "out". Sends one file from the organization's library (a catalogue, a price list, a menu) to the contact, then continues. mediaItemId must be one of the file ids listed below. Use it when the user wants a document or image delivered on a branch, e.g. "if they ask for the menu, send it".
 
 RULES:
 - Only use ids listed below. Never invent ids. If the user asks for a tag,
@@ -134,7 +137,7 @@ RULES:
   of the chain connected.
 - Keep it focused: 3–8 nodes beyond the trigger is ideal.
 - Set copyHistory: true on assign nodes when the human would benefit from context.
-- All user-facing text (keywords, intent labels, farewellText) must be written in locale "${locale}".
+- All user-facing text (keywords, intent labels, farewellText, caption) must be written in locale "${locale}".
 - Node ids: short lowercase slugs (e.g. "kw_precio", "ai_ventas").
 - Leave unused data fields null.
 - intent and aiDecision take agentId OPTIONALLY: leave it null unless the
@@ -170,7 +173,9 @@ ${list(refs.webhooks, (w: { url: string }) => w.url)}
 Tags (tagId):
 ${list(refs.tags, (t: { name: string }) => t.name)}
 Team members (userId):
-${list(refs.members, (m: { name: string }) => m.name)}`;
+${list(refs.members, (m: { name: string }) => m.name)}
+Library files (mediaItemId):
+${list(refs.mediaItems ?? [], (f: { name: string; fileName: string }) => `${f.name} (${f.fileName})`)}`;
 }
 
 export async function POST(req: Request) {

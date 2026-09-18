@@ -139,6 +139,13 @@ export function validateDraft(graph: DraftGraph, refs: FlowRefs): string[] {
           );
         }
         break;
+      case "sendMedia":
+        if (!inRefs(refs.mediaItems ?? [], d.mediaItemId)) {
+          errors.push(
+            `Node "${n.id}": mediaItemId must be one of the provided file ids`,
+          );
+        }
+        break;
       default:
         break;
     }

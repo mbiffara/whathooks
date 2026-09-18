@@ -10,7 +10,9 @@ import {
 } from '../flows/flow-graph';
 import { Channel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { QuotaService } from '../billing/quota.service';
 import { MediaService } from '../media/media.service';
+import { MediaLibraryService } from '../media-library/media-library.service';
 import { contactIdentityWhere } from '../common/contact-identity';
 import { WebhookDispatchService } from '../webhooks/webhook-dispatch.service';
 import { agentActiveNow } from './agent-schedule';
@@ -95,6 +97,8 @@ export class FlowEngineService {
     private readonly agentRunner: AgentRunnerService,
     private readonly webhooks: WebhookDispatchService,
     private readonly media: MediaService,
+    private readonly library: MediaLibraryService,
+    private readonly quota: QuotaService,
   ) {}
 
   /** The session's enabled flow, cached ~30s (checked on every DM). */
@@ -405,7 +409,8 @@ export class FlowEngineService {
               `agent "${agent.name}" could not reply — check its API key or token balance`,
             );
           }
-          rec.reply = reply.text ?? null;
+          rec.reply =
+            [rec.reply, reply.text].filter(Boolean).join('\n') || null;
           rec.steps.push({
             nodeId: node.id,
             type: node.type,
@@ -632,6 +637,63 @@ export class FlowEngineService {
           this.log.warn(`Flow ${flow.id}: saveContact failed: ${e}`);
           return 'error';
         });
+        rec.steps.push({ nodeId: node.id, type: node.type, note });
+        return this.follow(graph, node, 'out');
+      }
+
+      case 'sendMedia': {
+        const itemId = node.data.mediaItemId as string;
+        const caption = ((node.data.caption as string) ?? '').trim() || null;
+        const file = await this.library
+          .load(flow.organizationId, itemId)
+          .catch((e) => {
+            this.log.warn(`Flow ${flow.id}: library item ${itemId}: ${e}`);
+            return null;
+          });
+        // A file that has since been deleted is a configuration problem;
+        // the conversation goes on without it rather than stalling here.
+        if (!file) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: 'file not found (skipped)',
+          });
+          return this.follow(graph, node, 'out');
+        }
+        // Same gate as an agent reply: a lapsed subscription or a spent
+        // monthly cap must not keep sending a file per inbound message.
+        try {
+          await this.quota.assertCanSend(flow.organizationId);
+        } catch {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: 'skipped: over quota or no active subscription',
+          });
+          return this.follow(graph, node, 'out');
+        }
+        if (rec.dryRun) {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: `would send "${file.fileName}" (not sent)`,
+          });
+          // Show the file in the simulated chat, where the customer would
+          // see it; a later agent reply appends to it rather than replacing.
+          rec.reply = [rec.reply, `📎 ${file.fileName}`, caption]
+            .filter(Boolean)
+            .join('\n');
+          return this.follow(graph, node, 'out');
+        }
+        const note = await manager
+          .sendMediaOnSession(sessionId, ctx.remoteJid, file, caption, {
+            source: MessageSource.API,
+          })
+          .then(() => `sent "${file.fileName}"`)
+          .catch((e) => {
+            this.log.warn(`Flow ${flow.id}: sendMedia node failed: ${e}`);
+            return `send failed: ${String(e).slice(0, 120)}`;
+          });
         rec.steps.push({ nodeId: node.id, type: node.type, note });
         return this.follow(graph, node, 'out');
       }

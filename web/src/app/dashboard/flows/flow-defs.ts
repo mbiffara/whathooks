@@ -15,7 +15,8 @@ export type FlowNodeType =
   | "assignTeammate"
   | "saveContact"
   | "assignGroup"
-  | "assignContactAgent";
+  | "assignContactAgent"
+  | "sendMedia";
 
 export interface FlowIntent {
   key: string;
@@ -42,6 +43,15 @@ export interface FlowRefs {
   webhooks: { id: string; url: string; active: boolean }[];
   tags: { id: string; name: string; color: string }[];
   members: { id: string; name: string }[];
+  /** The org's media library; optional so an older API response still loads. */
+  mediaItems?: {
+    id: string;
+    name: string;
+    description: string | null;
+    mimeType: string;
+    fileName: string;
+    size: number;
+  }[];
 }
 
 export const NODE_ICONS: Record<FlowNodeType, string> = {
@@ -60,6 +70,7 @@ export const NODE_ICONS: Record<FlowNodeType, string> = {
   saveContact: "📇",
   assignGroup: "👥",
   assignContactAgent: "🎯",
+  sendMedia: "📎",
 };
 
 /** Palette (what can be added — trigger is fixed). */
@@ -70,6 +81,7 @@ export const PALETTE: FlowNodeType[] = [
   "aiDecision",
   "tagDecision",
   "agentReply",
+  "sendMedia",
   "assignHuman",
   "assignContactAgent",
   "roundRobin",
@@ -109,6 +121,8 @@ export function defaultDataFor(type: FlowNodeType): Record<string, unknown> {
       return { tagId: "" };
     case "assignTeammate":
       return { userId: "" };
+    case "sendMedia":
+      return { mediaItemId: "", caption: "" };
     default:
       return {};
   }
@@ -141,6 +155,7 @@ export function handlesFor(
     case "tagConversation":
     case "assignTeammate":
     case "saveContact":
+    case "sendMedia":
       return ["out"];
     default:
       return []; // terminal
@@ -197,6 +212,8 @@ export function summarize(
       return name(refs?.tags, data.tagId);
     case "assignTeammate":
       return name(refs?.members, data.userId);
+    case "sendMedia":
+      return name(refs?.mediaItems, data.mediaItemId);
     default:
       return "";
   }

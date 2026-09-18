@@ -15,7 +15,20 @@ const BASE: FlowGraphRefs = {
   webhookIds: new Set(),
   tagIds: new Set(),
   memberIds: new Set(),
+  mediaItems: new Map([
+    ['pdf', { mimeType: 'application/pdf', size: 1024 }],
+    ['mp3', { mimeType: 'audio/mpeg', size: 1024 }],
+  ]),
 };
+
+/** trigger → sendMedia, whose file may or may not suit the channel. */
+const mediaGraph = (mediaItemId: string) => ({
+  nodes: [
+    { id: 'n1', type: 'trigger', data: {} },
+    { id: 'n2', type: 'sendMedia', data: { mediaItemId } },
+  ],
+  edges: [{ source: 'n1', target: 'n2' }],
+});
 
 /** trigger → assignHuman, the shape that needs a group. */
 const handoffGraph = {
@@ -39,6 +52,23 @@ const codes = (refs: FlowGraphRefs, graph: unknown) =>
   validateGraph(graph, refs).map((e) => e.code);
 
 describe('channel capability validation', () => {
+  it('refuses a file the channel cannot deliver, at save time', () => {
+    // Meta rejects MP3 attachments; the editor should say so, not the send.
+    expect(
+      codes({ ...BASE, channel: Channel.INSTAGRAM }, mediaGraph('mp3')),
+    ).toContain('mediaUnsupported');
+    expect(
+      codes({ ...BASE, channel: Channel.INSTAGRAM }, mediaGraph('pdf')),
+    ).not.toContain('mediaUnsupported');
+  });
+
+  it('lets WhatsApp send the same file, and a detached draft keep it', () => {
+    expect(
+      codes({ ...BASE, channel: Channel.WHATSAPP }, mediaGraph('mp3')),
+    ).not.toContain('mediaUnsupported');
+    expect(codes(BASE, mediaGraph('mp3'))).not.toContain('mediaUnsupported');
+  });
+
   it('refuses a group handoff on Instagram with no WhatsApp number', () => {
     expect(
       codes(

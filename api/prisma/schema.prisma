@@ -91,6 +91,7 @@ model Organization {
   messages      Message[]
   tags         Tag[]
   quickReplies QuickReply[]
+  mediaLibrary MediaLibraryItem[]
   contacts     Contact[]
   humanAgents HumanAgent[]
   flows Flow[]
@@ -275,6 +276,7 @@ model Agent {
   maxTokens       Int           @default(1024)
   allowAutoStop   Boolean       @default(false) // give the agent a tool to pause itself (handoff to human)
   notifyOnHandoff Boolean       @default(false) // email the team when the agent hands off
+  allowSendMedia  Boolean       @default(false) // give the agent a tool to send files from the org's media library
   // MCP servers the agent may call tools on (Anthropic provider only, Pro+
   // plans). Shape: [{ name, url, authTokenCiphertext?, authTokenHint? }] —
   // see agents/mcp-servers.ts. Tokens encrypted like apiKeyCiphertext.
@@ -682,6 +684,27 @@ model QuickReply {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   title          String? // optional short label shown in pickers
   text           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+}
+
+// A file the organization keeps to send on demand: a catalogue, a price
+// list, a location photo. Referenced by id from the sendMedia flow node and
+// from the agents' send_media tool, so neither can name a file that is not
+// the org's. The object itself lives in the media store (S3 / local disk),
+// under a key that is not tied to any session.
+model MediaLibraryItem {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String // short label shown in pickers and to the agent
+  description    String? // when to send it, written for the agent
+  storageKey     String
+  mimeType       String
+  fileName       String
+  size           Int
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

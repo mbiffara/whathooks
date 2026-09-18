@@ -52,7 +52,11 @@ import { CHANNEL_ROUTER } from '../channels/channel-router.token';
 import { isGroupAddress, whatsappIdentity } from '../common/address';
 import { contactVcard } from '../common/vcard';
 import { Channel } from '@prisma/client';
-import type { ChannelDriver } from '../channels/channel-driver';
+import type {
+  ChannelDriver,
+  OutboundFile,
+  SendOptions,
+} from '../channels/channel-driver';
 import { MessageStoreService } from '../channels/message-store.service';
 import { AgentReplyService } from '../channels/agent-reply.service';
 import { SessionAlertService } from '../channels/session-alert.service';
@@ -1486,6 +1490,7 @@ export class ConnectionManagerService
         agentId: agent.id,
       });
     }
+    await this.agentReply.sendMedia(driver, sessionId, remoteJid, agent, reply);
     if (reply.notify) {
       void this.agentReply.notifyOwner(
         agent.organizationId,
@@ -1564,6 +1569,20 @@ export class ConnectionManagerService
   ): Promise<void> {
     const channel = await this.channelOf(sessionId);
     await this.channels.driverFor(channel).sendText(sessionId, to, text, opts);
+  }
+
+  /** The media counterpart of sendOnSession, for the flow engine. */
+  async sendMediaOnSession(
+    sessionId: string,
+    to: string,
+    file: OutboundFile,
+    caption: string | null,
+    opts: SendOptions = {},
+  ): Promise<void> {
+    const channel = await this.channelOf(sessionId);
+    await this.channels
+      .driverFor(channel)
+      .sendMedia(sessionId, to, file, caption, opts);
   }
 
   /** Send a text message. Returns the WhatsApp message id + stored message id. */

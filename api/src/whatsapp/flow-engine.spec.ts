@@ -9,6 +9,7 @@ const REFS = {
   webhookIds: new Set(['wh1']),
   tagIds: new Set(['tag1']),
   memberIds: new Set(['user1']),
+  mediaItems: new Map([['file1', { mimeType: 'application/pdf', size: 1024 }]]),
 };
 
 function node(
@@ -93,6 +94,25 @@ describe('validateGraph', () => {
       edges: [edge('t', 'd')],
     };
     expect(validateGraph(g, REFS).map((e) => e.code)).toContain('tagMissing');
+  });
+
+  it('requires a library file on a sendMedia node', () => {
+    const g: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('m', 'sendMedia', { mediaItemId: 'deleted' }),
+      ],
+      edges: [edge('t', 'm')],
+    };
+    expect(validateGraph(g, REFS).map((e) => e.code)).toContain('mediaMissing');
+    const ok: FlowGraph = {
+      nodes: [
+        node('t', 'trigger'),
+        node('m', 'sendMedia', { mediaItemId: 'file1', caption: '' }),
+      ],
+      edges: [edge('t', 'm')],
+    };
+    expect(validateGraph(ok, REFS)).toEqual([]);
   });
 
   it('only lets a tagDecision branch on yes/no', () => {
@@ -315,14 +335,41 @@ function makeEngine(overrides: {
       sent.push({ to, text });
       return Promise.resolve();
     }),
+    sendMediaOnSession: jest.fn(
+      (
+        sessionId: string,
+        to: string,
+        file: { mimeType: string; fileName?: string | null },
+        caption?: string | null,
+      ) => {
+        sentMedia.push({ to, mimeType: file.mimeType, caption });
+        return Promise.resolve();
+      },
+    ),
   };
 
   const media = { getBuffer: jest.fn().mockResolvedValue(Buffer.from('jpg')) };
+  // The org's library: one PDF exists; any other id is "deleted since".
+  const library = {
+    load: jest.fn((organizationId: string, id: string) =>
+      Promise.resolve(
+        id === 'file1'
+          ? {
+              buffer: Buffer.from('pdf'),
+              mimeType: 'application/pdf',
+              fileName: 'catalogo.pdf',
+              name: 'Catálogo',
+            }
+          : null,
+      ),
+    ),
+  };
   const engine = new FlowEngineService(
     prisma as never,
     agentRunner as never,
     webhooks as never,
     media as never,
+    library as never,
   );
   return {
     engine,
@@ -335,6 +382,7 @@ function makeEngine(overrides: {
     forwarded,
     sentMedia,
     media,
+    library,
     dispatched,
     updates,
     stateUpserts,
@@ -1402,5 +1450,75 @@ describe('FlowEngineService.handoff', () => {
     expect(t.forwarded).toHaveLength(1);
     expect(t.stateUpserts).toHaveLength(0);
     expect(t.updates).toHaveLength(0);
+  });
+});
+
+describe('sendMedia node', () => {
+  const graph = (itemId: string, caption = ''): FlowGraph => ({
+    nodes: [
+      node('t', 'trigger'),
+      node('m', 'sendMedia', { mediaItemId: itemId, caption }),
+      node('tag', 'tagConversation', { tagId: 'tag1' }),
+    ],
+    edges: [edge('t', 'm'), edge('m', 'tag')],
+  });
+
+  it('sends the library file on the session channel and continues', async () => {
+    const t = makeEngine({});
+    await t.engine.run(
+      {
+        id: 'f1',
+        graph: graph('file1', ' Acá va el catálogo '),
+        organizationId: 'org1',
+      },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.library.load).toHaveBeenCalledWith('org1', 'file1');
+    expect(t.sentMedia).toEqual([
+      {
+        to: CTX.remoteJid,
+        mimeType: 'application/pdf',
+        caption: 'Acá va el catálogo',
+      },
+    ]);
+    // The walk went on past the node.
+    expect(t.updates).toHaveLength(1);
+    const steps = (t.runs[0].data as AnyRecord).steps as Array<{
+      note?: string;
+    }>;
+    expect(steps.map((st) => st.note)).toEqual([
+      'sent "catalogo.pdf"',
+      undefined,
+    ]);
+  });
+
+  it('skips a file that no longer exists rather than stopping the flow', async () => {
+    const t = makeEngine({});
+    await t.engine.run(
+      { id: 'f1', graph: graph('gone'), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.sentMedia).toHaveLength(0);
+    expect(t.updates).toHaveLength(1);
+    const steps = (t.runs[0].data as AnyRecord).steps as Array<{
+      note?: string;
+    }>;
+    expect(steps[0].note).toBe('file not found (skipped)');
+  });
+
+  it('shows the file in a simulation without sending it', async () => {
+    const t = makeEngine({});
+    const rec = await t.engine.simulate(
+      { id: 'f1', graph: graph('file1', 'Mirá'), organizationId: 'org1' },
+      CTX,
+      t.manager as never,
+    );
+    expect(t.sentMedia).toHaveLength(0);
+    expect(rec.steps[0].note).toBe('would send "catalogo.pdf" (not sent)');
+    expect(rec.reply).toBe('📎 catalogo.pdf\nMirá');
   });
 });

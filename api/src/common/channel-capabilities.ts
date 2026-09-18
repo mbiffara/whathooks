@@ -1,5 +1,9 @@
 import { Channel } from '@prisma/client';
 import type { FlowNodeType } from '../flows/flow-graph';
+import {
+  checkInstagramAttachment,
+  type AttachmentVerdict,
+} from '../instagram/instagram-media';
 
 /**
  * What each channel can actually do.
@@ -26,6 +30,39 @@ export interface ChannelCapabilities {
   qrPairing: boolean;
   /** Can show a "typing…" indicator while an agent composes. */
   typingIndicator: boolean;
+  /**
+   * Will this channel deliver a file of this type and size? Instagram takes
+   * a short list of formats (no MP3, no Opus, PDF as the only document);
+   * WhatsApp takes anything under its size cap. Asked at flow save time so
+   * a node that can never deliver is refused in the editor, not mid-chat.
+   */
+  attachment: (mimeType: string, bytes?: number) => AttachmentVerdict;
+}
+
+const MB = 1024 * 1024;
+/** Baileys uploads happily past this, but WhatsApp clients stop rendering. */
+const WHATSAPP_MAX_ATTACHMENT_BYTES = 64 * MB;
+
+function checkWhatsappAttachment(
+  mimeType: string,
+  bytes?: number,
+): AttachmentVerdict {
+  if (bytes != null && bytes > WHATSAPP_MAX_ATTACHMENT_BYTES) {
+    return {
+      ok: false,
+      reason: 'size',
+      message: `WhatsApp accepts files up to ${WHATSAPP_MAX_ATTACHMENT_BYTES / MB} MB; this one is ${(bytes / MB).toFixed(1)} MB.`,
+    };
+  }
+  const mime = mimeType.split(';')[0].trim().toLowerCase();
+  const kind = mime.startsWith('image/')
+    ? 'image'
+    : mime.startsWith('video/')
+      ? 'video'
+      : mime.startsWith('audio/')
+        ? 'audio'
+        : 'file';
+  return { ok: true, kind };
 }
 
 export const CHANNEL_CAPABILITIES: Record<Channel, ChannelCapabilities> = {
@@ -34,12 +71,14 @@ export const CHANNEL_CAPABILITIES: Record<Channel, ChannelCapabilities> = {
     mentions: true,
     qrPairing: true,
     typingIndicator: true,
+    attachment: checkWhatsappAttachment,
   },
   INSTAGRAM: {
     hostsGroups: false,
     mentions: false,
     qrPairing: false,
     typingIndicator: false,
+    attachment: checkInstagramAttachment,
   },
 };
 

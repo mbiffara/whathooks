@@ -9,6 +9,7 @@ import { ConversationsModule } from './conversations/conversations.module';
 import { RedisModule } from './common/redis/redis.module';
 import { HealthController } from './health/health.controller';
 import { MediaModule } from './media/media.module';
+import { MediaLibraryModule } from './media-library/media-library.module';
 import { MessagesModule } from './messages/messages.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { InstagramModule } from './instagram/instagram.module';
@@ -30,6 +31,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     PrismaModule,
     RedisModule,
     MediaModule,
+    MediaLibraryModule,
     AuthModule,
     BillingModule,
     WebhooksModule,

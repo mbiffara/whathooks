@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Agent, MessageSource } from '@prisma/client';
-import { AgentRunnerService } from '../agents/agent-runner.service';
+import { AgentReply, AgentRunnerService } from '../agents/agent-runner.service';
 import { QuotaService } from '../billing/quota.service';
 import { addressLabel } from '../common/address';
 import { MailService } from '../mail/mail.service';
+import { MediaLibraryService } from '../media-library/media-library.service';
 import { PrismaService } from '../prisma/prisma.service';
 // Pure schedule helper; lives under whatsapp/ for historical reasons and has
 // no module dependency of its own.
@@ -34,6 +35,7 @@ export class AgentReplyService {
     private readonly quota: QuotaService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly library: MediaLibraryService,
   ) {}
 
   /**
@@ -102,6 +104,7 @@ export class AgentReplyService {
           mentions: ctx.mention ? [ctx.mention.jid] : undefined,
         });
       }
+      await this.sendMedia(driver, ctx.sessionId, ctx.remoteJid, agent, reply);
 
       // The agent called notify_owner → email the account owner. Does not
       // pause the agent (unlike handoff).
@@ -139,6 +142,44 @@ export class AgentReplyService {
       }
     } catch (e) {
       this.log.error(`Agent reply failed for ${ctx.sessionId}: ${e}`);
+    }
+  }
+
+  /**
+   * Deliver the files an agent asked for with send_media, after its text.
+   * Each id is checked against the org's library, so a model that invents
+   * one sends nothing; a file a channel refuses (Instagram and an mp3) is
+   * logged and skipped, never a failed reply. Shared by the inbound path
+   * here and the flow engine's agentReply node.
+   */
+  async sendMedia(
+    driver: ChannelDriver,
+    sessionId: string,
+    remoteJid: string,
+    agent: Agent,
+    reply: AgentReply,
+  ): Promise<void> {
+    const calls = reply.media ?? [];
+    if (calls.length === 0 || !agent.allowSendMedia) return;
+    for (const call of calls.slice(0, 3)) {
+      try {
+        const file = await this.library.load(agent.organizationId, call.itemId);
+        if (!file) {
+          this.log.warn(
+            `Agent "${agent.name}" asked to send unknown library item ${call.itemId}`,
+          );
+          continue;
+        }
+        if (!driver.isLive(sessionId)) return;
+        await driver.sendMedia(sessionId, remoteJid, file, call.caption, {
+          source: MessageSource.AGENT,
+          agentId: agent.id,
+        });
+      } catch (e) {
+        this.log.warn(
+          `Agent "${agent.name}" could not send library item ${call.itemId}: ${e}`,
+        );
+      }
     }
   }
 

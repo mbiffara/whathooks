@@ -108,6 +108,10 @@ export class CreateAgentDto {
   notifyOnHandoff?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  allowSendMedia?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(300)
@@ -215,6 +219,10 @@ export class UpdateAgentDto {
   @IsOptional()
   @IsBoolean()
   notifyOnHandoff?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allowSendMedia?: boolean;
 
   @IsOptional()
   @IsInt()

@@ -191,6 +191,8 @@ function makeEngine(overrides: {
     ...a: unknown[]
   ) => Promise<{ text: string | null; handoff: boolean } | null>;
   counterValues?: number[];
+  /** Quota gate the sendMedia node consults; rejecting = over quota. */
+  assertCanSend?: () => Promise<void>;
 }) {
   const sent: Array<{ to: string; text: string }> = [];
   const sentMedia: Array<{
@@ -364,12 +366,18 @@ function makeEngine(overrides: {
       ),
     ),
   };
+  const quota = {
+    assertCanSend: jest.fn(
+      overrides.assertCanSend ?? (() => Promise.resolve()),
+    ),
+  };
   const engine = new FlowEngineService(
     prisma as never,
     agentRunner as never,
     webhooks as never,
     media as never,
     library as never,
+    quota as never,
   );
   return {
     engine,
@@ -383,6 +391,7 @@ function makeEngine(overrides: {
     sentMedia,
     media,
     library,
+    quota,
     dispatched,
     updates,
     stateUpserts,
@@ -1492,6 +1501,24 @@ describe('sendMedia node', () => {
       'sent "catalogo.pdf"',
       undefined,
     ]);
+  });
+
+  it('does not send when the org is over quota or unsubscribed', async () => {
+    const t = makeEngine({
+      assertCanSend: () => Promise.reject(new Error('Subscription required')),
+    });
+    await t.engine.run(
+      { id: 'f1', graph: graph('file1'), organizationId: 'org1' },
+      's1',
+      CTX,
+      t.manager as never,
+    );
+    expect(t.quota.assertCanSend).toHaveBeenCalledWith('org1');
+    expect(t.sentMedia).toHaveLength(0);
+    const steps = (t.runs[0].data as AnyRecord).steps as Array<{
+      note?: string;
+    }>;
+    expect(steps[0].note).toBe('skipped: over quota or no active subscription');
   });
 
   it('skips a file that no longer exists rather than stopping the flow', async () => {

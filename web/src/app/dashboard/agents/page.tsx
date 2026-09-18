@@ -663,6 +663,8 @@ export default function AgentsPage() {
                   link: (chunks) => (
                     <Link
                       href="/dashboard/media-library"
+                      target="_blank"
+                      rel="noreferrer"
                       className="underline hover:text-[var(--color-fg)]"
                     >
                       {chunks}

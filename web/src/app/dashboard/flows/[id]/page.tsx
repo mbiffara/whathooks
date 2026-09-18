@@ -1989,6 +1989,9 @@ function NodePanel({
               : t("mediaHint")}{" "}
             <Link
               href="/dashboard/media-library"
+              // A new tab: the editor holds unsaved edits and has no guard.
+              target="_blank"
+              rel="noreferrer"
               className="underline hover:text-[var(--color-fg)]"
             >
               {t("mediaManage")}

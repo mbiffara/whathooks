@@ -10,6 +10,7 @@ import {
 } from '../flows/flow-graph';
 import { Channel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { QuotaService } from '../billing/quota.service';
 import { MediaService } from '../media/media.service';
 import { MediaLibraryService } from '../media-library/media-library.service';
 import { contactIdentityWhere } from '../common/contact-identity';
@@ -97,6 +98,7 @@ export class FlowEngineService {
     private readonly webhooks: WebhookDispatchService,
     private readonly media: MediaService,
     private readonly library: MediaLibraryService,
+    private readonly quota: QuotaService,
   ) {}
 
   /** The session's enabled flow, cached ~30s (checked on every DM). */
@@ -655,6 +657,18 @@ export class FlowEngineService {
             nodeId: node.id,
             type: node.type,
             note: 'file not found (skipped)',
+          });
+          return this.follow(graph, node, 'out');
+        }
+        // Same gate as an agent reply: a lapsed subscription or a spent
+        // monthly cap must not keep sending a file per inbound message.
+        try {
+          await this.quota.assertCanSend(flow.organizationId);
+        } catch {
+          rec.steps.push({
+            nodeId: node.id,
+            type: node.type,
+            note: 'skipped: over quota or no active subscription',
           });
           return this.follow(graph, node, 'out');
         }

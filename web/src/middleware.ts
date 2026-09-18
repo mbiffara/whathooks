@@ -2,26 +2,29 @@ import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
 // Pages that only make sense without a session: a signed-in visitor is sent
-// to their home instead of seeing the form.
-const AUTH_PAGES = ["/signin", "/signup", "/forgot-password", "/reset-password"];
+// to their home instead of seeing the form. /forgot-password and
+// /reset-password stay reachable on purpose: the reset link from the email
+// is the only way to change a password, session or not.
+const AUTH_PAGES = ["/signin", "/signup"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isAuthed = !!req.auth;
   const isAdmin = req.auth?.user?.role === "ADMIN";
 
-  const isAuthPage = AUTH_PAGES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-  if (isAuthPage && isAuthed) {
-    // Honour a relative callbackUrl (the one this middleware sets when it
-    // bounces an anonymous visitor to /signin); anything absolute is dropped
-    // so the redirect can't leave the site.
+  if (AUTH_PAGES.includes(pathname) && isAuthed) {
+    // Honour the callbackUrl this middleware sets when it bounces an
+    // anonymous visitor to /signin, but only when it resolves to this same
+    // origin: "//host", "/\\host" and absolute URLs would otherwise turn the
+    // redirect into an open redirect.
     const callback = req.nextUrl.searchParams.get("callbackUrl");
-    const safeCallback =
-      callback && callback.startsWith("/") && !callback.startsWith("//")
-        ? callback
-        : null;
+    let safeCallback: string | null = null;
+    if (callback) {
+      const target = new URL(callback, req.nextUrl.origin);
+      if (target.origin === req.nextUrl.origin && !AUTH_PAGES.includes(target.pathname)) {
+        safeCallback = target.pathname + target.search;
+      }
+    }
     const home = isAdmin ? "/admin" : "/dashboard";
     return NextResponse.redirect(new URL(safeCallback ?? home, req.nextUrl.origin));
   }
@@ -54,7 +57,5 @@ export const config = {
     "/onboarding/:path*",
     "/signin",
     "/signup",
-    "/forgot-password",
-    "/reset-password",
   ],
 };

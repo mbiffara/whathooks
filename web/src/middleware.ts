@@ -20,9 +20,15 @@ export default auth((req) => {
     const callback = req.nextUrl.searchParams.get("callbackUrl");
     let safeCallback: string | null = null;
     if (callback) {
-      const target = new URL(callback, req.nextUrl.origin);
-      if (target.origin === req.nextUrl.origin && !AUTH_PAGES.includes(target.pathname)) {
-        safeCallback = target.pathname + target.search;
+      // A malformed callback ("//[", "http://") must not turn the page into
+      // a 500: it is simply ignored.
+      try {
+        const target = new URL(callback, req.nextUrl.origin);
+        if (target.origin === req.nextUrl.origin && !AUTH_PAGES.includes(target.pathname)) {
+          safeCallback = target.pathname + target.search;
+        }
+      } catch {
+        safeCallback = null;
       }
     }
     const home = isAdmin ? "/admin" : "/dashboard";

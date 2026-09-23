@@ -131,7 +131,16 @@
       "themeHint": "System follows your device's appearance setting.",
       "themeSystem": "System",
       "themeLight": "Light",
-      "themeDark": "Dark"
+      "themeDark": "Dark",
+      "notifications": "Notifications",
+      "incomingSound": "Incoming message sound",
+      "incomingSoundHint": "Plays while the inbox is open.",
+      "soundNone": "None",
+      "soundChime": "Chime",
+      "soundPop": "Pop",
+      "soundDing": "Ding",
+      "soundDouble": "Double",
+      "soundTest": "Test"
     },
     "overview": {
       "title": "Overview",

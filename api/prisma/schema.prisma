@@ -105,6 +105,9 @@ model User {
   // UI + email language ("en" | "es"). Set from the visitor's locale at
   // signup; editable in dashboard settings.
   locale       String   @default("en")
+  // Sound the inbox plays on incoming messages: see INCOMING_SOUNDS in
+  // src/auth/incoming-sounds.ts (mirrored in web/src/lib/incoming-sound.ts).
+  incomingSound String  @default("chime")
   welcomeEmailSentAt DateTime?
   role         UserRole @default(CLIENT)
   createdAt    DateTime @default(now())

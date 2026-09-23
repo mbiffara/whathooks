@@ -273,14 +273,18 @@ function MessagesInbox() {
   // messages. Null until the first poll under the current filters lands, so
   // opening the inbox or changing filters never plays for unread that was
   // already there. The generation drops responses to requests made under
-  // filters that have since changed.
+  // filters that have since changed, and the request sequence drops a
+  // response that lands after a newer one under the same filters.
   const prevUnreadRef = useRef<Map<string, number> | null>(null);
   const unreadGenRef = useRef(0);
+  const unreadReqSeqRef = useRef(0);
+  const unreadAppliedSeqRef = useRef(0);
 
   // Load + poll conversations
   const loadConversations = useCallback(async () => {
     if (!token) return;
     const gen = unreadGenRef.current;
+    const seq = ++unreadReqSeqRef.current;
     const params = new URLSearchParams();
     if (sessionFilter) params.set("sessionId", sessionFilter);
     if (debouncedSearch) params.set("q", debouncedSearch);
@@ -293,7 +297,8 @@ function MessagesInbox() {
         token,
       );
       setConversations((prev) => (sameConversations(prev, data) ? prev : data));
-      if (gen === unreadGenRef.current) {
+      if (gen === unreadGenRef.current && seq > unreadAppliedSeqRef.current) {
+        unreadAppliedSeqRef.current = seq;
         const prevUnread = prevUnreadRef.current;
         // One sound per poll, however many messages arrived.
         if (prevUnread && hasNewIncoming(prevUnread, data)) {

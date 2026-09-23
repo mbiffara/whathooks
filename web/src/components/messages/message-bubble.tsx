@@ -236,25 +236,32 @@ function MessageBody({
 
   if (message.type === "DOCUMENT" && media?.url) {
     return (
-      <a
-        href={media.url}
-        download={media.fileName ?? true}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 hover:bg-[var(--color-surface-2)]"
-      >
-        <span className="text-xl">📄</span>
-        <span className="min-w-0">
-          <span className="block truncate text-sm text-[var(--color-fg)]">
-            {media.fileName ?? t("document")}
-          </span>
-          {media.size ? (
-            <span className="block text-xs text-[var(--color-muted)]">
-              {formatBytes(media.size)}
+      <div>
+        <a
+          href={media.url}
+          download={media.fileName ?? true}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 hover:bg-[var(--color-surface-2)]"
+        >
+          <span className="text-xl">📄</span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm text-[var(--color-fg)]">
+              {media.fileName ?? t("document")}
             </span>
-          ) : null}
-        </span>
-      </a>
+            {media.size ? (
+              <span className="block text-xs text-[var(--color-muted)]">
+                {formatBytes(media.size)}
+              </span>
+            ) : null}
+          </span>
+        </a>
+        {message.text ? (
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-[var(--color-fg)]">
+            <Linkify text={message.text} />
+          </p>
+        ) : null}
+      </div>
     );
   }
 

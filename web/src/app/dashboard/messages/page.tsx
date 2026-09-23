@@ -18,6 +18,12 @@ import {
 } from "@/components/messages/utils";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
+import {
+  DEFAULT_INCOMING_SOUND,
+  playIncomingSound,
+  toIncomingSound,
+  type IncomingSound,
+} from "@/lib/incoming-sound";
 import type { TeamMember, WaSession } from "@/lib/types";
 import { useLocale, useTranslations } from "next-intl";
 import { Glyph } from "@/components/glyphs";
@@ -49,6 +55,22 @@ function sameConversations(
   if (prev === next) return true;
   if (prev.length !== next.length) return false;
   return JSON.stringify(prev) === JSON.stringify(next);
+}
+
+/**
+ * True when a poll shows a message came in since the previous one:
+ * `unreadCount` only rises on inbound messages (outgoing ones, ours or a
+ * teammate's, never touch it), so a conversation whose count went up, or one
+ * that just appeared with unread messages, got something new.
+ */
+function hasNewIncoming(
+  prevUnread: Map<string, number>,
+  next: Conversation[],
+): boolean {
+  return next.some((c) => {
+    const before = prevUnread.get(c.id);
+    return before === undefined ? c.unreadCount > 0 : c.unreadCount > before;
+  });
 }
 
 function mergeMessages(
@@ -233,9 +255,32 @@ function MessagesInbox() {
     return () => clearInterval(id);
   }, []);
 
+  // Incoming-message sound. The preference is read once on mount: changing
+  // it happens in Settings, which is another route.
+  const soundRef = useRef<IncomingSound>(DEFAULT_INCOMING_SOUND);
+  useEffect(() => {
+    if (!token) return;
+    apiClient<{ incomingSound?: string }>("/auth/me", token)
+      .then((me) => {
+        soundRef.current = toIncomingSound(me.incomingSound);
+      })
+      .catch(() => {
+        /* keep the default */
+      });
+  }, [token]);
+
+  // unreadCount per conversation as of the last poll, to spot new inbound
+  // messages. Null until the first poll under the current filters lands, so
+  // opening the inbox or changing filters never plays for unread that was
+  // already there. The generation drops responses to requests made under
+  // filters that have since changed.
+  const prevUnreadRef = useRef<Map<string, number> | null>(null);
+  const unreadGenRef = useRef(0);
+
   // Load + poll conversations
   const loadConversations = useCallback(async () => {
     if (!token) return;
+    const gen = unreadGenRef.current;
     const params = new URLSearchParams();
     if (sessionFilter) params.set("sessionId", sessionFilter);
     if (debouncedSearch) params.set("q", debouncedSearch);
@@ -248,6 +293,14 @@ function MessagesInbox() {
         token,
       );
       setConversations((prev) => (sameConversations(prev, data) ? prev : data));
+      if (gen === unreadGenRef.current) {
+        const prevUnread = prevUnreadRef.current;
+        // One sound per poll, however many messages arrived.
+        if (prevUnread && hasNewIncoming(prevUnread, data)) {
+          playIncomingSound(soundRef.current);
+        }
+        prevUnreadRef.current = new Map(data.map((c) => [c.id, c.unreadCount]));
+      }
     } catch {
       /* ignore poll errors */
     } finally {
@@ -263,6 +316,9 @@ function MessagesInbox() {
   ]);
 
   useEffect(() => {
+    // New filters (or first load): start a fresh baseline.
+    unreadGenRef.current += 1;
+    prevUnreadRef.current = null;
     setConvLoading(true);
     loadConversations();
     const id = setInterval(loadConversations, 5000);

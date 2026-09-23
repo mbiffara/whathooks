@@ -18,6 +18,11 @@ import {
 } from "@/components/messages/utils";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
+import {
+  playIncomingSound,
+  toIncomingSound,
+  type IncomingSound,
+} from "@/lib/incoming-sound";
 import type { TeamMember, WaSession } from "@/lib/types";
 import { useLocale, useTranslations } from "next-intl";
 import { Glyph } from "@/components/glyphs";
@@ -49,6 +54,53 @@ function sameConversations(
   if (prev === next) return true;
   if (prev.length !== next.length) return false;
   return JSON.stringify(prev) === JSON.stringify(next);
+}
+
+interface UnreadBaseline {
+  unread: Map<string, number>;
+  /**
+   * Newest lastMessageAt seen (ms) under the current filters. Only grows, so
+   * a thread leaving the list doesn't lower it; -Infinity while nothing has
+   * been seen (then any newly visible thread with unread counts as new).
+   */
+  watermark: number;
+}
+
+function toUnreadBaseline(
+  data: Conversation[],
+  prevWatermark: number,
+): UnreadBaseline {
+  let watermark = prevWatermark;
+  for (const c of data) {
+    const at = c.lastMessageAt ? Date.parse(c.lastMessageAt) : NaN;
+    if (at > watermark) watermark = at;
+  }
+  return {
+    unread: new Map(data.map((c) => [c.id, c.unreadCount])),
+    watermark,
+  };
+}
+
+// Inbound WhatsApp timestamps have second precision and can arrive late after
+// a reconnect, while our own sends carry server ms: compare with some slack so
+// a new contact's first message isn't read as older than what we'd seen.
+const WATERMARK_SLACK_MS = 5000;
+
+/**
+ * True when a poll shows a message came in since the previous one:
+ * `unreadCount` only rises on inbound messages (outgoing ones, ours or a
+ * teammate's, never touch it), so a conversation whose count went up got
+ * something new. A conversation that just appeared in the list may only have
+ * entered the filters (assigned, tagged, reopened) with old unread messages, so
+ * it only counts when its last message is newer than anything seen before.
+ */
+function hasNewIncoming(prev: UnreadBaseline, next: Conversation[]): boolean {
+  return next.some((c) => {
+    const before = prev.unread.get(c.id);
+    if (before !== undefined) return c.unreadCount > before;
+    if (c.unreadCount <= 0 || !c.lastMessageAt) return false;
+    return Date.parse(c.lastMessageAt) > prev.watermark - WATERMARK_SLACK_MS;
+  });
 }
 
 function mergeMessages(
@@ -233,9 +285,38 @@ function MessagesInbox() {
     return () => clearInterval(id);
   }, []);
 
+  // Incoming-message sound. The preference is read once on mount: changing
+  // it happens in Settings, which is another route. Null (muted) until it
+  // loads, so a user who picked "none" never hears the default meanwhile; if
+  // the request fails it stays muted for this visit.
+  const soundRef = useRef<IncomingSound | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    apiClient<{ incomingSound?: string }>("/auth/me", token)
+      .then((me) => {
+        soundRef.current = toIncomingSound(me.incomingSound);
+      })
+      .catch(() => {
+        /* stay muted: better silent than a sound the user turned off */
+      });
+  }, [token]);
+
+  // unreadCount per conversation as of the last poll, to spot new inbound
+  // messages. Null until the first poll under the current filters lands, so
+  // opening the inbox or changing filters never plays for unread that was
+  // already there. The generation drops responses to requests made under
+  // filters that have since changed, and the request sequence drops a
+  // response that lands after a newer one under the same filters.
+  const prevUnreadRef = useRef<UnreadBaseline | null>(null);
+  const unreadGenRef = useRef(0);
+  const unreadReqSeqRef = useRef(0);
+  const unreadAppliedSeqRef = useRef(0);
+
   // Load + poll conversations
   const loadConversations = useCallback(async () => {
     if (!token) return;
+    const gen = unreadGenRef.current;
+    const seq = ++unreadReqSeqRef.current;
     const params = new URLSearchParams();
     if (sessionFilter) params.set("sessionId", sessionFilter);
     if (debouncedSearch) params.set("q", debouncedSearch);
@@ -248,6 +329,19 @@ function MessagesInbox() {
         token,
       );
       setConversations((prev) => (sameConversations(prev, data) ? prev : data));
+      if (gen === unreadGenRef.current && seq > unreadAppliedSeqRef.current) {
+        unreadAppliedSeqRef.current = seq;
+        const prevUnread = prevUnreadRef.current;
+        // One sound per poll, however many messages arrived.
+        const sound = soundRef.current;
+        if (sound && prevUnread && hasNewIncoming(prevUnread, data)) {
+          playIncomingSound(sound);
+        }
+        prevUnreadRef.current = toUnreadBaseline(
+          data,
+          prevUnread?.watermark ?? -Infinity,
+        );
+      }
     } catch {
       /* ignore poll errors */
     } finally {
@@ -263,6 +357,9 @@ function MessagesInbox() {
   ]);
 
   useEffect(() => {
+    // New filters (or first load): start a fresh baseline.
+    unreadGenRef.current += 1;
+    prevUnreadRef.current = null;
     setConvLoading(true);
     loadConversations();
     const id = setInterval(loadConversations, 5000);

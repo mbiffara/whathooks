@@ -60,6 +60,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       locale: user.locale,
+      incomingSound: user.incomingSound,
       role: user.role,
       organizationId: user.organizationId,
       // Platform ADMINs in a foreign org (support mode) report OWNER so the
@@ -283,7 +284,7 @@ export class AuthService {
     return { ok: true };
   }
 
-  /** Update profile fields (name, UI/email language). */
+  /** Update profile fields (name, UI/email language, inbox sound). */
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     await this.prisma.user.update({
       where: { id: userId },
@@ -291,6 +292,9 @@ export class AuthService {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.locale !== undefined
           ? { locale: normalizeLocale(dto.locale) }
+          : {}),
+        ...(dto.incomingSound !== undefined
+          ? { incomingSound: dto.incomingSound }
           : {}),
       },
     });

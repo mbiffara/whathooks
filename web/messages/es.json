@@ -131,7 +131,16 @@
       "themeHint": "Sistema sigue la apariencia configurada en tu dispositivo.",
       "themeSystem": "Sistema",
       "themeLight": "Claro",
-      "themeDark": "Oscuro"
+      "themeDark": "Oscuro",
+      "notifications": "Notificaciones",
+      "incomingSound": "Sonido de mensaje entrante",
+      "incomingSoundHint": "Suena mientras tengas la bandeja abierta.",
+      "soundNone": "Sin sonido",
+      "soundChime": "Campanita",
+      "soundPop": "Pop",
+      "soundDing": "Ding",
+      "soundDouble": "Doble",
+      "soundTest": "Probar"
     },
     "overview": {
       "title": "Resumen",

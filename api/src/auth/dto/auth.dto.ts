@@ -6,6 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { INCOMING_SOUNDS } from '../incoming-sounds';
 
 export class RegisterDto {
   @IsEmail()
@@ -85,4 +86,9 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsIn(['en', 'es'])
   locale?: string;
+
+  // Inbox sound for incoming messages ("none" silences it).
+  @IsOptional()
+  @IsIn(INCOMING_SOUNDS)
+  incomingSound?: string;
 }

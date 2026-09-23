@@ -58,21 +58,33 @@ function sameConversations(
 
 interface UnreadBaseline {
   unread: Map<string, number>;
-  /** Newest lastMessageAt seen (ms), or when the baseline was taken if empty. */
+  /**
+   * Newest lastMessageAt seen (ms) under the current filters. Only grows, so
+   * a thread leaving the list doesn't lower it; -Infinity while nothing has
+   * been seen (then any newly visible thread with unread counts as new).
+   */
   watermark: number;
 }
 
-function toUnreadBaseline(data: Conversation[]): UnreadBaseline {
-  let watermark = -Infinity;
+function toUnreadBaseline(
+  data: Conversation[],
+  prevWatermark: number,
+): UnreadBaseline {
+  let watermark = prevWatermark;
   for (const c of data) {
     const at = c.lastMessageAt ? Date.parse(c.lastMessageAt) : NaN;
     if (at > watermark) watermark = at;
   }
   return {
     unread: new Map(data.map((c) => [c.id, c.unreadCount])),
-    watermark: Number.isFinite(watermark) ? watermark : Date.now(),
+    watermark,
   };
 }
+
+// Inbound WhatsApp timestamps have second precision and can arrive late after
+// a reconnect, while our own sends carry server ms: compare with some slack so
+// a new contact's first message isn't read as older than what we'd seen.
+const WATERMARK_SLACK_MS = 5000;
 
 /**
  * True when a poll shows a message came in since the previous one:
@@ -87,7 +99,7 @@ function hasNewIncoming(prev: UnreadBaseline, next: Conversation[]): boolean {
     const before = prev.unread.get(c.id);
     if (before !== undefined) return c.unreadCount > before;
     if (c.unreadCount <= 0 || !c.lastMessageAt) return false;
-    return Date.parse(c.lastMessageAt) > prev.watermark;
+    return Date.parse(c.lastMessageAt) > prev.watermark - WATERMARK_SLACK_MS;
   });
 }
 
@@ -325,7 +337,10 @@ function MessagesInbox() {
         if (sound && prevUnread && hasNewIncoming(prevUnread, data)) {
           playIncomingSound(sound);
         }
-        prevUnreadRef.current = toUnreadBaseline(data);
+        prevUnreadRef.current = toUnreadBaseline(
+          data,
+          prevUnread?.watermark ?? -Infinity,
+        );
       }
     } catch {
       /* ignore poll errors */

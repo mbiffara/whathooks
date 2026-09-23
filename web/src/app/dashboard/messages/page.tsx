@@ -19,7 +19,6 @@ import {
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { ApiError, apiClient, isSubscriptionRequired } from "@/lib/client-api";
 import {
-  DEFAULT_INCOMING_SOUND,
   playIncomingSound,
   toIncomingSound,
   type IncomingSound,
@@ -57,19 +56,38 @@ function sameConversations(
   return JSON.stringify(prev) === JSON.stringify(next);
 }
 
+interface UnreadBaseline {
+  unread: Map<string, number>;
+  /** Newest lastMessageAt seen (ms), or when the baseline was taken if empty. */
+  watermark: number;
+}
+
+function toUnreadBaseline(data: Conversation[]): UnreadBaseline {
+  let watermark = -Infinity;
+  for (const c of data) {
+    const at = c.lastMessageAt ? Date.parse(c.lastMessageAt) : NaN;
+    if (at > watermark) watermark = at;
+  }
+  return {
+    unread: new Map(data.map((c) => [c.id, c.unreadCount])),
+    watermark: Number.isFinite(watermark) ? watermark : Date.now(),
+  };
+}
+
 /**
  * True when a poll shows a message came in since the previous one:
  * `unreadCount` only rises on inbound messages (outgoing ones, ours or a
- * teammate's, never touch it), so a conversation whose count went up, or one
- * that just appeared with unread messages, got something new.
+ * teammate's, never touch it), so a conversation whose count went up got
+ * something new. A conversation that just appeared in the list may only have
+ * entered the filters (assigned, tagged, reopened) with old unread messages, so
+ * it only counts when its last message is newer than anything seen before.
  */
-function hasNewIncoming(
-  prevUnread: Map<string, number>,
-  next: Conversation[],
-): boolean {
+function hasNewIncoming(prev: UnreadBaseline, next: Conversation[]): boolean {
   return next.some((c) => {
-    const before = prevUnread.get(c.id);
-    return before === undefined ? c.unreadCount > 0 : c.unreadCount > before;
+    const before = prev.unread.get(c.id);
+    if (before !== undefined) return c.unreadCount > before;
+    if (c.unreadCount <= 0 || !c.lastMessageAt) return false;
+    return Date.parse(c.lastMessageAt) > prev.watermark;
   });
 }
 
@@ -256,8 +274,10 @@ function MessagesInbox() {
   }, []);
 
   // Incoming-message sound. The preference is read once on mount: changing
-  // it happens in Settings, which is another route.
-  const soundRef = useRef<IncomingSound>(DEFAULT_INCOMING_SOUND);
+  // it happens in Settings, which is another route. Null (muted) until it
+  // loads, so a user who picked "none" never hears the default meanwhile; if
+  // the request fails it stays muted for this visit.
+  const soundRef = useRef<IncomingSound | null>(null);
   useEffect(() => {
     if (!token) return;
     apiClient<{ incomingSound?: string }>("/auth/me", token)
@@ -265,7 +285,7 @@ function MessagesInbox() {
         soundRef.current = toIncomingSound(me.incomingSound);
       })
       .catch(() => {
-        /* keep the default */
+        /* stay muted: better silent than a sound the user turned off */
       });
   }, [token]);
 
@@ -275,7 +295,7 @@ function MessagesInbox() {
   // already there. The generation drops responses to requests made under
   // filters that have since changed, and the request sequence drops a
   // response that lands after a newer one under the same filters.
-  const prevUnreadRef = useRef<Map<string, number> | null>(null);
+  const prevUnreadRef = useRef<UnreadBaseline | null>(null);
   const unreadGenRef = useRef(0);
   const unreadReqSeqRef = useRef(0);
   const unreadAppliedSeqRef = useRef(0);
@@ -301,10 +321,11 @@ function MessagesInbox() {
         unreadAppliedSeqRef.current = seq;
         const prevUnread = prevUnreadRef.current;
         // One sound per poll, however many messages arrived.
-        if (prevUnread && hasNewIncoming(prevUnread, data)) {
-          playIncomingSound(soundRef.current);
+        const sound = soundRef.current;
+        if (sound && prevUnread && hasNewIncoming(prevUnread, data)) {
+          playIncomingSound(sound);
         }
-        prevUnreadRef.current = new Map(data.map((c) => [c.id, c.unreadCount]));
+        prevUnreadRef.current = toUnreadBaseline(data);
       }
     } catch {
       /* ignore poll errors */
